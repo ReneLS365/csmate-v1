@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="da">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>akkordseddel</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="print.css" media="print">
+</head>
+<body>
+<header>
+  <div class="bar">
+    <div class="ttl">akkordseddel</div>
+    <nav>
+      <button id="btnOptaelling" class="active">Optælling</button>
+      <button id="btnLon">Løn</button>
+      <button id="btnGuide">Guide</button>
+    </nav>
+  </div>
+</header>
+<main>
+  <section id="optællingSection" class="sektion">
+    <fieldset>
+      <legend>Sagsinfo</legend>
+      <div class="grid-3">
+        <input id="sagsnummer" placeholder="Sagsnummer">
+        <input id="sagsnavn" placeholder="Navn/opgave">
+        <input id="sagsadresse" placeholder="Adresse">
+      </div>
+    </fieldset>
+    <fieldset><legend>Systemer</legend><div id="listSelectors" class="row"></div></fieldset>
+    <fieldset><legend>Materialer</legend><div id="optællingContainer" class="materials"></div></fieldset>
+    <div class="row no-print">
+      <label class="btn"><input id="csvUpload" type="file" accept=".csv" style="display:none">Importer CSV</label>
+      <button id="btnExportCSV">Del til E‑komplet (CSV)</button>
+      <button id="btnExportAll">Eksportér PDF + CSV</button>
+    </div>
+    <div id="total" class="total">Total: 0.00 kr</div>
+    <fieldset class="no-print"><legend>Admin</legend><div class="row"><input id="adminCode" placeholder="Kode"><button onclick="login()">Log ind</button></div></fieldset>
+  </section>
+  <section id="lonSection" class="sektion" style="display:none">
+    <fieldset><legend>Type & beløb</legend><div class="grid-3">
+      <select id="jobType"><option value="montage">Montage</option><option value="demontage">Demontage (50%)</option></select>
+      <input id="montagepris" placeholder="Montagepris (auto)" inputmode="decimal">
+      <input id="demontagepris" placeholder="Demontagepris (auto)" inputmode="decimal">
+    </div></fieldset>
+    <fieldset><legend>Tillæg & km</legend><div class="grid-3">
+      <input id="slaebePct" placeholder="Slæb i %" inputmode="decimal">
+      <input id="antalBoringHuller" placeholder="Huller (antal)" inputmode="numeric">
+      <input id="antalLukHuller" placeholder="Luk af hul (antal)" inputmode="numeric">
+      <input id="antalBoringBeton" placeholder="Boring i beton (antal)" inputmode="numeric">
+      <input id="km" placeholder="Km" inputmode="decimal">
+    </div></fieldset>
+
+<fieldset><legend>Tralleløft</legend>
+  <div class="grid-2">
+    <input id="traelleloeft35" placeholder="Tralleløft 0,35 (antal)" inputmode="numeric">
+    <input id="traelleloeft50" placeholder="Tralleløft 0,50 (antal)" inputmode="numeric">
+  </div>
+</fieldset>
+
+    <fieldset class="no-print"><legend>Medarbejdere</legend><div id="workers"></div><div class="row"><button id="btnAddWorker">+ Tilføj mand</button></div></fieldset>
+    <div class="row no-print"><button id="btnBeregnLon">Beregn løn</button><button id="btnPrint">Print</button></div>
+    <fieldset><legend>Resultat</legend><div id="lonResult"></div></fieldset>
+  </section>
+  <section id="guideSection" class="sektion" style="display:none"><fieldset><legend>Guide</legend><p>1) Tæl materialer. 2) Gå til Løn og indtast timer + tillæg. 3) Beregn og eksportér.</p></fieldset></section>
+</main>
+<div id="guideModal" class="modal"><div class="inner"><h3>Guide</h3><p>Her kommer hjælpetekst.</p><button id="closeGuideModal">Luk</button></div></div>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="main.js"></script>
+<script>if('serviceWorker' in navigator){ navigator.serviceWorker.register('./service-worker.js'); }</script>
+</body></html>
