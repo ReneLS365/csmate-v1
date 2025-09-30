@@ -1,100 +1,73 @@
 <!doctype html>
 <html lang="da">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Scafix v8.1 – Akkordregistrering</title>
-  <link rel="manifest" href="manifest.json" />
-  <link rel="stylesheet" href="style.css" />
-  <link rel="stylesheet" href="print.css" media="print" />
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>akkordseddel</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="print.css" media="print">
 </head>
 <body>
 <header>
-  <h1>Scafix v8.1</h1>
-  <nav class="tabs">
-    <button class="tab-btn active" data-tab="reg">Registrering</button>
-    <button class="tab-btn" data-tab="mat">Materialer</button>
-    <button class="tab-btn" data-tab="calc">Udregning</button>
-  </nav>
+  <div class="bar">
+    <div class="ttl">akkordseddel</div>
+    <nav>
+      <button id="btnOptaelling" class="active">Optælling</button>
+      <button id="btnLon">Løn</button>
+      <button id="btnGuide">Guide</button>
+    </nav>
+  </div>
 </header>
 <main>
-  <!-- REGISTRERING -->
-  <section id="tab-reg" class="tab-panel active">
-    <div class="card">
-      <h2>Projekt</h2>
-      <div class="grid-2">
-        <input id="projId" placeholder="Sagsnummer" />
-        <input id="projNavn" placeholder="Projekt-/opgavenavn" />
-      </div>
-      <div class="grid-2">
-        <input id="projAdresse" placeholder="Adresse" />
-        <input id="projDato" type="date" />
-      </div>
-      <div class="grid-2">
-        <input id="sjak" placeholder="Sjak" />
-        <select id="delopgave">
-          <option value="montage">Montage</option>
-          <option value="demontage">Demontage</option>
-          <option value="service">Service</option>
-        </select>
-      </div>
-    </div>
-    <div class="card">
-      <h2>Montører</h2>
-      <div id="workers"></div>
-      <button id="btnAddWorker" class="secondary">+ Tilføj mand</button>
-    </div>
-  </section>
-
-  <!-- MATERIALER -->
-  <section id="tab-mat" class="tab-panel">
-    <div class="card">
-      <h2>Materialer</h2>
+  <section id="optællingSection" class="sektion">
+    <fieldset>
+      <legend>Sagsinfo</legend>
       <div class="grid-3">
-        <input id="searchMaterialer" placeholder="Søg…" />
-        <select id="systemFilter">
-          <option value="ALL">Alle systemer</option>
-          <option value="BOSTA">BOSTA</option>
-          <option value="HAKI">HAKI</option>
-          <option value="MODEX">MODEX</option>
-        </select>
-        <label class="switch"><input type="checkbox" id="toggleCounter" /> Tæller‑mode (+/−)</label>
+        <input id="sagsnummer" placeholder="Sagsnummer">
+        <input id="sagsnavn" placeholder="Navn/opgave">
+        <input id="sagsadresse" placeholder="Adresse">
       </div>
-      <div id="materialsList" class="materialsList"></div>
+    </fieldset>
+    <fieldset><legend>Systemer</legend><div id="listSelectors" class="row"></div></fieldset>
+    <fieldset><legend>Materialer</legend><div id="optællingContainer" class="materials"></div></fieldset>
+    <div class="row no-print">
+      <label class="btn"><input id="csvUpload" type="file" accept=".csv" style="display:none">Importer CSV</label>
+      <button id="btnExportCSV">Del til E‑komplet (CSV)</button>
+      <button id="btnExportAll">Eksportér PDF + CSV</button>
     </div>
+    <div id="total" class="total">Total: 0.00 kr</div>
+    <fieldset class="no-print"><legend>Admin</legend><div class="row"><input id="adminCode" placeholder="Kode"><button onclick="login()">Log ind</button></div></fieldset>
   </section>
+  <section id="lonSection" class="sektion" style="display:none">
+    <fieldset><legend>Type & beløb</legend><div class="grid-3">
+      <select id="jobType"><option value="montage">Montage</option><option value="demontage">Demontage (50%)</option></select>
+      <input id="montagepris" placeholder="Montagepris (auto)" inputmode="decimal">
+      <input id="demontagepris" placeholder="Demontagepris (auto)" inputmode="decimal">
+    </div></fieldset>
+    <fieldset><legend>Tillæg & km</legend><div class="grid-3">
+      <input id="slaebePct" placeholder="Slæb i %" inputmode="decimal">
+      <input id="antalBoringHuller" placeholder="Huller (antal)" inputmode="numeric">
+      <input id="antalLukHuller" placeholder="Luk af hul (antal)" inputmode="numeric">
+      <input id="antalBoringBeton" placeholder="Boring i beton (antal)" inputmode="numeric">
+      <input id="km" placeholder="Km" inputmode="decimal">
+    </div></fieldset>
 
-  <!-- UDREGNING -->
-  <section id="tab-calc" class="tab-panel">
-    <div class="card">
-      <h2>Job-tilvalg</h2>
-      <div class="grid-3">
-        <input id="km" type="number" step="1" min="0" placeholder="Kørte km" value="0" />
-        <input id="kmSats" type="number" step="0.25" min="0" placeholder="Km-sats (kr/km)" value="3" />
-        <input id="timeSats" type="number" step="1" min="0" placeholder="Timefaktor (kr/t)" value="300" />
-      </div>
-      <textarea id="notat" placeholder="Notat (vises på PDF)"></textarea>
-    </div>
-    <div class="card actions">
-      <button id="btnBeregn" class="primary">Beregn og vis review</button>
-      <button id="btnExportCSV" class="secondary">Eksportér én samlet CSV</button>
-      <button id="btnExportPDF" class="primary">Generér PDF‑rapport</button>
-    </div>
-    <div class="card">
-      <h2>Review</h2>
-      <div id="review">Udfyld data og tryk “Beregn”.</div>
-    </div>
+<fieldset><legend>Tralleløft</legend>
+  <div class="grid-2">
+    <input id="traelleloeft35" placeholder="Tralleløft 0,35 (antal)" inputmode="numeric">
+    <input id="traelleloeft50" placeholder="Tralleløft 0,50 (antal)" inputmode="numeric">
+  </div>
+</fieldset>
+
+    <fieldset class="no-print"><legend>Medarbejdere</legend><div id="workers"></div><div class="row"><button id="btnAddWorker">+ Tilføj mand</button></div></fieldset>
+    <div class="row no-print"><button id="btnBeregnLon">Beregn løn</button><button id="btnPrint">Print</button></div>
+    <fieldset><legend>Resultat</legend><div id="lonResult"></div></fieldset>
   </section>
+  <section id="guideSection" class="sektion" style="display:none"><fieldset><legend>Guide</legend><p>1) Tæl materialer. 2) Gå til Løn og indtast timer + tillæg. 3) Beregn og eksportér.</p></fieldset></section>
 </main>
-
-<div id="pdfPreview" style="display:none"></div>
-
-<script src="dataset.js"></script>
+<div id="guideModal" class="modal"><div class="inner"><h3>Guide</h3><p>Her kommer hjælpetekst.</p><button id="closeGuideModal">Luk</button></div></div>
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script src="main.js"></script>
-<script>
-  if ('serviceWorker' in navigator) navigator.serviceWorker.register('./service-worker.js');
-</script>
-</body>
-</html>
+<script>if('serviceWorker' in navigator){ navigator.serviceWorker.register('./service-worker.js'); }</script>
+</body></html>
