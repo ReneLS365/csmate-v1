@@ -1,8 +1,9 @@
 {
-  "name": "Scafix",
+  "name": "Scafix v8",
   "short_name": "Scafix",
   "start_url": "index.html",
   "display": "standalone",
   "background_color": "#1e1f22",
-  "theme_color": "#1e1f22"
+  "theme_color": "#1e1f22",
+  "icons": []
 }

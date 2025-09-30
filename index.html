@@ -3,71 +3,114 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>akkordseddel</title>
+  <title>Scafix v8 – Akkordregistrering</title>
+  <!--
+    Denne version er bygget specifikt til montører der registrerer både materialer
+    og timer i ét enkelt flow. Sideopbygningen er mobilvenlig og alle beregninger
+    sker i browseren. PWA-funktionaliteten leveres via manifest og service
+    worker, så appen kan installeres på telefonen og fungere offline.
+  -->
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="print.css" media="print">
+  <link rel="manifest" href="manifest.json">
 </head>
 <body>
-<header>
-  <div class="bar">
-    <div class="ttl">akkordseddel</div>
-    <nav>
-      <button id="btnOptaelling" class="active">Optælling</button>
-      <button id="btnLon">Løn</button>
-      <button id="btnGuide">Guide</button>
-    </nav>
-  </div>
-</header>
-<main>
-  <section id="optællingSection" class="sektion">
-    <fieldset>
-      <legend>Sagsinfo</legend>
-      <div class="grid-3">
-        <input id="sagsnummer" placeholder="Sagsnummer">
-        <input id="sagsnavn" placeholder="Navn/opgave">
-        <input id="sagsadresse" placeholder="Adresse">
+  <header>
+    <h1>Scafix v8</h1>
+  </header>
+  <main>
+    <!-- Projektoplysninger -->
+    <section class="card">
+      <h2>Projektoplysninger</h2>
+      <div class="grid-2">
+        <input id="projId" placeholder="Sagsnummer" required>
+        <input id="projNavn" placeholder="Projekt-/opgavenavn" required>
       </div>
-    </fieldset>
-    <fieldset><legend>Systemer</legend><div id="listSelectors" class="row"></div></fieldset>
-    <fieldset><legend>Materialer</legend><div id="optællingContainer" class="materials"></div></fieldset>
-    <div class="row no-print">
-      <label class="btn"><input id="csvUpload" type="file" accept=".csv" style="display:none">Importer CSV</label>
-      <button id="btnExportCSV">Del til E‑komplet (CSV)</button>
-      <button id="btnExportAll">Eksportér PDF + CSV</button>
-    </div>
-    <div id="total" class="total">Total: 0.00 kr</div>
-    <fieldset class="no-print"><legend>Admin</legend><div class="row"><input id="adminCode" placeholder="Kode"><button onclick="login()">Log ind</button></div></fieldset>
-  </section>
-  <section id="lonSection" class="sektion" style="display:none">
-    <fieldset><legend>Type & beløb</legend><div class="grid-3">
-      <select id="jobType"><option value="montage">Montage</option><option value="demontage">Demontage (50%)</option></select>
-      <input id="montagepris" placeholder="Montagepris (auto)" inputmode="decimal">
-      <input id="demontagepris" placeholder="Demontagepris (auto)" inputmode="decimal">
-    </div></fieldset>
-    <fieldset><legend>Tillæg & km</legend><div class="grid-3">
-      <input id="slaebePct" placeholder="Slæb i %" inputmode="decimal">
-      <input id="antalBoringHuller" placeholder="Huller (antal)" inputmode="numeric">
-      <input id="antalLukHuller" placeholder="Luk af hul (antal)" inputmode="numeric">
-      <input id="antalBoringBeton" placeholder="Boring i beton (antal)" inputmode="numeric">
-      <input id="km" placeholder="Km" inputmode="decimal">
-    </div></fieldset>
+      <div class="grid-2">
+        <input id="projAdresse" placeholder="Adresse" required>
+        <input id="projDato" type="date">
+      </div>
+      <div class="grid-2">
+        <input id="montorNavn" placeholder="Montørnavn" required>
+        <input id="sjak" placeholder="Sjak (optional)">
+      </div>
+      <div class="grid-2">
+        <select id="delopgave">
+          <option value="montage">Montage</option>
+          <option value="demontage">Demontage</option>
+          <option value="service">Service</option>
+        </select>
+        <input id="notat" placeholder="Notat (valgfri)">
+      </div>
+    </section>
 
-<fieldset><legend>Tralleløft</legend>
-  <div class="grid-2">
-    <input id="traelleloeft35" placeholder="Tralleløft 0,35 (antal)" inputmode="numeric">
-    <input id="traelleloeft50" placeholder="Tralleløft 0,50 (antal)" inputmode="numeric">
-  </div>
-</fieldset>
+    <!-- Materialer -->
+    <section class="card">
+      <h2>Materialer</h2>
+      <input id="searchMaterialer" placeholder="Søg efter materialer…" aria-label="Søg materialer">
+      <div id="materialsList" class="materialsList"></div>
+    </section>
 
-    <fieldset class="no-print"><legend>Medarbejdere</legend><div id="workers"></div><div class="row"><button id="btnAddWorker">+ Tilføj mand</button></div></fieldset>
-    <div class="row no-print"><button id="btnBeregnLon">Beregn løn</button><button id="btnPrint">Print</button></div>
-    <fieldset><legend>Resultat</legend><div id="lonResult"></div></fieldset>
-  </section>
-  <section id="guideSection" class="sektion" style="display:none"><fieldset><legend>Guide</legend><p>1) Tæl materialer. 2) Gå til Løn og indtast timer + tillæg. 3) Beregn og eksportér.</p></fieldset></section>
-</main>
-<div id="guideModal" class="modal"><div class="inner"><h3>Guide</h3><p>Her kommer hjælpetekst.</p><button id="closeGuideModal">Luk</button></div></div>
-<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-<script src="main.js"></script>
-<script>if('serviceWorker' in navigator){ navigator.serviceWorker.register('./service-worker.js'); }</script>
-</body></html>
+    <!-- Timer & Tillæg -->
+    <section class="card">
+      <h2>Timer & tillæg</h2>
+      <!-- Timer -->
+      <div class="grid-3">
+        <input id="timerNormal" type="number" inputmode="decimal" step="0.25" min="0" placeholder="Normale timer" value="0">
+        <input id="timerOT50" type="number" inputmode="decimal" step="0.25" min="0" placeholder="Overtid 50%" value="0">
+        <input id="timerOT100" type="number" inputmode="decimal" step="0.25" min="0" placeholder="Overtid 100%" value="0">
+      </div>
+      <!-- Km og slæbe -->
+      <div class="grid-3">
+        <input id="km" type="number" inputmode="decimal" step="1" min="0" placeholder="Kørte km" value="0">
+        <input id="slaebePct" type="number" inputmode="decimal" step="1" min="0" placeholder="Slæbe %" value="0">
+        <div class="switch">
+          <input id="trapper" type="checkbox">
+          <span>Trapper</span>
+        </div>
+      </div>
+      <!-- Tillæg -->
+      <div class="grid-3">
+        <input id="boringAntal" type="number" inputmode="decimal" step="1" min="0" placeholder="Antal boringer" value="0">
+        <input id="lukHulAntal" type="number" inputmode="decimal" step="1" min="0" placeholder="Luk af hul (antal)" value="0">
+        <input id="tralle35Antal" type="number" inputmode="decimal" step="1" min="0" placeholder="Tralleløft 0,35 (antal)" value="0">
+      </div>
+      <div class="grid-3">
+        <input id="tralle50Antal" type="number" inputmode="decimal" step="1" min="0" placeholder="Tralleløft 0,50 (antal)" value="0">
+        <!-- tomme kolonner for layout -->
+        <div></div>
+        <div></div>
+      </div>
+    </section>
+
+    <!-- Handling -->
+    <section class="card actions">
+      <button id="btnBeregn" class="primary">Beregn totaler</button>
+      <button id="btnGem" class="secondary">Gem offline</button>
+      <button id="btnExport" class="primary">Eksportér (CSV & PDF)</button>
+    </section>
+
+    <!-- Resultater -->
+    <section class="card">
+      <h2>Resultater</h2>
+      <div id="resultater">
+        <p>Indtast data og tryk "Beregn" for at se totaler.</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- Preview/PDF area (hidden, used for PDF generation) -->
+  <div id="pdfPreview" style="display:none"></div>
+
+  <script src="dataset.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="main.js"></script>
+  <script>
+    // Registrer service worker for offline support
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./service-worker.js');
+    }
+  </script>
+</body>
+</html>

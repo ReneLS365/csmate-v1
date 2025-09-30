@@ -2,13 +2,11 @@
   command = ""
   publish = "."
 
-# SPA redirect - route everything to index.html
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
 
-# Service worker should never be aggressively cached
 [[headers]]
   for = "/service-worker.js"
   [headers.values]
@@ -19,7 +17,6 @@
   [headers.values]
   Cache-Control = "max-age=300"
 
-# Cache the rest for 1 week (tune to taste)
 [[headers]]
   for = "/*"
   [headers.values]
