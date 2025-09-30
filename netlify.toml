@@ -11,13 +11,3 @@
   for = "/service-worker.js"
   [headers.values]
   Cache-Control = "no-store"
-
-[[headers]]
-  for = "/manifest.json"
-  [headers.values]
-  Cache-Control = "max-age=300"
-
-[[headers]]
-  for = "/*"
-  [headers.values]
-  Cache-Control = "public, max-age=604800"

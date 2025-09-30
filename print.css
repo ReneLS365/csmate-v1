@@ -1,9 +1,4 @@
-@page {
-  size: A4;
-  margin: 14mm;
-}
-
-body {
-  color: #000;
-  font: 12pt Arial, sans-serif;
-}
+@page{size:A4;margin:14mm}
+body{font:12pt Arial, sans-serif;color:#000}
+.review-table{width:100%;border-collapse:collapse}
+.review-table th,.review-table td{border:1px solid #888;padding:6px}

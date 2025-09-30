@@ -1,230 +1,28 @@
-/*
- * Global styles for Scafix v8
- * Designet er mørkt med simple kort og gitter-layout. Klassenavnene
- * svarer til markup i index.html. Print-styles findes i print.css.
- */
-:root {
-  --bg: #1e1f22;
-  --surface: #26272b;
-  --card: #2d2f34;
-  --text: #f4f4f6;
-  --muted: #c8c9ce;
-  --border: #3b3d45;
-  --accent: #8ea0b5;
-  --primary: #4a8fe7;
-  --secondary: #49536a;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  background: var(--bg);
-  color: var(--text);
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
-  line-height: 1.4;
-}
-
-header {
-  background: var(--surface);
-  padding: 12px;
-  border-bottom: 1px solid var(--border);
-  position: sticky;
-  top: 0;
-  z-index: 10;
-}
-
-header h1 {
-  margin: 0;
-  font-size: 20px;
-  color: var(--accent);
-}
-
-main {
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  max-width: 960px;
-  margin: 0 auto;
-}
-
-/* Cards */
-.card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 12px;
-}
-
-.card h2 {
-  margin-top: 0;
-  font-size: 18px;
-  color: var(--accent);
-}
-
-/* Grid helpers */
-.grid-2 {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-
-.grid-3 {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
-}
-
-/* Inputs */
-input, select, button {
-  appearance: none;
-  background: var(--surface);
-  color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 10px;
-  font-size: 14px;
-  min-height: 40px;
-}
-
-input::placeholder {
-  color: var(--muted);
-}
-
-select {
-  width: 100%;
-}
-
-/* Toggle style for trapper */
-.switch {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  cursor: pointer;
-  user-select: none;
-}
-
-.switch input {
-  width: auto;
-  height: auto;
-}
-
-/* Materials list */
-#materialsList {
-  max-height: 45vh;
-  overflow-y: auto;
-  padding-right: 4px;
-  margin-top: 8px;
-}
-
-.material-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 6px 0;
-  border-bottom: 1px solid var(--border);
-}
-
-.material-row:last-child {
-  border-bottom: none;
-}
-
-.material-row .mat-name {
-  flex: 1 1 auto;
-  font-size: 14px;
-}
-
-.material-row .mat-price {
-  flex: 0 0 70px;
-  font-size: 12px;
-  color: var(--muted);
-  text-align: right;
-}
-
-.qty-control {
-  flex: 0 0 120px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.qty-control button {
-  width: 32px;
-  height: 32px;
-  background: var(--secondary);
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  font-size: 18px;
-  color: var(--text);
-}
-
-.qty-control input {
-  width: 48px;
-  text-align: center;
-}
-
-/* Buttons */
-button.primary {
-  background: var(--primary);
-  color: #fff;
-  border: 1px solid transparent;
-}
-
-button.secondary {
-  background: var(--secondary);
-  color: var(--text);
-  border: 1px solid var(--border);
-}
-
-button:active {
-  transform: scale(0.98);
-}
-
-.actions {
-  display: flex;
-  gap: 8px;
-}
-
-/* Resultat area */
-#resultater {
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-/* Responsive tweaks */
-@media (max-width: 600px) {
-  .grid-2, .grid-3 {
-    grid-template-columns: 1fr;
-  }
-  .actions {
-    flex-direction: column;
-  }
-  #materialsList {
-    max-height: 40vh;
-  }
-}
-
-@media print {
-  body {
-    background: #fff;
-    color: #000;
-  }
-  .card {
-    border: none;
-    background: #fff;
-  }
-  input, select, button {
-    display: none;
-  }
-  #materialsList {
-    max-height: none;
-    overflow: visible;
-  }
-  header, .actions {
-    display: none;
-  }
-}
+:root{--bg:#1e1f22;--surface:#26272b;--card:#2d2f34;--text:#f4f4f6;--muted:#c8c9ce;--border:#3b3d45;--accent:#8ea0b5;--primary:#4a8fe7;--secondary:#49536a}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;line-height:1.45}
+header{background:var(--surface);padding:12px;border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10}
+header h1{margin:0 0 8px 0;color:var(--accent);font-size:20px}
+.tabs{display:flex;gap:8px}
+.tab-btn{background:var(--secondary);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:8px 12px}
+.tab-btn.active{background:var(--primary);color:#fff;border-color:transparent}
+main{padding:12px;max-width:960px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px}
+.card h2{margin:0 0 8px;color:var(--accent);font-size:18px}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+input,select,button,textarea{appearance:none;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:10px;font-size:14px;min-height:40px}
+textarea{min-height:80px}
+button.primary{background:var(--primary);color:#fff;border:1px solid transparent}
+button.secondary{background:var(--secondary)}
+.materialsList{max-height:50vh;overflow:auto}
+.material-row{display:grid;grid-template-columns:auto 1fr 90px 120px;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)}
+.qty{display:flex;gap:4px;align-items:center}
+.qty input{width:60px;text-align:center}
+.switch{display:flex;align-items:center;gap:6px}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+#workers .worker{border:1px dashed var(--border);border-radius:8px;padding:8px;margin:8px 0}
+@media(max-width:700px){.grid-2,.grid-3{grid-template-columns:1fr}.materialsList{max-height:42vh}.actions{flex-direction:column}}
+@media print{body{background:#fff;color:#000}.card{background:#fff;border:none}header,.tabs,.actions,button,input,select,textarea{display:none}main{padding:0}}

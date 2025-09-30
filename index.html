@@ -1,116 +1,100 @@
 <!doctype html>
 <html lang="da">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Scafix v8 – Akkordregistrering</title>
-  <!--
-    Denne version er bygget specifikt til montører der registrerer både materialer
-    og timer i ét enkelt flow. Sideopbygningen er mobilvenlig og alle beregninger
-    sker i browseren. PWA-funktionaliteten leveres via manifest og service
-    worker, så appen kan installeres på telefonen og fungere offline.
-  -->
-  <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="print.css" media="print">
-  <link rel="manifest" href="manifest.json">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Scafix v8.1 – Akkordregistrering</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="print.css" media="print" />
 </head>
 <body>
-  <header>
-    <h1>Scafix v8</h1>
-  </header>
-  <main>
-    <!-- Projektoplysninger -->
-    <section class="card">
-      <h2>Projektoplysninger</h2>
+<header>
+  <h1>Scafix v8.1</h1>
+  <nav class="tabs">
+    <button class="tab-btn active" data-tab="reg">Registrering</button>
+    <button class="tab-btn" data-tab="mat">Materialer</button>
+    <button class="tab-btn" data-tab="calc">Udregning</button>
+  </nav>
+</header>
+<main>
+  <!-- REGISTRERING -->
+  <section id="tab-reg" class="tab-panel active">
+    <div class="card">
+      <h2>Projekt</h2>
       <div class="grid-2">
-        <input id="projId" placeholder="Sagsnummer" required>
-        <input id="projNavn" placeholder="Projekt-/opgavenavn" required>
+        <input id="projId" placeholder="Sagsnummer" />
+        <input id="projNavn" placeholder="Projekt-/opgavenavn" />
       </div>
       <div class="grid-2">
-        <input id="projAdresse" placeholder="Adresse" required>
-        <input id="projDato" type="date">
+        <input id="projAdresse" placeholder="Adresse" />
+        <input id="projDato" type="date" />
       </div>
       <div class="grid-2">
-        <input id="montorNavn" placeholder="Montørnavn" required>
-        <input id="sjak" placeholder="Sjak (optional)">
-      </div>
-      <div class="grid-2">
+        <input id="sjak" placeholder="Sjak" />
         <select id="delopgave">
           <option value="montage">Montage</option>
           <option value="demontage">Demontage</option>
           <option value="service">Service</option>
         </select>
-        <input id="notat" placeholder="Notat (valgfri)">
       </div>
-    </section>
+    </div>
+    <div class="card">
+      <h2>Montører</h2>
+      <div id="workers"></div>
+      <button id="btnAddWorker" class="secondary">+ Tilføj mand</button>
+    </div>
+  </section>
 
-    <!-- Materialer -->
-    <section class="card">
+  <!-- MATERIALER -->
+  <section id="tab-mat" class="tab-panel">
+    <div class="card">
       <h2>Materialer</h2>
-      <input id="searchMaterialer" placeholder="Søg efter materialer…" aria-label="Søg materialer">
+      <div class="grid-3">
+        <input id="searchMaterialer" placeholder="Søg…" />
+        <select id="systemFilter">
+          <option value="ALL">Alle systemer</option>
+          <option value="BOSTA">BOSTA</option>
+          <option value="HAKI">HAKI</option>
+          <option value="MODEX">MODEX</option>
+        </select>
+        <label class="switch"><input type="checkbox" id="toggleCounter" /> Tæller‑mode (+/−)</label>
+      </div>
       <div id="materialsList" class="materialsList"></div>
-    </section>
+    </div>
+  </section>
 
-    <!-- Timer & Tillæg -->
-    <section class="card">
-      <h2>Timer & tillæg</h2>
-      <!-- Timer -->
+  <!-- UDREGNING -->
+  <section id="tab-calc" class="tab-panel">
+    <div class="card">
+      <h2>Job-tilvalg</h2>
       <div class="grid-3">
-        <input id="timerNormal" type="number" inputmode="decimal" step="0.25" min="0" placeholder="Normale timer" value="0">
-        <input id="timerOT50" type="number" inputmode="decimal" step="0.25" min="0" placeholder="Overtid 50%" value="0">
-        <input id="timerOT100" type="number" inputmode="decimal" step="0.25" min="0" placeholder="Overtid 100%" value="0">
+        <input id="km" type="number" step="1" min="0" placeholder="Kørte km" value="0" />
+        <input id="kmSats" type="number" step="0.25" min="0" placeholder="Km-sats (kr/km)" value="3" />
+        <input id="timeSats" type="number" step="1" min="0" placeholder="Timefaktor (kr/t)" value="300" />
       </div>
-      <!-- Km og slæbe -->
-      <div class="grid-3">
-        <input id="km" type="number" inputmode="decimal" step="1" min="0" placeholder="Kørte km" value="0">
-        <input id="slaebePct" type="number" inputmode="decimal" step="1" min="0" placeholder="Slæbe %" value="0">
-        <div class="switch">
-          <input id="trapper" type="checkbox">
-          <span>Trapper</span>
-        </div>
-      </div>
-      <!-- Tillæg -->
-      <div class="grid-3">
-        <input id="boringAntal" type="number" inputmode="decimal" step="1" min="0" placeholder="Antal boringer" value="0">
-        <input id="lukHulAntal" type="number" inputmode="decimal" step="1" min="0" placeholder="Luk af hul (antal)" value="0">
-        <input id="tralle35Antal" type="number" inputmode="decimal" step="1" min="0" placeholder="Tralleløft 0,35 (antal)" value="0">
-      </div>
-      <div class="grid-3">
-        <input id="tralle50Antal" type="number" inputmode="decimal" step="1" min="0" placeholder="Tralleløft 0,50 (antal)" value="0">
-        <!-- tomme kolonner for layout -->
-        <div></div>
-        <div></div>
-      </div>
-    </section>
+      <textarea id="notat" placeholder="Notat (vises på PDF)"></textarea>
+    </div>
+    <div class="card actions">
+      <button id="btnBeregn" class="primary">Beregn og vis review</button>
+      <button id="btnExportCSV" class="secondary">Eksportér én samlet CSV</button>
+      <button id="btnExportPDF" class="primary">Generér PDF‑rapport</button>
+    </div>
+    <div class="card">
+      <h2>Review</h2>
+      <div id="review">Udfyld data og tryk “Beregn”.</div>
+    </div>
+  </section>
+</main>
 
-    <!-- Handling -->
-    <section class="card actions">
-      <button id="btnBeregn" class="primary">Beregn totaler</button>
-      <button id="btnGem" class="secondary">Gem offline</button>
-      <button id="btnExport" class="primary">Eksportér (CSV & PDF)</button>
-    </section>
+<div id="pdfPreview" style="display:none"></div>
 
-    <!-- Resultater -->
-    <section class="card">
-      <h2>Resultater</h2>
-      <div id="resultater">
-        <p>Indtast data og tryk "Beregn" for at se totaler.</p>
-      </div>
-    </section>
-  </main>
-
-  <!-- Preview/PDF area (hidden, used for PDF generation) -->
-  <div id="pdfPreview" style="display:none"></div>
-
-  <script src="dataset.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-  <script src="main.js"></script>
-  <script>
-    // Registrer service worker for offline support
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./service-worker.js');
-    }
-  </script>
+<script src="dataset.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script src="main.js"></script>
+<script>
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('./service-worker.js');
+</script>
 </body>
 </html>
