@@ -1,12 +1,25 @@
 // --- Utility Functions ---
+function resolveSectionId(id) {
+  if (!id) return '';
+  return id.endsWith('Section') ? id : `${id}Section`;
+}
+
 function vis(id) {
-  const sections = document.querySelectorAll('.sektion');
-  sections.forEach(section => {
-    section.style.display = section.id === `${id}Section` ? 'block' : 'none';
+  const targetId = resolveSectionId(id);
+
+  document.querySelectorAll('.sektion').forEach(section => {
+    const isActive = section.id === targetId;
+    section.toggleAttribute('hidden', !isActive);
+    if (isActive) {
+      section.style.removeProperty('display');
+    } else {
+      section.style.display = 'none';
+    }
   });
 
   document.querySelectorAll('header nav button[data-section]').forEach(btn => {
-    btn.classList.toggle('active', btn.dataset.section === id);
+    const buttonTarget = resolveSectionId(btn.dataset.section);
+    btn.classList.toggle('active', buttonTarget === targetId);
   });
 }
 
@@ -337,7 +350,7 @@ function setupListSelectors() {
 
 // --- Rendering Functions ---
 function render() {
-  const container = document.getElementById('optællingContainer');
+  const container = document.getElementById('optaellingContainer');
   if (!container) return;
   container.innerHTML = '';
 
@@ -1480,11 +1493,11 @@ const numericKeyboard = (() => {
 
 // --- Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
-  vis('sagsinfo');
+  vis('sagsinfoSection');
 
-  document.getElementById('btnSagsinfo')?.addEventListener('click', () => vis('sagsinfo'));
-  document.getElementById('btnOptaelling')?.addEventListener('click', () => vis('optælling'));
-  document.getElementById('btnLon')?.addEventListener('click', () => vis('lon'));
+  document.querySelectorAll('header nav button[data-section]').forEach(button => {
+    button.addEventListener('click', () => vis(button.dataset.section));
+  });
 
   setupListSelectors();
   render();
