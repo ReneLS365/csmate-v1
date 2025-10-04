@@ -1,0 +1,192 @@
+:root {
+  color-scheme: light dark;
+  font-family: 'Inter', system-ui, sans-serif;
+  background: #0f172a;
+  color: #e2e8f0;
+}
+
+body {
+  margin: 0;
+  background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+  min-height: 100vh;
+}
+
+.csmate-app {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 1rem;
+  display: grid;
+  gap: 1.5rem;
+}
+
+.csmate-card {
+  background: rgba(15, 23, 42, 0.8);
+  border-radius: 20px;
+  padding: 1.5rem;
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.45);
+  backdrop-filter: blur(18px);
+}
+
+.csmate-card h2 {
+  margin-top: 0;
+}
+
+label span {
+  display: block;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(148, 163, 184, 0.9);
+  margin-bottom: 0.35rem;
+}
+
+input, textarea, select {
+  width: 100%;
+  padding: 0.75rem;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: rgba(15, 23, 42, 0.6);
+  color: inherit;
+  font: inherit;
+}
+
+textarea {
+  min-height: 110px;
+}
+
+.csmate-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.csmate-grid.cols-2 {
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.csmate-grid.cols-3 {
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.csmate-grid .full {
+  grid-column: 1 / -1;
+}
+
+button {
+  font: inherit;
+  border: none;
+  border-radius: 999px;
+  padding: 0.85rem 1.5rem;
+  background: #22d3ee;
+  color: #0f172a;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button[disabled] {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.csmate-time-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.csmate-time-table th,
+.csmate-time-table td {
+  padding: 0.5rem;
+  text-align: left;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+.csmate-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.csmate-ek-preview {
+  max-height: 220px;
+  overflow: auto;
+}
+
+.csmate-ek-preview table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.csmate-ek-preview th,
+.csmate-ek-preview td {
+  padding: 0.4rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.csmate-ek-validation .errors {
+  background: rgba(239, 68, 68, 0.15);
+  border-radius: 12px;
+  padding: 0.75rem;
+}
+
+.csmate-ek-validation .ok {
+  color: #4ade80;
+}
+
+.csmate-ek-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.csmate-ek-actions button {
+  background: rgba(148, 163, 184, 0.2);
+  color: #f8fafc;
+}
+
+.csmate-ek-map-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.csmate-ek-import-status {
+  margin-top: 0.75rem;
+  min-height: 1.25rem;
+}
+
+.csmate-diagnostics {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  background: rgba(15, 23, 42, 0.9);
+  padding: 1rem;
+  border-radius: 16px;
+  max-width: 260px;
+  max-height: 320px;
+  overflow: auto;
+  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.4);
+}
+
+.csmate-diagnostics h2 {
+  margin-top: 0;
+  font-size: 1rem;
+}
+
+.csmate-diagnostics ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+@media (max-width: 480px) {
+  .csmate-card {
+    padding: 1rem;
+  }
+
+  .csmate-actions {
+    flex-direction: column;
+  }
+}
