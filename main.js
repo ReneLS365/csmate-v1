@@ -276,6 +276,27 @@ function getAllData() {
   return combined;
 }
 
+let __materialeBaseSum = 0;
+
+function calcMaterialesum(baseSum) {
+  let base = Number(baseSum);
+  if (!isFinite(base)) {
+    base = __materialeBaseSum || 0;
+  } else {
+    __materialeBaseSum = base;
+  }
+
+  const traelleloeftSum = window.__traelleloeft?.sum || 0;
+  const totals = {
+    base,
+    traelleloeft: traelleloeftSum,
+    total: base + traelleloeftSum,
+  };
+
+  window.__materialeTotals = totals;
+  return totals;
+}
+
 // --- UI for List Selection ---
 function setupListSelectors() {
   const container = document.getElementById('listSelectors');
@@ -432,7 +453,13 @@ function beregnLon() {
     });
   }
 
-  const samletAkkordSum = materialeTotal + ekstraarbejde + kilometerPris + slaebebelob;
+  const materialeTotals = calcMaterialesum(materialeTotal);
+  const materialeTotalMedTraelle = materialeTotals.total;
+  if (materialeTotals.traelleloeft > 0) {
+    materialelinjer += `<div style="margin-top:6px;font-weight:600;">Tralleløft i alt: ${materialeTotals.traelleloeft.toFixed(2)} kr</div>`;
+  }
+
+  const samletAkkordSum = materialeTotalMedTraelle + ekstraarbejde + kilometerPris + slaebebelob;
 
   const workers = document.querySelectorAll(".worker-row");
   let samletTimer = 0;
@@ -487,15 +514,27 @@ function beregnLon() {
     ${arbejderLinjer}<br>
     <h3>Oversigt:</h3>
     <div><strong>Slæbebeløb:</strong> ${slaebebelob.toFixed(2)} kr</div>
-    <div><strong>Materialer:</strong> ${materialeTotal.toFixed(2)} kr</div>
+    <div><strong>Materialer (inkl. tralleløft):</strong> ${materialeTotalMedTraelle.toFixed(2)} kr</div>
     <div><strong>Ekstraarbejde:</strong> ${ekstraarbejde.toFixed(2)} kr</div>
     <div><strong>Kilometer:</strong> ${kilometerPris.toFixed(2)} kr</div>
     <div><strong>Samlet akkordsum:</strong> ${samletAkkordSum.toFixed(2)} kr</div>
     <div><strong>Timer:</strong> ${samletTimer.toFixed(1)} t</div>
     <div><strong>Timepris (uden tillæg):</strong> ${akkordTimeLøn.toFixed(2)} kr/t</div>
-    <div><strong>Samlet projektsum:</strong> ${samletUdbetalt.toFixed(2)} kr</div>
+    <div><strong>Projektsum:</strong> ${samletUdbetalt.toFixed(2)} kr</div>
 
   `;
+
+  window.__beregnLonCache = {
+    materialeTotals,
+    ekstraarbejde,
+    kilometerPris,
+    slaebebelob,
+    samletAkkordSum,
+    samletTimer,
+    akkordTimeLøn,
+    samletUdbetalt,
+    jobType,
+  };
 
   return sagsnummer;
 }
@@ -503,6 +542,10 @@ function beregnLon() {
 
 // --- CSV-eksport ---
 function downloadCSV(sagsnummer) {
+  if (!window.__beregnLonCache) {
+    beregnLon();
+  }
+
   const items = getAllData();
   let csv = 'id;name;quantity;price\n';
   items.forEach(item => {
@@ -511,6 +554,10 @@ function downloadCSV(sagsnummer) {
       csv += `${item.id};${safeName};${item.quantity};${item.price}\n`;
     }
   });
+
+  const traelle = window.__traelleloeft || { n35: 0, n50: 0, RATE35: 0, RATE50: 0, sum: 0 };
+  if (traelle.n35 > 0) csv += `TL35;"Tralleløft 0,35 m";${traelle.n35};${traelle.RATE35}\n`;
+  if (traelle.n50 > 0) csv += `TL50;"Tralleløft 0,50 m";${traelle.n50};${traelle.RATE50}\n`;
 
   const km = parseFloat(document.getElementById("km")?.value) || 0;
   const boringHuller = parseInt(document.getElementById("antalBoringHuller")?.value) || 0;
@@ -521,6 +568,14 @@ function downloadCSV(sagsnummer) {
   if (boringHuller > 0) ekstraTekst += `Boring af huller: ${boringHuller} | `;
   if (lukHuller > 0) ekstraTekst += `Luk af huller: ${lukHuller} | `;
   if (boringBeton > 0) ekstraTekst += `Boring i beton: ${boringBeton} | `;
+
+  const cache = window.__beregnLonCache || {};
+  const materialeTotals = cache.materialeTotals || calcMaterialesum(cache.materialeTotals?.base);
+  const materialSum = materialeTotals?.total ?? 0;
+  const projectSum = cache.samletUdbetalt ?? 0;
+
+  csv += `summary;materialSum;${materialSum.toFixed(2)};kr\n`;
+  csv += `summary;projectSum;${projectSum.toFixed(2)};kr\n`;
 
   const totalTekst = document.getElementById("lonResult")?.innerText.replace(/\r?\n/g, '|') || "";
   const lonText = `Kilometer: ${km} km | ${ekstraTekst}${totalTekst}`.trim();
@@ -537,12 +592,17 @@ function downloadCSV(sagsnummer) {
   document.body.removeChild(link);
 }
 
+window.__csvSupportsTraelle = true;
+
 // --- PDF-eksport (html2canvas + jsPDF) ---
 async function exportPDF(sagsnummer) {
   const resultDiv = document.getElementById("lonResult");
   if (!resultDiv) return;
 
   try {
+    if (!window.__beregnLonCache) {
+      beregnLon();
+    }
     const canvas = await html2canvas(resultDiv, { scale: 2 });
     const imgData = canvas.toDataURL("image/png");
     const { jsPDF } = window.jspdf;
@@ -745,22 +805,22 @@ document.addEventListener('DOMContentLoaded', () => {
   try {
     const _origBeregn = window.beregnLon || beregnLon;
     window.beregnLon = function(){
-      const ret = _origBeregn();
+      const vals = getVals();
+      window.__traelleloeft = { n35: vals.n35, n50: vals.n50, RATE35, RATE50, sum: vals.sum };
+
+      const ret = _origBeregn.apply(this, arguments);
       const el = document.getElementById('lonResult');
       if (!el) return ret;
 
-      const { n35, n50, sum } = getVals();
-      // store globally for exports
-      window.__traelleloeft = { n35, n50, RATE35, RATE50, sum };
+      el.querySelector('.traelleloeft-card')?.remove();
 
-      // Only render section if any quantity > 0
-      if ((n35 + n50) > 0) {
+      if ((vals.n35 + vals.n50) > 0) {
         const html = `
-          <div class="card">
+          <div class="card traelleloeft-card">
             <h4>Tralleløft</h4>
-            <div>0,35 m: ${n35} × ${RATE35.toFixed(2)} kr = ${(n35*RATE35).toFixed(2)} kr</div>
-            <div>0,50 m: ${n50} × ${RATE50.toFixed(2)} kr = ${(n50*RATE50).toFixed(2)} kr</div>
-            <div style="margin-top:6px;font-weight:600;">Tralleløft i alt: ${sum.toFixed(2)} kr</div>
+            <div>0,35 m: ${vals.n35} × ${RATE35.toFixed(2)} kr = ${(vals.n35*RATE35).toFixed(2)} kr</div>
+            <div>0,50 m: ${vals.n50} × ${RATE50.toFixed(2)} kr = ${(vals.n50*RATE50).toFixed(2)} kr</div>
+            <div style="margin-top:6px;font-weight:600;">Tralleløft i alt: ${vals.sum.toFixed(2)} kr</div>
           </div>`;
         el.insertAdjacentHTML('beforeend', html);
       }
@@ -770,34 +830,41 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Replace/override downloadCSV to include tralleløft
   try {
-    window.downloadCSV = function(sagsnummer){
-      // Build CSV fresh from data
-      const items = (typeof getAllData === 'function') ? getAllData() : [];
-      let csv = 'id;name;quantity;price\n';
-      items.forEach(item => {
-        if (item.quantity > 0) {
-          const safeName = '"' + String(item.name).replace(/"/g, '""') + '"';
-          csv += `${item.id};${safeName};${item.quantity};${item.price}\n`;
-        }
-      });
+    if (!window.__csvSupportsTraelle) {
+      window.downloadCSV = function(sagsnummer){
+        const items = (typeof getAllData === 'function') ? getAllData() : [];
+        let csv = 'id;name;quantity;price\n';
+        items.forEach(item => {
+          if (item.quantity > 0) {
+            const safeName = '"' + String(item.name).replace(/"/g, '""') + '"';
+            csv += `${item.id};${safeName};${item.quantity};${item.price}\n`;
+          }
+        });
 
-      const t = window.__traelleloeft || { n35:0, n50:0, RATE35:RATE35, RATE50:RATE50, sum:0 };
-      if (t.n35 > 0) csv += `TL35;"Tralleløft 0,35 m";${t.n35};${t.RATE35}\n`;
-      if (t.n50 > 0) csv += `TL50;"Tralleløft 0,50 m";${t.n50};${t.RATE50}\n`;
+        const t = window.__traelleloeft || { n35:0, n50:0, RATE35:RATE35, RATE50:RATE50, sum:0 };
+        if (t.n35 > 0) csv += `TL35;"Tralleløft 0,35 m";${t.n35};${t.RATE35}\n`;
+        if (t.n50 > 0) csv += `TL50;"Tralleløft 0,50 m";${t.n50};${t.RATE50}\n`;
 
-      // Append a summary/info section (lonResult text)
-      const lonText = (document.getElementById('lonResult')?.innerText || '').replace(/\s+/g,' ').trim();
-      csv += `info;"Beregningsresultater";"${lonText}";0\n`;
+        const cache = window.__beregnLonCache || {};
+        const totals = cache.materialeTotals || calcMaterialesum(cache.materialeTotals?.base);
+        const materialSum = totals?.total ?? 0;
+        const projectSum = cache.samletUdbetalt ?? 0;
+        csv += `summary;materialSum;${materialSum.toFixed(2)};kr\n`;
+        csv += `summary;projectSum;${projectSum.toFixed(2)};kr\n`;
 
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${sagsnummer || (document.getElementById('sagsnummer')?.value.trim() || 'uspecified')}_beregning_optælling.csv`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    };
+        const lonText = (document.getElementById('lonResult')?.innerText || '').replace(/\s+/g,' ').trim();
+        csv += `info;"Beregningsresultater";"${lonText}";0\n`;
+
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${sagsnummer || (document.getElementById('sagsnummer')?.value.trim() || 'uspecified')}_beregning_optælling.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      };
+    }
   } catch(e){ console.warn('Tralleløft: kunne ikke override downloadCSV', e); }
 })();
 
@@ -813,47 +880,36 @@ document.addEventListener('DOMContentLoaded', () => {
   function updateTotals(){
     const lr = document.getElementById('lonResult');
     if (!lr) return;
-    const { sum } = window.__traelleloeft || { sum:0 };
 
-    if (sum <= 0) return;
+    const cache = window.__beregnLonCache;
+    if (!cache) return;
 
+    const totals = cache.materialeTotals || calcMaterialesum(cache.materialeTotals?.base);
     const divs = Array.from(lr.querySelectorAll('div'));
+
+    const materialEl = divs.find(d => d.textContent.trim().startsWith('Materialer (inkl. tralleløft):'));
+    if (materialEl && totals){
+      materialEl.innerHTML = `<strong>Materialer (inkl. tralleløft):</strong> ${totals.total.toFixed(2)} kr`;
+    }
+
     const akkEl = divs.find(d => d.textContent.trim().startsWith('Samlet akkordsum:'));
-    const tprEl = divs.find(d => d.textContent.trim().startsWith('Timepris (uden tillæg):'));
-    const projEl = divs.find(d => d.textContent.trim().startsWith('Samlet projektsum:'));
-
-    // Update akkordsum
-    if (akkEl){
-      const num = (akkEl.textContent.match(/([0-9]+(?:\.[0-9]{2}))/) || [,'0'])[1];
-      const oldVal = parseFloat(num);
-      if (!isNaN(oldVal)){
-        const newVal = oldVal + sum;
-        akkEl.innerHTML = `<strong>Samlet akkordsum:</strong> ${newVal.toFixed(2)} kr`;
-      }
+    if (akkEl && typeof cache.samletAkkordSum === 'number'){
+      akkEl.innerHTML = `<strong>Samlet akkordsum:</strong> ${cache.samletAkkordSum.toFixed(2)} kr`;
     }
 
-    // Update timepris (uden tillæg) using samletTimer from text
-    // Extract 'Timer:' line
     const timerEl = divs.find(d => d.textContent.trim().startsWith('Timer:'));
-    if (tprEl && timerEl){
-      const numTimer = (timerEl.textContent.match(/([0-9]+(?:\.[0-9])?)/) || [,'0'])[1];
-      const hours = parseFloat(numTimer);
-      const akkEl2 = divs.find(d => d.textContent.trim().startsWith('Samlet akkordsum:'));
-      if (!isNaN(hours) && hours>0 && akkEl2){
-        const numAkk = (akkEl2.textContent.match(/([0-9]+(?:\.[0-9]{2}))/) || [,'0'])[1];
-        const akk = parseFloat(numAkk);
-        tprEl.innerHTML = `<strong>Timepris (uden tillæg):</strong> ${(akk / hours).toFixed(2)} kr/t`;
-      }
+    if (timerEl && typeof cache.samletTimer === 'number'){
+      timerEl.innerHTML = `<strong>Timer:</strong> ${cache.samletTimer.toFixed(1)} t`;
     }
 
-    // Update projektsum by adding tralleløft sum (approx)
-    if (projEl){
-      const num = (projEl.textContent.match(/([0-9]+(?:\.[0-9]{2}))/) || [,'0'])[1];
-      const oldVal = parseFloat(num);
-      if (!isNaN(oldVal)){
-        const newVal = oldVal + sum;
-        projEl.innerHTML = `<strong>Samlet projektsum:</strong> ${newVal.toFixed(2)} kr`;
-      }
+    const tprEl = divs.find(d => d.textContent.trim().startsWith('Timepris (uden tillæg):'));
+    if (tprEl && typeof cache.akkordTimeLøn === 'number'){
+      tprEl.innerHTML = `<strong>Timepris (uden tillæg):</strong> ${cache.akkordTimeLøn.toFixed(2)} kr/t`;
+    }
+
+    const projEl = divs.find(d => d.textContent.trim().startsWith('Projektsum:'));
+    if (projEl && typeof cache.samletUdbetalt === 'number'){
+      projEl.innerHTML = `<strong>Projektsum:</strong> ${cache.samletUdbetalt.toFixed(2)} kr`;
     }
   }
 
