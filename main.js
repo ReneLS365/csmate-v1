@@ -1338,6 +1338,14 @@ const numericKeyboard = (() => {
           <button type="button" data-key=".">,</button>
           <button type="button" data-action="backspace" aria-label="Slet">⌫</button>
         </div>
+        <div class="keypad-quick" role="group" aria-label="Hurtig justering">
+          <button type="button" data-delta="-10">-10</button>
+          <button type="button" data-delta="-5">-5</button>
+          <button type="button" data-delta="-1">-1</button>
+          <button type="button" data-delta="1">+1</button>
+          <button type="button" data-delta="5">+5</button>
+          <button type="button" data-delta="10">+10</button>
+        </div>
         <div class="keypad-actions">
           <button type="button" data-action="clear">C</button>
           <button type="button" data-action="ok">OK</button>
@@ -1361,6 +1369,10 @@ const numericKeyboard = (() => {
     overlay.querySelector('[data-action="backspace"]').addEventListener('click', backspace);
     overlay.querySelector('[data-action="clear"]').addEventListener('click', clearBuffer);
     overlay.querySelector('[data-action="ok"]').addEventListener('click', applyValue);
+    overlay.querySelectorAll('[data-delta]').forEach(btn => {
+      const delta = Number(btn.dataset.delta);
+      btn.addEventListener('click', () => adjustValue(delta));
+    });
 
     document.addEventListener('focusin', handleFocusIn, { capture: true });
     document.addEventListener('keydown', event => {
@@ -1393,10 +1405,25 @@ const numericKeyboard = (() => {
     }
   }
 
+  function isZeroLike(value) {
+    if (value === null || value === undefined) return false;
+    const raw = String(value).trim();
+    if (!raw) return false;
+    if (/[1-9]/.test(raw)) return false;
+    const normalized = parseFloat(raw.replace(',', '.'));
+    return Number.isFinite(normalized) && normalized === 0;
+  }
+
   function show(input) {
     ensureOverlay();
     currentInput = input;
-    buffer = input.value ? String(input.value).replace(',', '.') : '';
+    const rawValue = input.value ?? '';
+    if (isZeroLike(rawValue)) {
+      buffer = '';
+      input.value = '';
+    } else {
+      buffer = rawValue ? String(rawValue).replace(',', '.') : '';
+    }
     previousFocus = document.activeElement;
     updateDisplay();
     overlay.classList.add('show');
@@ -1435,7 +1462,11 @@ const numericKeyboard = (() => {
       if (!buffer) buffer = '0';
       buffer += '.';
     } else {
-      buffer += key;
+      if (buffer === '0') {
+        buffer = key;
+      } else {
+        buffer += key;
+      }
     }
     updateDisplay();
   }
@@ -1448,6 +1479,22 @@ const numericKeyboard = (() => {
 
   function clearBuffer() {
     buffer = '';
+    updateDisplay();
+  }
+
+  function normalizeNumber(value) {
+    if (!Number.isFinite(value)) return '';
+    const rounded = Math.round(value * 100000) / 100000;
+    return String(rounded);
+  }
+
+  function adjustValue(delta) {
+    if (!currentInput || !Number.isFinite(delta)) return;
+    const baseBuffer = buffer !== '' ? parseFloat(buffer) : parseFloat((currentInput.value || '').replace(',', '.'));
+    const base = Number.isFinite(baseBuffer) ? baseBuffer : 0;
+    let next = base + delta;
+    if (next < 0) next = 0;
+    buffer = normalizeNumber(next);
     updateDisplay();
   }
 
