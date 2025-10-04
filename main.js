@@ -796,11 +796,8 @@ function applyCSVRows(rows) {
     }
   });
 
-  if (window.timeRowsModule) {
-    const applyImported = window.timeRowsModule._applyImportedRows || window.timeRowsModule.mergeRowsWithSag;
-    if (typeof applyImported === 'function') {
-      applyImported({ TIME: importedTimeRows });
-    }
+  if (window.timeRowsModule && typeof window.timeRowsModule.mergeRowsWithSag === 'function') {
+    window.timeRowsModule.mergeRowsWithSag({ TIME: importedTimeRows });
   }
 
   setSagsinfoField('sagsnummer', info.sagsnummer || '');
