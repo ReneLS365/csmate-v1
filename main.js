@@ -749,12 +749,18 @@ function applyCSVRows(rows) {
   const montorValues = [];
   const materials = [];
   const labor = [];
+  const importedTimeRows = [];
 
   rows.forEach(row => {
     const normalized = {};
     Object.entries(row).forEach(([key, value]) => {
       normalized[normalizeKey(key)] = (value ?? '').toString().trim();
     });
+
+    const sectionVal = (row['Sektion'] ?? row['sektion'] ?? row['section'] ?? normalized['sektion'] ?? normalized['section'] ?? '').toString().trim();
+    if (sectionVal.toLowerCase() === 'time') {
+      importedTimeRows.push(row);
+    }
 
     const sagsnummerVal = normalized['sagsnummer'] || normalized['sagsnr'] || normalized['sag'] || normalized['caseid'];
     if (sagsnummerVal) info.sagsnummer = sagsnummerVal;
@@ -789,6 +795,13 @@ function applyCSVRows(rows) {
       labor.push({ type: laborType || '', hours: toNumber(laborHours), rate: toNumber(laborRate) });
     }
   });
+
+  if (window.timeRowsModule) {
+    const applyImported = window.timeRowsModule._applyImportedRows || window.timeRowsModule.mergeRowsWithSag;
+    if (typeof applyImported === 'function') {
+      applyImported({ TIME: importedTimeRows });
+    }
+  }
 
   setSagsinfoField('sagsnummer', info.sagsnummer || '');
   setSagsinfoField('sagsnavn', info.navn || '');
@@ -1551,6 +1564,10 @@ document.addEventListener('DOMContentLoaded', () => {
   addWorker();
 
   setupCSVImport();
+
+  if (window.timeRowsModule?.setTimeRowsContainer) {
+    window.timeRowsModule.setTimeRowsContainer(document.getElementById('timeRowsTable'));
+  }
 
   document.getElementById('btnBeregnLon')?.addEventListener('click', () => beregnLon());
   document.getElementById('btnPrint')?.addEventListener('click', () => {
