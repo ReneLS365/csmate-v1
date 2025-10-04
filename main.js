@@ -1018,6 +1018,21 @@ function beregnLon() {
   laborEntries = beregnedeArbejdere;
   updateTotals();
 
+  if (typeof window !== 'undefined') {
+    const traelle35 = parseFloat(document.getElementById('traelleloeft35')?.value) || 0;
+    const traelle50 = parseFloat(document.getElementById('traelleloeft50')?.value) || 0;
+    const TRAELLE_RATE35 = 10.44;
+    const TRAELLE_RATE50 = 14.62;
+    const traelleSum = (traelle35 * TRAELLE_RATE35) + (traelle50 * TRAELLE_RATE50);
+    window.__beregnLonCache = {
+      materialSum: lastMaterialSum,
+      laborSum: lastLoensum,
+      projectSum: lastMaterialSum + lastLoensum,
+      traelleSum,
+      timestamp: Date.now(),
+    };
+  }
+
   return sagsnummer;
 }
 
@@ -1029,14 +1044,24 @@ function downloadCSV() {
     return false;
   }
   const info = collectSagsinfo();
+  beregnLon();
+  const cache = typeof window !== 'undefined' ? window.__beregnLonCache : null;
+  const tralleState = typeof window !== 'undefined' ? window.__traelleloeft : null;
   const materials = getAllData().filter(item => {
     const qty = toNumber(item.quantity);
     return qty > 0;
   });
   const labor = Array.isArray(laborEntries) ? laborEntries : [];
-  const materialSum = calcMaterialesum();
-  const laborSum = calcLoensum();
-  const projectSum = materialSum + laborSum;
+  const tralleSum = tralleState && Number.isFinite(tralleState.sum) ? tralleState.sum : 0;
+  const materialSum = cache && Number.isFinite(cache.materialSum)
+    ? cache.materialSum
+    : calcMaterialesum() + tralleSum;
+  const laborSum = cache && Number.isFinite(cache.laborSum)
+    ? cache.laborSum
+    : calcLoensum();
+  const projectSum = cache && Number.isFinite(cache.projectSum)
+    ? cache.projectSum
+    : materialSum + laborSum;
 
   const lines = [];
   lines.push('Sektion;Felt;Værdi;Antal;Pris;Linjesum');
@@ -1118,14 +1143,24 @@ async function exportPDF() {
     return;
   }
   const info = collectSagsinfo();
+  beregnLon();
+  const cache = typeof window !== 'undefined' ? window.__beregnLonCache : null;
+  const tralleState = typeof window !== 'undefined' ? window.__traelleloeft : null;
   const materials = getAllData().filter(item => {
     const qty = toNumber(item.quantity);
     return qty > 0;
   });
   const labor = Array.isArray(laborEntries) ? laborEntries : [];
-  const materialSum = calcMaterialesum();
-  const laborSum = calcLoensum();
-  const projectSum = materialSum + laborSum;
+  const tralleSum = tralleState && Number.isFinite(tralleState.sum) ? tralleState.sum : 0;
+  const materialSum = cache && Number.isFinite(cache.materialSum)
+    ? cache.materialSum
+    : calcMaterialesum() + tralleSum;
+  const laborSum = cache && Number.isFinite(cache.laborSum)
+    ? cache.laborSum
+    : calcLoensum();
+  const projectSum = cache && Number.isFinite(cache.projectSum)
+    ? cache.projectSum
+    : materialSum + laborSum;
 
   const wrapper = document.createElement('div');
   wrapper.className = 'export-preview';
@@ -1538,6 +1573,14 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>`;
         el.insertAdjacentHTML('beforeend', html);
       }
+      if (typeof window !== 'undefined') {
+        const cache = window.__beregnLonCache || {};
+        window.__beregnLonCache = {
+          ...cache,
+          traelleSum: sum,
+          timestamp: Date.now(),
+        };
+      }
       return ret;
     };
   } catch(e){ console.warn('Tralleløft: kunne ikke wrappe beregnLon', e); }
@@ -1597,6 +1640,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const newVal = oldVal + sum;
         projEl.innerHTML = `<strong>Samlet projektsum:</strong> ${newVal.toFixed(2)} kr`;
       }
+    }
+
+    if (typeof window !== 'undefined') {
+      const baseMaterial = typeof lastMaterialSum === 'number' ? lastMaterialSum : 0;
+      const baseLabor = typeof lastLoensum === 'number' ? lastLoensum : 0;
+      window.__beregnLonCache = {
+        materialSum: baseMaterial + sum,
+        laborSum: baseLabor,
+        projectSum: baseMaterial + sum + baseLabor,
+        traelleSum: sum,
+        timestamp: Date.now(),
+      };
     }
   }
 
