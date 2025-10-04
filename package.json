@@ -1,0 +1,12 @@
+{
+  "name": "csmate-v1",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "jsdom": "^24.0.0",
+    "vitest": "^1.3.1"
+  }
+}

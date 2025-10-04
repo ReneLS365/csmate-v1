@@ -161,6 +161,10 @@
         <button id="btnAddWorker" type="button">+ Tilføj mand</button>
       </div>
     </fieldset>
+    <fieldset class="no-print">
+      <legend>Tidsposteringer (import)</legend>
+      <div id="timeRowsTable" class="time-rows"></div>
+    </fieldset>
     <div class="row no-print btn-group">
       <button id="btnBeregnLon" type="button">Beregn løn</button>
       <button id="btnPrint" type="button" disabled>Print</button>
@@ -174,6 +178,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script type="module" src="timeRows.js"></script>
 <script src="main.js"></script>
 <script>if('serviceWorker' in navigator){ navigator.serviceWorker.register('./service-worker.js'); }</script>
 </body>
