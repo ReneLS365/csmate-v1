@@ -12,9 +12,9 @@
   <div class="bar">
     <div class="ttl">akkordseddel</div>
     <nav>
-      <button id="btnSagsinfo" data-section="sagsinfo" class="active" type="button">Sagsinfo</button>
-      <button id="btnOptaelling" data-section="optælling" type="button">Optælling</button>
-      <button id="btnLon" data-section="lon" type="button">Løn</button>
+      <button id="btnSagsinfo" data-section="sagsinfoSection" class="active" type="button">Sagsinfo</button>
+      <button id="btnOptaelling" data-section="optaellingSection" type="button">Optælling</button>
+      <button id="btnLon" data-section="lonSection" type="button">Løn</button>
     </nav>
   </div>
 </header>
@@ -51,7 +51,7 @@
     </fieldset>
   </section>
 
-  <section id="optællingSection" class="sektion" style="display:none">
+  <section id="optaellingSection" class="sektion" hidden>
     <fieldset>
       <legend>Systemer</legend>
       <div id="listSelectors" class="row"></div>
@@ -59,7 +59,7 @@
 
     <fieldset>
       <legend>Materialer</legend>
-      <div id="optællingContainer" class="materials"></div>
+      <div id="optaellingContainer" class="materials"></div>
     </fieldset>
 
     <section id="overview" class="overview">
@@ -103,7 +103,7 @@
     </fieldset>
   </section>
 
-  <section id="lonSection" class="sektion" style="display:none">
+  <section id="lonSection" class="sektion" hidden>
     <fieldset>
       <legend>Type & beløb</legend>
       <div class="grid-3">
