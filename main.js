@@ -345,8 +345,7 @@ function hydrateMaterialListsFromJson() {
     target,
     prefix,
     normalizedSources: sources
-      .map(source => normalizeKey(source))
-      .filter(Boolean),
+      .map(source => normalizeKey(source)),
   }));
 
   const applyLists = lists => {
