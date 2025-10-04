@@ -43,7 +43,8 @@ export class EKompletPanel {
       if (!entry || !entry.source) {
         return false;
       }
-      return normalizedHeaders.has(normalize(entry.source));
+      const normalizedSource = normalize(entry.source);
+      return normalizedHeaders.has(normalizedSource);
     });
 
     return filtered.length > 0 ? filtered : null;
