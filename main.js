@@ -1,13 +1,51 @@
 // --- Utility Functions ---
-function vis(id) {
-  document.querySelectorAll(".sektion").forEach(el => el.style.display = "none");
-  document.getElementById(id + 'Section').style.display = 'block';
+function resolveSectionId(id) {
+  if (!id) return '';
+  return id.endsWith('Section') ? id : `${id}Section`;
 }
 
+function vis(id) {
+  const targetId = resolveSectionId(id);
+
+  document.querySelectorAll('.sektion').forEach(section => {
+    const isActive = section.id === targetId;
+    section.toggleAttribute('hidden', !isActive);
+    if (isActive) {
+      section.style.removeProperty('display');
+    } else {
+      section.style.display = 'none';
+    }
+  });
+
+  document.querySelectorAll('header nav button[data-section]').forEach(btn => {
+    const buttonTarget = resolveSectionId(btn.dataset.section);
+    btn.classList.toggle('active', buttonTarget === targetId);
+  });
+}
+
+function formatCurrency(value) {
+  return new Intl.NumberFormat('da-DK', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value || 0);
+}
+
+function toNumber(value) {
+  const num = parseFloat(String(value).replace(',', '.'));
+  return Number.isFinite(num) ? num : 0;
+}
+
+function normalizeKey(value) {
+  return value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .replace(/[^a-z0-9]/g, '');
+}
 
 // --- Global Variables ---
 let admin = false;
 let workerCount = 0;
+let laborEntries = [];
+let lastLoensum = 0;
+let lastMaterialSum = 0;
 
 // Flag to control inclusion of each material system
 let includeAlfix = true;
@@ -267,18 +305,37 @@ let includeBosta = true;
 let includeHaki  = true;
 let includeModex = true;
 
-function getAllData() {
+const manualMaterials = Array.from({ length: 3 }, (_, index) => ({
+  id: `manual-${index + 1}`,
+  name: '',
+  price: 0,
+  quantity: 0,
+  manual: true,
+}));
+
+function getAllData(includeManual = true) {
   let combined = [];
   if (includeBosta) combined = combined.concat(dataBosta);
   if (includeHaki)  combined = combined.concat(dataHaki);
   if (includeModex) combined = combined.concat(dataModex);
   if (includeAlfix) combined = combined.concat(dataAlfix);
+  if (includeManual) combined = combined.concat(manualMaterials);
   return combined;
+}
+
+function findMaterialById(id) {
+  const allSets = [dataBosta, dataHaki, dataModex, dataAlfix, manualMaterials];
+  for (const list of allSets) {
+    const match = list.find(item => String(item.id) === String(id));
+    if (match) return match;
+  }
+  return null;
 }
 
 // --- UI for List Selection ---
 function setupListSelectors() {
   const container = document.getElementById('listSelectors');
+  if (!container) return;
   container.innerHTML = `
     <label><input type="checkbox" id="chkBosta" ${includeBosta ? 'checked' : ''}> Bosta</label>
     <label><input type="checkbox" id="chkHaki" ${includeHaki ? 'checked' : ''}> Haki</label>
@@ -293,60 +350,524 @@ function setupListSelectors() {
 
 // --- Rendering Functions ---
 function render() {
+  const container = document.getElementById('optaellingContainer');
+  if (!container) return;
+  container.innerHTML = '';
+
   const items = getAllData();
-  const el = document.getElementById("optællingContainer");
-  el.innerHTML = "";
-  let total = 0;
 
   items.forEach(item => {
-    const row = document.createElement("div");
-    row.style.display = "flex";
-    row.style.gap = "1rem";
-    row.style.marginBottom = "5px";
-    row.innerHTML = `
-      <div style="flex:1;">${item.name}</div>
-      <input type="number" data-id="${item.id}" class="qty" value="${item.quantity || 0}" min="0">
-      <input type="number" data-id="${item.id}" class="price" value="${item.price.toFixed(2)}" ${!admin ? "disabled" : ""}>
-      <div class="item-total">${(item.quantity * item.price).toFixed(2)} kr</div>
-    `;
-    el.appendChild(row);
-    total += item.quantity * item.price;
+    const row = document.createElement('div');
+    row.className = `material-row${item.manual ? ' manual' : ''}`;
+    if (item.manual) {
+      row.innerHTML = `
+        <label>
+          <span class="cell-label">Materiale</span>
+          <input type="text" class="manual-name" data-id="${item.id}" placeholder="Materiale" value="${item.name || ''}">
+        </label>
+        <label>
+          <span class="cell-label">Pris</span>
+          <input type="number" class="price" data-id="${item.id}" step="0.01" inputmode="decimal" placeholder="Pris" value="${item.price ? item.price : ''}">
+        </label>
+        <label>
+          <span class="cell-label">Antal</span>
+          <input type="number" class="qty" data-id="${item.id}" step="1" inputmode="numeric" placeholder="Antal" value="${item.quantity ? item.quantity : ''}">
+        </label>
+        <strong class="item-total">${formatCurrency((item.price || 0) * (item.quantity || 0))} kr</strong>
+      `;
+    } else {
+      row.innerHTML = `
+        <div class="item-name">${item.name}</div>
+        <label>
+          <span class="cell-label">Antal</span>
+          <input type="number" class="qty" data-id="${item.id}" min="0" step="1" inputmode="numeric" value="${item.quantity || 0}">
+        </label>
+        <label>
+          <span class="cell-label">Pris</span>
+          <input type="number" class="price" data-id="${item.id}" step="0.01" inputmode="decimal" value="${item.price.toFixed(2)}" ${!admin ? 'disabled' : ''}>
+        </label>
+        <strong class="item-total">${formatCurrency(item.quantity * item.price)} kr</strong>
+      `;
+    }
+    container.appendChild(row);
   });
 
-  document.getElementById("total").textContent = `Total: ${total.toFixed(2)} kr`;
-  document.getElementById("montagepris").value = total.toFixed(2);
-  document.getElementById("demontagepris").value = (total * 0.5).toFixed(2);
-
-  document.querySelectorAll('.qty').forEach(input => {
-    input.addEventListener('change', e => {
-      const id = parseInt(e.target.dataset.id);
-      updateQty(id, e.target.value);
-    });
-    input.addEventListener('focus', e => {
-      if (e.target.value === "0") e.target.value = "";
-    });
+  container.querySelectorAll('.qty').forEach(input => {
+    input.addEventListener('input', handleQuantityChange);
+    input.addEventListener('change', handleQuantityChange);
   });
 
-  document.querySelectorAll('.price').forEach(input => {
-    input.addEventListener('change', e => {
-      const id = parseInt(e.target.dataset.id);
-      updatePrice(id, e.target.value);
-    });
-    input.addEventListener('focus', e => {
-      if (e.target.value === "0") e.target.value = "";
-    });
+  container.querySelectorAll('.price').forEach(input => {
+    input.addEventListener('input', handlePriceChange);
+    input.addEventListener('change', handlePriceChange);
   });
+
+  container.querySelectorAll('.manual-name').forEach(input => {
+    input.addEventListener('input', handleManualNameChange);
+  });
+
+  updateTotals();
 }
 
 // --- Update Functions ---
-function updateQty(id, val) {
-  getAllData().find(d=>d.id===id).quantity = parseFloat(val)||0;
-  render();
+function handleQuantityChange(event) {
+  const { id } = event.target.dataset;
+  updateQty(id, event.target.value);
 }
+
+function handlePriceChange(event) {
+  const { id } = event.target.dataset;
+  updatePrice(id, event.target.value);
+}
+
+function handleManualNameChange(event) {
+  const { id } = event.target.dataset;
+  const item = findMaterialById(id);
+  if (item && item.manual) {
+    item.name = event.target.value;
+  }
+}
+
+function findMaterialRowElement(id) {
+  const rows = document.querySelectorAll('.material-row');
+  return Array.from(rows).find(row =>
+    Array.from(row.querySelectorAll('input[data-id]')).some(input => input.dataset.id === String(id))
+  ) || null;
+}
+
+function updateQty(id, val) {
+  const item = findMaterialById(id);
+  if (!item) return;
+  item.quantity = toNumber(val);
+  refreshMaterialRowDisplay(id);
+  updateTotals();
+}
+
 function updatePrice(id, val) {
-  if(!admin) return;
-  getAllData().find(d=>d.id===id).price = parseFloat(val)||0;
+  const item = findMaterialById(id);
+  if (!item) return;
+  if (!item.manual && !admin) return;
+  item.price = toNumber(val);
+  refreshMaterialRowDisplay(id);
+  updateTotals();
+}
+
+function refreshMaterialRowDisplay(id) {
+  const item = findMaterialById(id);
+  if (!item) return;
+  const row = findMaterialRowElement(id);
+  if (!row) return;
+
+  const qtyInput = row.querySelector('input.qty');
+  if (qtyInput && document.activeElement !== qtyInput) {
+    if (item.manual) {
+      qtyInput.value = item.quantity ? item.quantity : '';
+    } else {
+      qtyInput.value = item.quantity || 0;
+    }
+  }
+
+  const priceInput = row.querySelector('input.price');
+  if (priceInput && document.activeElement !== priceInput) {
+    if (item.manual) {
+      priceInput.value = item.price ? item.price : '';
+    } else {
+      priceInput.value = item.price.toFixed(2);
+    }
+  }
+
+  const totalCell = row.querySelector('.item-total');
+  if (totalCell) {
+    totalCell.textContent = `${formatCurrency(item.price * item.quantity)} kr`;
+  }
+}
+
+function calcMaterialesum() {
+  return getAllData().reduce((sum, item) => {
+    const line = toNumber(item.price) * toNumber(item.quantity);
+    return sum + line;
+  }, 0);
+}
+
+function calcLoensum() {
+  if (!Array.isArray(laborEntries) || laborEntries.length === 0) {
+    return 0;
+  }
+  return laborEntries.reduce((sum, entry) => {
+    const hours = toNumber(entry.hours);
+    const rate = toNumber(entry.rate);
+    return sum + hours * rate;
+  }, 0);
+}
+
+function renderCurrency(target, value) {
+  const el = typeof target === 'string' ? document.querySelector(target) : target;
+  if (!el) return;
+  el.textContent = `${formatCurrency(value)} kr`;
+}
+
+function updateTotals() {
+  const materialSum = calcMaterialesum();
+  lastMaterialSum = materialSum;
+  renderCurrency('#total-material', materialSum);
+
+  const laborSum = calcLoensum();
+  lastLoensum = laborSum;
+  renderCurrency('#total-labor', laborSum);
+
+  renderCurrency('#total-project', materialSum + laborSum);
+
+  const montageField = document.getElementById('montagepris');
+  if (montageField) {
+    montageField.value = materialSum.toFixed(2);
+  }
+  const demontageField = document.getElementById('demontagepris');
+  if (demontageField) {
+    demontageField.value = (materialSum * 0.5).toFixed(2);
+  }
+}
+
+const sagsinfoFieldIds = ['sagsnummer', 'sagsnavn', 'sagsadresse', 'sagskunde', 'sagsdato', 'sagsmontoer'];
+
+function collectSagsinfo() {
+  return {
+    sagsnummer: document.getElementById('sagsnummer')?.value.trim() || '',
+    navn: document.getElementById('sagsnavn')?.value.trim() || '',
+    adresse: document.getElementById('sagsadresse')?.value.trim() || '',
+    kunde: document.getElementById('sagskunde')?.value.trim() || '',
+    dato: document.getElementById('sagsdato')?.value || '',
+    montoer: document.getElementById('sagsmontoer')?.value.trim() || '',
+  };
+}
+
+function setSagsinfoField(id, value) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.value = value;
+}
+
+function validateSagsinfo() {
+  let isValid = true;
+  sagsinfoFieldIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const rawValue = (el.value || '').trim();
+    let fieldValid = rawValue.length > 0;
+    if (id === 'sagsdato') {
+      fieldValid = rawValue.length > 0 && !Number.isNaN(new Date(rawValue).valueOf());
+    }
+    if (!fieldValid) {
+      isValid = false;
+    }
+    el.classList.toggle('invalid', !fieldValid);
+  });
+
+  ['btnExportCSV', 'btnExportAll', 'btnPrint'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) btn.disabled = !isValid;
+  });
+
+  const hint = document.getElementById('actionHint');
+  if (hint) {
+    hint.style.display = isValid ? 'none' : '';
+  }
+
+  return isValid;
+}
+
+function escapeCSV(value) {
+  if (value === null || value === undefined) return '';
+  const str = String(value);
+  if (/[";\n\r]/.test(str)) {
+    return `"${str.replace(/"/g, '""')}"`;
+  }
+  return str;
+}
+
+function escapeHtml(value) {
+  if (value === null || value === undefined) return '';
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function sanitizeFilename(value) {
+  return (value || 'akkordseddel')
+    .toString()
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .replace(/[^a-z0-9-_]+/gi, '_');
+}
+
+function formatNumberForCSV(value) {
+  return toNumber(value).toFixed(2).replace('.', ',');
+}
+
+function normalizeDateValue(value) {
+  if (!value) return '';
+  const trimmed = String(value).trim();
+  if (!trimmed) return '';
+  const parts = trimmed.split(/[-\/.]/);
+  if (parts.length === 3) {
+    const [a, b, c] = parts;
+    if (a.length === 4) {
+      return `${a}-${b.padStart(2, '0')}-${c.padStart(2, '0')}`;
+    }
+    if (c.length === 4) {
+      return `${c}-${b.padStart(2, '0')}-${a.padStart(2, '0')}`;
+    }
+  }
+  const parsed = new Date(trimmed);
+  if (!Number.isNaN(parsed.valueOf())) {
+    return parsed.toISOString().slice(0, 10);
+  }
+  return '';
+}
+
+function parseCSV(text) {
+  const lines = String(text).split(/\r?\n/).filter(line => line.trim().length > 0);
+  if (lines.length === 0) return [];
+  const delimiter = lines[0].includes(';') ? ';' : ',';
+
+  const parseLine = (line) => {
+    const cells = [];
+    let current = '';
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      if (char === '"') {
+        if (inQuotes && line[i + 1] === '"') {
+          current += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (char === delimiter && !inQuotes) {
+        cells.push(current.trim());
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    cells.push(current.trim());
+    return cells;
+  };
+
+  const headers = parseLine(lines[0]);
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const values = parseLine(lines[i]);
+    if (values.every(cell => cell === '')) continue;
+    const row = {};
+    headers.forEach((header, index) => {
+      row[header] = values[index] ?? '';
+    });
+    rows.push(row);
+  }
+  return rows;
+}
+
+function resetMaterials() {
+  [dataBosta, dataHaki, dataModex, dataAlfix].forEach(list => {
+    list.forEach(item => {
+      item.quantity = 0;
+    });
+  });
+  manualMaterials.forEach(item => {
+    item.name = '';
+    item.price = 0;
+    item.quantity = 0;
+  });
+}
+
+function resetWorkers() {
+  workerCount = 0;
+  const container = document.getElementById('workers');
+  if (container) {
+    container.innerHTML = '';
+  }
+}
+
+function populateWorkersFromLabor(entries) {
+  resetWorkers();
+  if (!Array.isArray(entries) || entries.length === 0) {
+    addWorker();
+    return;
+  }
+  entries.forEach((entry, index) => {
+    addWorker();
+    const worker = document.getElementById(`worker${index + 1}`);
+    if (!worker) return;
+    const hoursInput = worker.querySelector('.worker-hours');
+    const tillaegInput = worker.querySelector('.worker-tillaeg');
+    if (hoursInput) hoursInput.value = toNumber(entry.hours);
+    if (tillaegInput) tillaegInput.value = 0;
+  });
+}
+
+function matchMaterialByName(name) {
+  if (!name) return null;
+  const targetKey = normalizeKey(name);
+  return getAllData(false).find(item => normalizeKey(item.name) === targetKey) || null;
+}
+
+function assignMaterialRow(row) {
+  const idValue = row.id?.trim?.() || '';
+  const nameValue = row.name?.trim?.() || '';
+  const qty = toNumber(row.quantity);
+  const price = toNumber(row.price);
+  if (!nameValue && !idValue && qty === 0 && price === 0) return;
+
+  let target = null;
+  if (idValue) {
+    target = findMaterialById(idValue);
+  }
+  if (!target && nameValue) {
+    target = matchMaterialByName(nameValue);
+  }
+
+  if (target && !target.manual) {
+    target.quantity = qty;
+    if (price > 0) target.price = price;
+    return;
+  }
+
+  const receiver = manualMaterials.find(item => !item.name && item.quantity === 0 && item.price === 0);
+  if (!receiver) return;
+  const manualIndex = manualMaterials.indexOf(receiver) + 1;
+  receiver.name = nameValue || receiver.name || `Manuelt materiale ${manualIndex}`;
+  receiver.quantity = qty;
+  receiver.price = price;
+}
+
+function applyCSVRows(rows) {
+  if (!Array.isArray(rows) || rows.length === 0) return;
+  resetMaterials();
+
+  const info = collectSagsinfo();
+  const montorValues = [];
+  const materials = [];
+  const labor = [];
+
+  rows.forEach(row => {
+    const normalized = {};
+    Object.entries(row).forEach(([key, value]) => {
+      normalized[normalizeKey(key)] = (value ?? '').toString().trim();
+    });
+
+    const sagsnummerVal = normalized['sagsnummer'] || normalized['sagsnr'] || normalized['sag'] || normalized['caseid'];
+    if (sagsnummerVal) info.sagsnummer = sagsnummerVal;
+
+    const navnVal = normalized['navnopgave'] || normalized['navn'] || normalized['opgave'] || normalized['projekt'];
+    if (navnVal) info.navn = navnVal;
+
+    const adresseVal = normalized['adresse'] || normalized['addresse'];
+    if (adresseVal) info.adresse = adresseVal;
+
+    const kundeVal = normalized['kunde'] || normalized['customer'];
+    if (kundeVal) info.kunde = kundeVal;
+
+    const datoVal = normalizeDateValue(normalized['dato'] || normalized['date']);
+    if (datoVal) info.dato = datoVal;
+
+    const montorVal = normalized['montoer'] || normalized['montor'] || normalized['montornavne'] || normalized['montornavn'];
+    if (montorVal) montorValues.push(montorVal);
+
+    const matName = normalized['materialenavn'] || normalized['materiale'] || normalized['varenavn'] || normalized['navn'];
+    const matQty = normalized['antal'] || normalized['quantity'] || normalized['qty'] || normalized['maengde'];
+    const matPrice = normalized['pris'] || normalized['price'] || normalized['enhedspris'] || normalized['stkpris'];
+    const matId = normalized['id'] || normalized['materialeid'] || normalized['varenummer'];
+    if (matName || matId || matQty || matPrice) {
+      materials.push({ id: matId, name: matName, quantity: matQty, price: matPrice });
+    }
+
+    const laborType = normalized['arbejdstype'] || normalized['type'] || normalized['jobtype'];
+    const laborHours = normalized['timer'] || normalized['hours'] || normalized['antalttimer'];
+    const laborRate = normalized['sats'] || normalized['rate'] || normalized['timelon'] || normalized['timeloen'];
+    if (laborType || laborHours || laborRate) {
+      labor.push({ type: laborType || '', hours: toNumber(laborHours), rate: toNumber(laborRate) });
+    }
+  });
+
+  setSagsinfoField('sagsnummer', info.sagsnummer || '');
+  setSagsinfoField('sagsnavn', info.navn || '');
+  setSagsinfoField('sagsadresse', info.adresse || '');
+  setSagsinfoField('sagskunde', info.kunde || '');
+  setSagsinfoField('sagsdato', info.dato || '');
+
+  if (montorValues.length) {
+    const names = montorValues
+      .flatMap(value => value.split(/[\n,]/))
+      .map(name => name.trim())
+      .filter(Boolean)
+      .join('\n');
+    setSagsinfoField('sagsmontoer', names);
+  }
+
+  materials.forEach(assignMaterialRow);
   render();
+
+  laborEntries = labor.filter(entry => entry.hours > 0 || entry.rate > 0 || entry.type);
+  populateWorkersFromLabor(laborEntries);
+  updateTotals();
+
+  if (laborEntries.length > 0) {
+    const firstType = laborEntries[0].type?.toLowerCase() || '';
+    const jobSelect = document.getElementById('jobType');
+    if (jobSelect) {
+      if (firstType.includes('demo')) jobSelect.value = 'demontage';
+      else if (firstType.includes('montage')) jobSelect.value = 'montage';
+    }
+  }
+
+  validateSagsinfo();
+}
+
+function setupCSVImport() {
+  const dropArea = document.getElementById('dropArea');
+  const fileInput = document.getElementById('csvFileInput');
+  if (!dropArea || !fileInput) return;
+
+  const openPicker = () => fileInput.click();
+
+  ['dragenter', 'dragover'].forEach(evt => {
+    dropArea.addEventListener(evt, event => {
+      event.preventDefault();
+      dropArea.classList.add('dragover');
+      if (event.dataTransfer) event.dataTransfer.dropEffect = 'copy';
+    });
+  });
+
+  ['dragleave', 'dragend'].forEach(evt => {
+    dropArea.addEventListener(evt, () => dropArea.classList.remove('dragover'));
+  });
+
+  dropArea.addEventListener('drop', event => {
+    event.preventDefault();
+    dropArea.classList.remove('dragover');
+    const file = event.dataTransfer?.files?.[0];
+    if (file) {
+      uploadCSV(file);
+      fileInput.value = '';
+    }
+  });
+
+  dropArea.addEventListener('click', openPicker);
+  dropArea.addEventListener('keydown', event => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      openPicker();
+    }
+  });
+
+  fileInput.addEventListener('change', event => {
+    const file = event.target.files?.[0];
+    if (file) {
+      uploadCSV(file);
+      fileInput.value = '';
+    }
+  });
 }
 
 // --- Authentication ---
@@ -423,11 +944,15 @@ function beregnLon() {
   const allData = getAllData();
   if (Array.isArray(allData)) {
     allData.forEach(item => {
-      if (item.quantity > 0) {
-        const total = item.quantity * item.price;
+      const qty = toNumber(item.quantity);
+      if (qty > 0) {
+        const price = toNumber(item.price);
+        const total = qty * price;
         const justeretTotal = jobType === "montage" ? total : total / 2;
         materialeTotal += justeretTotal;
-        materialelinjer += `<div>${item.name}: ${item.quantity} × ${item.price.toFixed(2)} kr = ${justeretTotal.toFixed(2)} kr</div>`;
+        const manualIndex = manualMaterials.indexOf(item);
+        const label = item.manual ? (item.name?.trim() || `Manuelt materiale ${manualIndex + 1}`) : item.name;
+        materialelinjer += `<div>${label}: ${qty} × ${price.toFixed(2)} kr = ${justeretTotal.toFixed(2)} kr</div>`;
       }
     });
   }
@@ -438,6 +963,7 @@ function beregnLon() {
   let samletTimer = 0;
   let arbejderLinjer = "";
   let samletUdbetalt = 0;
+  const beregnedeArbejdere = [];
 
   workers.forEach((worker, index) => {
     const hoursEl = worker.querySelector(".worker-hours");
@@ -477,9 +1003,12 @@ function beregnLon() {
 
     outputEl.textContent = `${timelon.toFixed(2)} kr/t | Total: ${total.toFixed(2)} kr`;
     arbejderLinjer += `<div>Mand ${index + 1}: Timer: ${hours}, Timeløn: ${timelon.toFixed(2)} kr/t, Total: ${total.toFixed(2)} kr</div>`;
+    beregnedeArbejdere.push({ type: jobType, hours, rate: timelon, total });
   });
 
   const resultatDiv = document.getElementById("lonResult");
+  const materialSum = calcMaterialesum();
+  const projektsum = materialSum + samletUdbetalt;
   resultatDiv.innerHTML = `
     <h3>Materialer brugt:</h3>
     ${materialelinjer || '<div>Ingen materialer brugt</div>'}
@@ -487,231 +1016,571 @@ function beregnLon() {
     ${arbejderLinjer}<br>
     <h3>Oversigt:</h3>
     <div><strong>Slæbebeløb:</strong> ${slaebebelob.toFixed(2)} kr</div>
-    <div><strong>Materialer:</strong> ${materialeTotal.toFixed(2)} kr</div>
+    <div><strong>Materialer (akkordberegnet):</strong> ${materialeTotal.toFixed(2)} kr</div>
+    <div><strong>Materialesum:</strong> ${materialSum.toFixed(2)} kr</div>
     <div><strong>Ekstraarbejde:</strong> ${ekstraarbejde.toFixed(2)} kr</div>
     <div><strong>Kilometer:</strong> ${kilometerPris.toFixed(2)} kr</div>
     <div><strong>Samlet akkordsum:</strong> ${samletAkkordSum.toFixed(2)} kr</div>
     <div><strong>Timer:</strong> ${samletTimer.toFixed(1)} t</div>
     <div><strong>Timepris (uden tillæg):</strong> ${akkordTimeLøn.toFixed(2)} kr/t</div>
-    <div><strong>Samlet projektsum:</strong> ${samletUdbetalt.toFixed(2)} kr</div>
+    <div><strong>Lønsum:</strong> ${samletUdbetalt.toFixed(2)} kr</div>
+    <div><strong>Projektsum:</strong> ${projektsum.toFixed(2)} kr</div>
 
   `;
+
+  laborEntries = beregnedeArbejdere;
+  updateTotals();
+
+  if (typeof window !== 'undefined') {
+    const traelle35 = parseFloat(document.getElementById('traelleloeft35')?.value) || 0;
+    const traelle50 = parseFloat(document.getElementById('traelleloeft50')?.value) || 0;
+    const TRAELLE_RATE35 = 10.44;
+    const TRAELLE_RATE50 = 14.62;
+    const traelleSum = (traelle35 * TRAELLE_RATE35) + (traelle50 * TRAELLE_RATE50);
+    window.__beregnLonCache = {
+      materialSum: lastMaterialSum,
+      laborSum: lastLoensum,
+      projectSum: lastMaterialSum + lastLoensum,
+      traelleSum,
+      timestamp: Date.now(),
+    };
+  }
 
   return sagsnummer;
 }
 
 
 // --- CSV-eksport ---
-function downloadCSV(sagsnummer) {
-  const items = getAllData();
-  let csv = 'id;name;quantity;price\n';
-  items.forEach(item => {
-    if (item.quantity > 0) {
-      const safeName = `"${item.name.replace(/"/g, '""')}"`;
-      csv += `${item.id};${safeName};${item.quantity};${item.price}\n`;
-    }
+function downloadCSV() {
+  if (!validateSagsinfo()) {
+    alert('Udfyld Sagsinfo for at eksportere.');
+    return false;
+  }
+  const info = collectSagsinfo();
+  beregnLon();
+  const cache = typeof window !== 'undefined' ? window.__beregnLonCache : null;
+  const tralleState = typeof window !== 'undefined' ? window.__traelleloeft : null;
+  const materials = getAllData().filter(item => {
+    const qty = toNumber(item.quantity);
+    return qty > 0;
   });
+  const labor = Array.isArray(laborEntries) ? laborEntries : [];
+  const tralleSum = tralleState && Number.isFinite(tralleState.sum) ? tralleState.sum : 0;
+  const materialSum = cache && Number.isFinite(cache.materialSum)
+    ? cache.materialSum
+    : calcMaterialesum() + tralleSum;
+  const laborSum = cache && Number.isFinite(cache.laborSum)
+    ? cache.laborSum
+    : calcLoensum();
+  const projectSum = cache && Number.isFinite(cache.projectSum)
+    ? cache.projectSum
+    : materialSum + laborSum;
 
-  const km = parseFloat(document.getElementById("km")?.value) || 0;
-  const boringHuller = parseInt(document.getElementById("antalBoringHuller")?.value) || 0;
-  const lukHuller = parseInt(document.getElementById("antalLukHuller")?.value) || 0;
-  const boringBeton = parseInt(document.getElementById("antalBoringBeton")?.value) || 0;
+  const lines = [];
+  lines.push('Sektion;Felt;Værdi;Antal;Pris;Linjesum');
+  lines.push(`Sagsinfo;Sagsnummer;${escapeCSV(info.sagsnummer)};;;`);
+  lines.push(`Sagsinfo;Navn/opgave;${escapeCSV(info.navn)};;;`);
+  lines.push(`Sagsinfo;Adresse;${escapeCSV(info.adresse)};;;`);
+  lines.push(`Sagsinfo;Kunde;${escapeCSV(info.kunde)};;;`);
+  lines.push(`Sagsinfo;Dato;${escapeCSV(info.dato)};;;`);
+  const montorText = info.montoer.replace(/\r?\n/g, ', ');
+  lines.push(`Sagsinfo;Montørnavne;${escapeCSV(montorText)};;;`);
 
-  let ekstraTekst = "";
-  if (boringHuller > 0) ekstraTekst += `Boring af huller: ${boringHuller} | `;
-  if (lukHuller > 0) ekstraTekst += `Luk af huller: ${lukHuller} | `;
-  if (boringBeton > 0) ekstraTekst += `Boring i beton: ${boringBeton} | `;
+  lines.push('');
+  lines.push('Sektion;Id;Materiale;Antal;Pris;Linjesum');
+  if (materials.length === 0) {
+    lines.push('Materiale;;;0;0,00;0,00');
+  } else {
+    materials.forEach(item => {
+      const qty = toNumber(item.quantity);
+      if (qty === 0) return;
+      const price = toNumber(item.price);
+      const total = qty * price;
+      const manualIndex = manualMaterials.indexOf(item);
+      const label = item.manual ? (item.name?.trim() || `Manuelt materiale ${manualIndex + 1}`) : item.name;
+      lines.push(`Materiale;${escapeCSV(item.id)};${escapeCSV(label)};${escapeCSV(formatNumberForCSV(qty))};${escapeCSV(formatNumberForCSV(price))};${escapeCSV(formatNumberForCSV(total))}`);
+    });
+  }
 
-  const totalTekst = document.getElementById("lonResult")?.innerText.replace(/\r?\n/g, '|') || "";
-  const lonText = `Kilometer: ${km} km | ${ekstraTekst}${totalTekst}`.trim();
+  const tralle = window.__traelleloeft;
+  if (tralle && (tralle.n35 > 0 || tralle.n50 > 0)) {
+    if (tralle.n35 > 0) {
+      const total35 = tralle.n35 * tralle.RATE35;
+      lines.push(`Materiale;TL35;Tralleløft 0,35 m;${escapeCSV(formatNumberForCSV(tralle.n35))};${escapeCSV(formatNumberForCSV(tralle.RATE35))};${escapeCSV(formatNumberForCSV(total35))}`);
+    }
+    if (tralle.n50 > 0) {
+      const total50 = tralle.n50 * tralle.RATE50;
+      lines.push(`Materiale;TL50;Tralleløft 0,50 m;${escapeCSV(formatNumberForCSV(tralle.n50))};${escapeCSV(formatNumberForCSV(tralle.RATE50))};${escapeCSV(formatNumberForCSV(total50))}`);
+    }
+  }
 
-  csv += `info;"Beregningsresultater";"${lonText}";0\n`;
+  lines.push('');
+  lines.push('Sektion;Arbejdstype;Timer;Sats;Linjesum');
+  if (labor.length === 0) {
+    lines.push('Løn;Ingen registrering;;;');
+  } else {
+    labor.forEach((entry, index) => {
+      const hours = toNumber(entry.hours);
+      const rate = toNumber(entry.rate);
+      const total = hours * rate;
+      const type = entry.type || `Arbejdstype ${index + 1}`;
+      lines.push(`Løn;${escapeCSV(type)};${escapeCSV(formatNumberForCSV(hours))};${escapeCSV(formatNumberForCSV(rate))};${escapeCSV(formatNumberForCSV(total))}`);
+    });
+  }
 
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  lines.push('');
+  lines.push('Sektion;Total;Beløb');
+  lines.push(`Total;Materialesum;${escapeCSV(formatNumberForCSV(materialSum))}`);
+  lines.push(`Total;Lønsum;${escapeCSV(formatNumberForCSV(laborSum))}`);
+  lines.push(`Total;Projektsum;${escapeCSV(formatNumberForCSV(projectSum))}`);
+
+  const csvContent = lines.join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
+  const fileName = sanitizeFilename(info.sagsnummer || 'akkordseddel');
+
   const link = document.createElement('a');
   link.href = url;
-  link.download = `${sagsnummer}_beregning_optælling.csv`;
+  link.download = `${fileName}_data.csv`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+  return true;
 }
 
 // --- PDF-eksport (html2canvas + jsPDF) ---
-async function exportPDF(sagsnummer) {
-  const resultDiv = document.getElementById("lonResult");
-  if (!resultDiv) return;
+async function exportPDF() {
+  if (!validateSagsinfo()) {
+    alert('Udfyld Sagsinfo for at eksportere.');
+    return;
+  }
+  const info = collectSagsinfo();
+  beregnLon();
+  const cache = typeof window !== 'undefined' ? window.__beregnLonCache : null;
+  const tralleState = typeof window !== 'undefined' ? window.__traelleloeft : null;
+  const materials = getAllData().filter(item => {
+    const qty = toNumber(item.quantity);
+    return qty > 0;
+  });
+  const labor = Array.isArray(laborEntries) ? laborEntries : [];
+  const tralleSum = tralleState && Number.isFinite(tralleState.sum) ? tralleState.sum : 0;
+  const materialSum = cache && Number.isFinite(cache.materialSum)
+    ? cache.materialSum
+    : calcMaterialesum() + tralleSum;
+  const laborSum = cache && Number.isFinite(cache.laborSum)
+    ? cache.laborSum
+    : calcLoensum();
+  const projectSum = cache && Number.isFinite(cache.projectSum)
+    ? cache.projectSum
+    : materialSum + laborSum;
 
+  const wrapper = document.createElement('div');
+  wrapper.className = 'export-preview';
+  wrapper.style.position = 'fixed';
+  wrapper.style.left = '-9999px';
+  wrapper.style.top = '0';
+  wrapper.style.background = '#ffffff';
+  wrapper.style.color = '#000000';
+  wrapper.style.padding = '24px';
+  wrapper.style.width = '794px';
+  wrapper.style.boxSizing = 'border-box';
+  wrapper.innerHTML = `
+    <style>
+      .export-preview { font-family: system-ui, -apple-system, Segoe UI, sans-serif; }
+      .export-preview h2 { margin-top: 0; }
+      .export-preview section { margin-bottom: 16px; }
+      .export-preview ul { list-style: none; padding: 0; margin: 0; }
+      .export-preview ul li { margin-bottom: 6px; }
+      .export-preview table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+      .export-preview th, .export-preview td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; font-size: 14px; }
+      .export-preview th { background: #f0f0f0; }
+      .export-preview .totals { display: flex; gap: 12px; flex-wrap: wrap; }
+      .export-preview .totals div { background: #f7f7f7; border: 1px solid #ddd; padding: 8px 12px; border-radius: 6px; }
+    </style>
+    <h2>Akkordseddel</h2>
+    <section>
+      <h3>Sagsinfo</h3>
+      <ul>
+        <li><strong>Sagsnummer:</strong> ${escapeHtml(info.sagsnummer)}</li>
+        <li><strong>Navn/opgave:</strong> ${escapeHtml(info.navn)}</li>
+        <li><strong>Adresse:</strong> ${escapeHtml(info.adresse)}</li>
+        <li><strong>Kunde:</strong> ${escapeHtml(info.kunde)}</li>
+        <li><strong>Dato:</strong> ${escapeHtml(info.dato)}</li>
+        <li><strong>Montørnavne:</strong> ${escapeHtml(info.montoer).replace(/\n/g, '<br>')}</li>
+      </ul>
+    </section>
+    <section>
+      <h3>Materialer</h3>
+      ${materials.length ? `
+        <table class="export-table">
+          <thead>
+            <tr><th>Id</th><th>Materiale</th><th>Antal</th><th>Pris</th><th>Linjesum</th></tr>
+          </thead>
+          <tbody>
+            ${materials.map(item => {
+              const qty = toNumber(item.quantity);
+              const price = toNumber(item.price);
+              const total = qty * price;
+              const manualIndex = manualMaterials.indexOf(item);
+              const label = item.manual ? (item.name?.trim() || `Manuelt materiale ${manualIndex + 1}`) : item.name;
+              return `<tr><td>${escapeHtml(item.id)}</td><td>${escapeHtml(label)}</td><td>${qty.toLocaleString('da-DK', { maximumFractionDigits: 2 })}</td><td>${formatCurrency(price)} kr</td><td>${formatCurrency(total)} kr</td></tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      ` : '<p>Ingen materialer registreret.</p>'}
+    </section>
+    <section>
+      <h3>Løn</h3>
+      ${labor.length ? `
+        <table class="export-table">
+          <thead>
+            <tr><th>Arbejdstype</th><th>Timer</th><th>Sats</th><th>Linjesum</th></tr>
+          </thead>
+          <tbody>
+            ${labor.map((entry, index) => {
+              const hours = toNumber(entry.hours);
+              const rate = toNumber(entry.rate);
+              const total = hours * rate;
+              const type = entry.type || `Arbejdstype ${index + 1}`;
+              return `<tr><td>${escapeHtml(type)}</td><td>${hours.toLocaleString('da-DK', { maximumFractionDigits: 2 })}</td><td>${formatCurrency(rate)} kr</td><td>${formatCurrency(total)} kr</td></tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      ` : '<p>Ingen lønlinjer registreret.</p>'}
+    </section>
+    <section>
+      <h3>Totals</h3>
+      <div class="totals">
+        <div><strong>Materialesum</strong><div>${formatCurrency(materialSum)} kr</div></div>
+        <div><strong>Lønsum</strong><div>${formatCurrency(laborSum)} kr</div></div>
+        <div><strong>Projektsum</strong><div>${formatCurrency(projectSum)} kr</div></div>
+      </div>
+    </section>
+    <section>
+      <h3>Detaljer</h3>
+      ${document.getElementById('lonResult')?.innerHTML || '<p>Ingen beregning udført.</p>'}
+    </section>
+  `;
+
+  document.body.appendChild(wrapper);
   try {
-    const canvas = await html2canvas(resultDiv, { scale: 2 });
-    const imgData = canvas.toDataURL("image/png");
+    const canvas = await html2canvas(wrapper, { scale: 2, backgroundColor: '#ffffff' });
     const { jsPDF } = window.jspdf;
-    const doc = new jsPDF({ unit: "px", format: [canvas.width, canvas.height] });
-    doc.addImage(imgData, "PNG", 0, 0, canvas.width, canvas.height);
-    doc.save(`${sagsnummer}_beregning_resultat.pdf`);
+    const doc = new jsPDF({ unit: 'px', format: [canvas.width, canvas.height] });
+    doc.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, canvas.width, canvas.height);
+    const fileName = sanitizeFilename(info.sagsnummer || 'akkordseddel');
+    doc.save(`${fileName}_oversigt.pdf`);
   } catch (err) {
-    console.error("PDF eksport fejlede:", err);
+    console.error('PDF eksport fejlede:', err);
+  } finally {
+    document.body.removeChild(wrapper);
   }
 }
 
 // --- Samlet eksport ---
-async function exportAll(sagsnummer) {
-  downloadCSV(sagsnummer);
-  await exportPDF(sagsnummer);
+async function exportAll() {
+  if (!downloadCSV()) return;
+  beregnLon();
+  await exportPDF();
 }
 
 // --- CSV-import for optælling ---
 function uploadCSV(file) {
+  if (!file) return;
+  if (!/\.csv$/i.test(file.name) && !(file.type && file.type.includes('csv'))) {
+    alert('Vælg en gyldig CSV-fil.');
+    return;
+  }
   const reader = new FileReader();
-  reader.onload = e => {
-    const lines = e.target.result.split('\n');
-    lines.slice(1).forEach(line => {
-      if (!line.trim()) return;
-      const [id, name, qty, price] = line.split(';');
-      const obj = getAllData().find(d => d.id === parseInt(id));
-      if (obj) {
-        obj.quantity = parseFloat(qty) || 0;
-        obj.price = parseFloat(price) || obj.price;
+  reader.onload = event => {
+    try {
+      const rows = parseCSV(event.target.result);
+      applyCSVRows(rows);
+    } catch (err) {
+      console.error('Kunne ikke importere CSV', err);
+      alert('Kunne ikke importere CSV-filen.');
+    }
+  };
+  reader.readAsText(file, 'utf-8');
+}
+
+
+// --- Global Numeric Keyboard ---
+const numericKeyboard = (() => {
+  let overlay;
+  let display;
+  let currentInput = null;
+  let buffer = '';
+  let previousFocus = null;
+  let initialized = false;
+
+  function ensureOverlay() {
+    if (initialized) return;
+    initialized = true;
+    overlay = document.createElement('div');
+    overlay.className = 'keypad-overlay';
+    overlay.setAttribute('aria-hidden', 'true');
+    overlay.innerHTML = `
+      <div class="keypad" role="dialog" aria-modal="true" aria-label="Numerisk tastatur">
+        <div class="keypad-display" aria-live="polite">0</div>
+        <div class="keypad-grid">
+          <button type="button" data-key="7">7</button>
+          <button type="button" data-key="8">8</button>
+          <button type="button" data-key="9">9</button>
+          <button type="button" data-key="4">4</button>
+          <button type="button" data-key="5">5</button>
+          <button type="button" data-key="6">6</button>
+          <button type="button" data-key="1">1</button>
+          <button type="button" data-key="2">2</button>
+          <button type="button" data-key="3">3</button>
+          <button type="button" data-key="0">0</button>
+          <button type="button" data-key=".">,</button>
+          <button type="button" data-action="backspace" aria-label="Slet">⌫</button>
+        </div>
+        <div class="keypad-quick" role="group" aria-label="Hurtig justering">
+          <button type="button" data-delta="-10">-10</button>
+          <button type="button" data-delta="-5">-5</button>
+          <button type="button" data-delta="-1">-1</button>
+          <button type="button" data-delta="1">+1</button>
+          <button type="button" data-delta="5">+5</button>
+          <button type="button" data-delta="10">+10</button>
+        </div>
+        <div class="keypad-actions">
+          <button type="button" data-action="clear">C</button>
+          <button type="button" data-action="ok">OK</button>
+        </div>
+        <button type="button" class="keypad-close">Luk</button>
+      </div>
+    `;
+    document.body.appendChild(overlay);
+    display = overlay.querySelector('.keypad-display');
+
+    overlay.addEventListener('click', event => {
+      if (event.target === overlay) hide();
+    });
+
+    overlay.querySelector('.keypad-close').addEventListener('click', hide);
+    overlay.addEventListener('keydown', handleOverlayKeydown);
+
+    overlay.querySelectorAll('[data-key]').forEach(btn => {
+      btn.addEventListener('click', () => appendValue(btn.dataset.key));
+    });
+    overlay.querySelector('[data-action="backspace"]').addEventListener('click', backspace);
+    overlay.querySelector('[data-action="clear"]').addEventListener('click', clearBuffer);
+    overlay.querySelector('[data-action="ok"]').addEventListener('click', applyValue);
+    overlay.querySelectorAll('[data-delta]').forEach(btn => {
+      const delta = Number(btn.dataset.delta);
+      btn.addEventListener('click', () => adjustValue(delta));
+    });
+
+    document.addEventListener('focusin', handleFocusIn, { capture: true });
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape' && overlay.classList.contains('show')) {
+        event.preventDefault();
+        hide();
       }
     });
-    render();
+  }
+
+  function isNumericCandidate(el) {
+    if (!el || el.tagName !== 'INPUT') return false;
+    if (el.disabled || el.readOnly) return false;
+    const type = (el.getAttribute('type') || '').toLowerCase();
+    const inputmode = (el.getAttribute('inputmode') || '').toLowerCase();
+    if (type === 'number') return true;
+    if (inputmode === 'numeric' || inputmode === 'decimal') return true;
+    if (el.dataset.numpad === 'true') return true;
+    return false;
+  }
+
+  function handleFocusIn(event) {
+    if (!initialized) return;
+    const target = event.target;
+    if (overlay.contains(target)) return;
+    if (isNumericCandidate(target)) {
+      show(target);
+    } else if (currentInput && target !== currentInput) {
+      hide();
+    }
+  }
+
+  function isZeroLike(value) {
+    if (value === null || value === undefined) return false;
+    const raw = String(value).trim();
+    if (!raw) return false;
+    if (/[1-9]/.test(raw)) return false;
+    const normalized = parseFloat(raw.replace(',', '.'));
+    return Number.isFinite(normalized) && normalized === 0;
+  }
+
+  function show(input) {
+    ensureOverlay();
+    currentInput = input;
+    const rawValue = input.value ?? '';
+    if (isZeroLike(rawValue)) {
+      buffer = '';
+      input.value = '';
+    } else {
+      buffer = rawValue ? String(rawValue).replace(',', '.') : '';
+    }
+    previousFocus = document.activeElement;
+    updateDisplay();
+    overlay.classList.add('show');
+    overlay.setAttribute('aria-hidden', 'false');
+    requestAnimationFrame(() => {
+      const firstButton = overlay.querySelector('[data-key="7"]') || overlay.querySelector('[data-key]');
+      firstButton?.focus();
+    });
+  }
+
+  function hide() {
+    if (!overlay) return;
+    overlay.classList.remove('show');
+    overlay.setAttribute('aria-hidden', 'true');
+    const target = currentInput;
+    currentInput = null;
+    buffer = '';
+    if (previousFocus && typeof previousFocus.focus === 'function') {
+      previousFocus.focus();
+    } else if (target && typeof target.focus === 'function') {
+      target.focus();
+    }
+  }
+
+  function updateDisplay() {
+    if (!display) return;
+    const value = buffer !== '' ? buffer : '0';
+    display.textContent = value.replace('.', ',');
+  }
+
+  function appendValue(key) {
+    if (!currentInput) return;
+    if (key === '.' || key === ',') {
+      if (buffer.includes('.')) return;
+      buffer = buffer || currentInput.value?.replace(',', '.') || '';
+      if (!buffer) buffer = '0';
+      buffer += '.';
+    } else {
+      if (buffer === '0') {
+        buffer = key;
+      } else {
+        buffer += key;
+      }
+    }
+    updateDisplay();
+  }
+
+  function backspace() {
+    if (!currentInput) return;
+    buffer = buffer.slice(0, -1);
+    updateDisplay();
+  }
+
+  function clearBuffer() {
+    buffer = '';
+    updateDisplay();
+  }
+
+  function normalizeNumber(value) {
+    if (!Number.isFinite(value)) return '';
+    const rounded = Math.round(value * 100000) / 100000;
+    return String(rounded);
+  }
+
+  function adjustValue(delta) {
+    if (!currentInput || !Number.isFinite(delta)) return;
+    const baseBuffer = buffer !== '' ? parseFloat(buffer) : parseFloat((currentInput.value || '').replace(',', '.'));
+    const base = Number.isFinite(baseBuffer) ? baseBuffer : 0;
+    let next = base + delta;
+    if (next < 0) next = 0;
+    buffer = normalizeNumber(next);
+    updateDisplay();
+  }
+
+  function applyValue() {
+    if (!currentInput) {
+      hide();
+      return;
+    }
+    const finalValue = buffer || currentInput.value || '';
+    let normalized = finalValue.replace(',', '.');
+    if (normalized.endsWith('.')) {
+      normalized = normalized.slice(0, -1);
+    }
+    currentInput.value = normalized;
+    currentInput.dispatchEvent(new Event('input', { bubbles: true }));
+    currentInput.dispatchEvent(new Event('change', { bubbles: true }));
+    hide();
+  }
+
+  function handleOverlayKeydown(event) {
+    if (event.key === 'Tab') {
+      event.preventDefault();
+      const elements = Array.from(overlay.querySelectorAll('button')).filter(btn => !btn.disabled);
+      if (elements.length === 0) return;
+      const index = elements.indexOf(document.activeElement);
+      const nextIndex = event.shiftKey
+        ? (index <= 0 ? elements.length - 1 : index - 1)
+        : (index === elements.length - 1 ? 0 : index + 1);
+      elements[nextIndex].focus();
+    } else if (event.key === 'Enter') {
+      event.preventDefault();
+      applyValue();
+    }
+  }
+
+  return {
+    init: ensureOverlay,
+    show,
+    hide,
   };
-  reader.readAsText(file);
-}
+})();
 
 
 // --- Initialization ---
 document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById("btnOptaelling")?.addEventListener("click", () => vis("optælling"));
-  document.getElementById("btnLon")?.addEventListener("click", () => vis("lon"));
+  vis('sagsinfoSection');
+
+  document.querySelectorAll('header nav button[data-section]').forEach(button => {
+    button.addEventListener('click', () => vis(button.dataset.section));
+  });
 
   setupListSelectors();
   render();
   addWorker();
 
-  document.getElementById("btnBeregnLon")?.addEventListener("click", () => beregnLon());
-  document.getElementById("btnPrint")?.addEventListener("click", () => window.print());
+  setupCSVImport();
 
-  document.getElementById('csvUpload')?.addEventListener('change', e => uploadCSV(e.target.files[0]));
-  document.getElementById('btnExportCSV')?.addEventListener('click', () => downloadCSV(document.getElementById("sagsnummer")?.value.trim() || "uspecified"));
-
-  document.getElementById("btnExportAll")?.addEventListener("click", async () => {
-    const sagsnummer = document.getElementById("sagsnummer")?.value.trim() || "uspecified";
-    beregnLon();
-    await exportAll(sagsnummer);
+  document.getElementById('btnBeregnLon')?.addEventListener('click', () => beregnLon());
+  document.getElementById('btnPrint')?.addEventListener('click', () => {
+    if (validateSagsinfo()) {
+      window.print();
+    } else {
+      alert('Udfyld Sagsinfo for at kunne printe.');
+    }
   });
 
-  document.getElementById("btnAddWorker")?.addEventListener("click", () => addWorker());
+  document.getElementById('btnExportCSV')?.addEventListener('click', () => downloadCSV());
 
-  const guideBtn = document.getElementById("btnGuide");
-  const closeModalBtn = document.getElementById("closeGuideModal");
-  const modal = document.getElementById("guideModal");
+  document.getElementById('btnExportAll')?.addEventListener('click', async () => {
+    await exportAll();
+  });
 
-  guideBtn && (guideBtn.onclick = () => modal.style.display = "block");
-  closeModalBtn && (closeModalBtn.onclick = () => modal.style.display = "none");
+  document.getElementById('btnAddWorker')?.addEventListener('click', () => addWorker());
 
-  window.onclick = function (event) {
-    if (event.target === modal) {
-      modal.style.display = "none";
+  sagsinfoFieldIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener('input', () => validateSagsinfo());
+      el.addEventListener('change', () => validateSagsinfo());
     }
-  };
+  });
+
+  validateSagsinfo();
+  updateTotals();
+  numericKeyboard.init();
 });
-
-
-// ===== Popup Keypad Integration (non-intrusive) =====
-(function(){
-  const _origRender = render;
-  let kpCurrentId=null;
-  let kp={op:null, buffer:'', base:0};
-
-  function ensureOverlay(){
-    if(document.getElementById('keypadOverlay')) return;
-    const html = '<div id="keypadOverlay" class="keypad-overlay" aria-hidden="true">\
-  <div id="keypad" class="keypad" role="dialog" aria-modal="true" aria-label="Numerisk tastatur">\
-    <div class="keypad-display" id="keypadDisplay">0</div>\
-    <div class="keypad-grid">\
-      <button data-key="7">7</button><button data-key="8">8</button><button data-key="9">9</button><button data-op="*">×</button>\
-      <button data-key="4">4</button><button data-key="5">5</button><button data-key="6">6</button><button data-op="/">÷</button>\
-      <button data-key="1">1</button><button data-key="2">2</button><button data-key="3">3</button><button data-op="-">-</button>\
-      <button data-key="0">0</button><button data-action="clear">C</button><button data-action="ok" class="ok">OK</button><button data-op="+">+</button>\
-    </div>\
-    <button class="keypad-close" id="keypadClose" aria-label="Luk tastatur">✕</button>\
-  </div>\
-</div>';
-    document.body.insertAdjacentHTML('beforeend', html);
-    initKeypad();
-  }
-
-  function openKeypad(forId){
-    kpCurrentId = forId;
-    let it = getAllData().find(d=> String(d.id)===String(forId));
-    kp = { op:null, buffer:'', base: it? (Number(it.quantity)||0) : 0 };
-    document.getElementById('keypadDisplay').textContent = String(kp.base);
-    document.getElementById('keypadOverlay').classList.add('show');
-  }
-  function closeKeypad(){
-    document.getElementById('keypadOverlay').classList.remove('show');
-    kpCurrentId=null; kp={op:null,buffer:'',base:0};
-  }
-  function applyKeypad(){
-    if(!kpCurrentId) return closeKeypad();
-    const it = getAllData().find(d=> String(d.id)===String(kpCurrentId));
-    if(!it) return closeKeypad();
-    let val = kp.base;
-    const n = kp.buffer===''? null : Number(kp.buffer);
-    if(n!==null){
-      switch(kp.op){
-        case '+': val = (Number(val)||0) + n; break;
-        case '-': val = Math.max(0, (Number(val)||0) - n); break;
-        case '*': val = Math.round((Number(val)||0) * n); break;
-        case '/': val = n===0 ? (Number(val)||0) : Math.floor((Number(val)||0)/n); break;
-        default:  val = n;
-      }
-    }
-    if(typeof updateQty === 'function') updateQty(Number(it.id), val);
-    else { it.quantity = val; }
-    closeKeypad();
-  }
-  function initKeypad(){
-    const overlay = document.getElementById('keypadOverlay');
-    const display = document.getElementById('keypadDisplay');
-    overlay.addEventListener('click', (e)=>{ if(e.target===overlay) closeKeypad(); });
-    document.getElementById('keypadClose').addEventListener('click', closeKeypad);
-    overlay.querySelectorAll('.keypad-grid button').forEach(btn=>{
-      const key = btn.getAttribute('data-key');
-      const op = btn.getAttribute('data-op');
-      const act = btn.getAttribute('data-action');
-      btn.addEventListener('click', ()=>{
-        if(key!==null && key!==undefined){
-          kp.buffer += String(key);
-          display.textContent = (kp.op? (kp.op+' '):'') + kp.buffer;
-        }else if(op){
-          kp.op = op;
-          display.textContent = kp.buffer? (op + ' ' + kp.buffer) : op;
-        }else if(act==='clear'){
-          kp.buffer=''; kp.op=null; display.textContent = String(kp.base);
-        }else if(act==='ok'){
-          applyKeypad();
-        }
-      });
-    });
-  }
-  function hookQtyInputs(){
-    document.querySelectorAll('.qty').forEach(inp=>{
-      inp.setAttribute('inputmode','none');
-      inp.setAttribute('readonly','readonly');
-      inp.addEventListener('click', ()=> openKeypad(inp.dataset.id));
-      inp.addEventListener('focus', ()=> openKeypad(inp.dataset.id));
-    });
-  }
-  render = function(){
-    _origRender();
-    ensureOverlay();
-    hookQtyInputs();
-  };
-})();
-// ===== End Popup Keypad Integration =====
-
 
 
 // --- Tralleløft patch (0,35 & 0,50) ---
@@ -764,41 +1633,18 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>`;
         el.insertAdjacentHTML('beforeend', html);
       }
+      if (typeof window !== 'undefined') {
+        const cache = window.__beregnLonCache || {};
+        window.__beregnLonCache = {
+          ...cache,
+          traelleSum: sum,
+          timestamp: Date.now(),
+        };
+      }
       return ret;
     };
   } catch(e){ console.warn('Tralleløft: kunne ikke wrappe beregnLon', e); }
 
-  // Replace/override downloadCSV to include tralleløft
-  try {
-    window.downloadCSV = function(sagsnummer){
-      // Build CSV fresh from data
-      const items = (typeof getAllData === 'function') ? getAllData() : [];
-      let csv = 'id;name;quantity;price\n';
-      items.forEach(item => {
-        if (item.quantity > 0) {
-          const safeName = '"' + String(item.name).replace(/"/g, '""') + '"';
-          csv += `${item.id};${safeName};${item.quantity};${item.price}\n`;
-        }
-      });
-
-      const t = window.__traelleloeft || { n35:0, n50:0, RATE35:RATE35, RATE50:RATE50, sum:0 };
-      if (t.n35 > 0) csv += `TL35;"Tralleløft 0,35 m";${t.n35};${t.RATE35}\n`;
-      if (t.n50 > 0) csv += `TL50;"Tralleløft 0,50 m";${t.n50};${t.RATE50}\n`;
-
-      // Append a summary/info section (lonResult text)
-      const lonText = (document.getElementById('lonResult')?.innerText || '').replace(/\s+/g,' ').trim();
-      csv += `info;"Beregningsresultater";"${lonText}";0\n`;
-
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `${sagsnummer || (document.getElementById('sagsnummer')?.value.trim() || 'uspecified')}_beregning_optælling.csv`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    };
-  } catch(e){ console.warn('Tralleløft: kunne ikke override downloadCSV', e); }
 })();
 
 
@@ -854,6 +1700,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const newVal = oldVal + sum;
         projEl.innerHTML = `<strong>Samlet projektsum:</strong> ${newVal.toFixed(2)} kr`;
       }
+    }
+
+    if (typeof window !== 'undefined') {
+      const baseMaterial = typeof lastMaterialSum === 'number' ? lastMaterialSum : 0;
+      const baseLabor = typeof lastLoensum === 'number' ? lastLoensum : 0;
+      window.__beregnLonCache = {
+        materialSum: baseMaterial + sum,
+        laborSum: baseLabor,
+        projectSum: baseMaterial + sum + baseLabor,
+        traelleSum: sum,
+        timestamp: Date.now(),
+      };
     }
   }
 

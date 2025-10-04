@@ -1,0 +1,19 @@
+{
+  "name": "csmate-v1",
+  "version": "1.0.0",
+  "description": "En PWA til hurtig optælling af materialer, akkordberegning og eksport. Projektet kan køres som statisk HTML/JS uden build-step.",
+  "main": "main.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "devDependencies": {
+    "vitest": "^3.2.4"
+  }
+}

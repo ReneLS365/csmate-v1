@@ -12,62 +12,169 @@
   <div class="bar">
     <div class="ttl">akkordseddel</div>
     <nav>
-      <button id="btnOptaelling" class="active">Optælling</button>
-      <button id="btnLon">Løn</button>
-      <button id="btnGuide">Guide</button>
+      <button id="btnSagsinfo" data-section="sagsinfoSection" class="active" type="button">Sagsinfo</button>
+      <button id="btnOptaelling" data-section="optaellingSection" type="button">Optælling</button>
+      <button id="btnLon" data-section="lonSection" type="button">Løn</button>
     </nav>
   </div>
 </header>
 <main>
-  <section id="optællingSection" class="sektion">
+  <section id="sagsinfoSection" class="sektion">
     <fieldset>
-      <legend>Sagsinfo</legend>
-      <div class="grid-3">
-        <input id="sagsnummer" placeholder="Sagsnummer">
-        <input id="sagsnavn" placeholder="Navn/opgave">
-        <input id="sagsadresse" placeholder="Adresse">
+      <legend>Stamdata</legend>
+      <div class="form-grid grid-3">
+        <label for="sagsnummer">
+          <span>Sagsnummer</span>
+          <input id="sagsnummer" name="sagsnummer" type="text" required>
+        </label>
+        <label for="sagsnavn">
+          <span>Navn/opgave</span>
+          <input id="sagsnavn" name="navn" type="text" required>
+        </label>
+        <label for="sagsadresse">
+          <span>Adresse</span>
+          <input id="sagsadresse" name="adresse" type="text" required>
+        </label>
+        <label for="sagskunde">
+          <span>Kunde</span>
+          <input id="sagskunde" name="kunde" type="text" required>
+        </label>
+        <label for="sagsdato">
+          <span>Dato</span>
+          <input id="sagsdato" name="dato" type="date" required inputmode="numeric">
+        </label>
+        <label for="sagsmontoer" class="col-span-3">
+          <span>Montørnavne</span>
+          <textarea id="sagsmontoer" name="montoer" rows="3" placeholder="Fx: Anna Jensen, Bo Nielsen" required></textarea>
+        </label>
       </div>
     </fieldset>
-    <fieldset><legend>Systemer</legend><div id="listSelectors" class="row"></div></fieldset>
-    <fieldset><legend>Materialer</legend><div id="optællingContainer" class="materials"></div></fieldset>
-    <div class="row no-print">
-      <label class="btn"><input id="csvUpload" type="file" accept=".csv" style="display:none">Importer CSV</label>
-      <button id="btnExportCSV">Del til E‑komplet (CSV)</button>
-      <button id="btnExportAll">Eksportér PDF + CSV</button>
+  </section>
+
+  <section id="optaellingSection" class="sektion" hidden>
+    <fieldset>
+      <legend>Systemer</legend>
+      <div id="listSelectors" class="row"></div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Materialer</legend>
+      <div id="optaellingContainer" class="materials"></div>
+    </fieldset>
+
+    <section id="overview" class="overview">
+      <div class="totals">
+        <div>
+          <span>Materialesum</span>
+          <strong id="total-material">0,00</strong>
+        </div>
+        <div>
+          <span>Lønsum</span>
+          <strong id="total-labor">0,00</strong>
+        </div>
+        <div>
+          <span>Projektsum</span>
+          <strong id="total-project">0,00</strong>
+        </div>
+      </div>
+    </section>
+
+    <section id="importer" class="import-zone no-print">
+      <input id="csvFileInput" type="file" accept=".csv,text/csv" hidden>
+      <div id="dropArea" class="drop-area" role="button" tabindex="0" aria-label="Træk en CSV hertil eller klik for at vælge">
+        <p><strong>Importer CSV</strong></p>
+        <p>Træk og slip din CSV her, eller klik for at vælge</p>
+      </div>
+    </section>
+
+    <div class="row btn-group no-print">
+      <button id="btnExportCSV" type="button" disabled>Del til E‑komplet (CSV)</button>
+      <button id="btnExportAll" type="button" disabled>Eksportér PDF + CSV</button>
     </div>
-    <div id="total" class="total">Total: 0.00 kr</div>
-    <fieldset class="no-print"><legend>Admin</legend><div class="row"><input id="adminCode" placeholder="Kode"><button onclick="login()">Log ind</button></div></fieldset>
-  </section>
-  <section id="lonSection" class="sektion" style="display:none">
-    <fieldset><legend>Type & beløb</legend><div class="grid-3">
-      <select id="jobType"><option value="montage">Montage</option><option value="demontage">Demontage (50%)</option></select>
-      <input id="montagepris" placeholder="Montagepris (auto)" inputmode="decimal">
-      <input id="demontagepris" placeholder="Demontagepris (auto)" inputmode="decimal">
-    </div></fieldset>
-    <fieldset><legend>Tillæg & km</legend><div class="grid-3">
-      <input id="slaebePct" placeholder="Slæb i %" inputmode="decimal">
-      <input id="antalBoringHuller" placeholder="Huller (antal)" inputmode="numeric">
-      <input id="antalLukHuller" placeholder="Luk af hul (antal)" inputmode="numeric">
-      <input id="antalBoringBeton" placeholder="Boring i beton (antal)" inputmode="numeric">
-      <input id="km" placeholder="Km" inputmode="decimal">
-    </div></fieldset>
+    <p id="actionHint" class="hint no-print">Udfyld Sagsinfo for at fortsætte.</p>
 
-<fieldset><legend>Tralleløft</legend>
-  <div class="grid-2">
-    <input id="traelleloeft35" placeholder="Tralleløft 0,35 (antal)" inputmode="numeric">
-    <input id="traelleloeft50" placeholder="Tralleløft 0,50 (antal)" inputmode="numeric">
-  </div>
-</fieldset>
-
-    <fieldset class="no-print"><legend>Medarbejdere</legend><div id="workers"></div><div class="row"><button id="btnAddWorker">+ Tilføj mand</button></div></fieldset>
-    <div class="row no-print"><button id="btnBeregnLon">Beregn løn</button><button id="btnPrint">Print</button></div>
-    <fieldset><legend>Resultat</legend><div id="lonResult"></div></fieldset>
+    <fieldset class="no-print">
+      <legend>Admin</legend>
+      <div class="row">
+        <label class="sr-only" for="adminCode">Admin kode</label>
+        <input id="adminCode" placeholder="Kode">
+        <button type="button" onclick="login()">Log ind</button>
+      </div>
+    </fieldset>
   </section>
-  <section id="guideSection" class="sektion" style="display:none"><fieldset><legend>Guide</legend><p>1) Tæl materialer. 2) Gå til Løn og indtast timer + tillæg. 3) Beregn og eksportér.</p></fieldset></section>
+
+  <section id="lonSection" class="sektion" hidden>
+    <fieldset>
+      <legend>Type & beløb</legend>
+      <div class="grid-3">
+        <label for="jobType"><span>Arbejdstype</span>
+          <select id="jobType">
+            <option value="montage">Montage</option>
+            <option value="demontage">Demontage (50%)</option>
+          </select>
+        </label>
+        <label for="montagepris"><span>Montagepris (auto)</span>
+          <input id="montagepris" placeholder="Montagepris (auto)" inputmode="decimal">
+        </label>
+        <label for="demontagepris"><span>Demontagepris (auto)</span>
+          <input id="demontagepris" placeholder="Demontagepris (auto)" inputmode="decimal">
+        </label>
+      </div>
+    </fieldset>
+    <fieldset>
+      <legend>Tillæg & km</legend>
+      <div class="grid-3">
+        <label for="slaebePct"><span>Slæb i %</span>
+          <input id="slaebePct" placeholder="Slæb i %" inputmode="decimal">
+        </label>
+        <label for="antalBoringHuller"><span>Huller (antal)</span>
+          <input id="antalBoringHuller" placeholder="Huller (antal)" inputmode="numeric">
+        </label>
+        <label for="antalLukHuller"><span>Luk af hul (antal)</span>
+          <input id="antalLukHuller" placeholder="Luk af hul (antal)" inputmode="numeric">
+        </label>
+        <label for="antalBoringBeton"><span>Boring i beton (antal)</span>
+          <input id="antalBoringBeton" placeholder="Boring i beton (antal)" inputmode="numeric">
+        </label>
+        <label for="km"><span>Km</span>
+          <input id="km" placeholder="Km" inputmode="decimal">
+        </label>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Tralleløft</legend>
+      <div class="grid-2">
+        <label for="traelleloeft35"><span>Tralleløft 0,35 (antal)</span>
+          <input id="traelleloeft35" placeholder="Tralleløft 0,35 (antal)" inputmode="numeric">
+        </label>
+        <label for="traelleloeft50"><span>Tralleløft 0,50 (antal)</span>
+          <input id="traelleloeft50" placeholder="Tralleløft 0,50 (antal)" inputmode="numeric">
+        </label>
+      </div>
+    </fieldset>
+
+    <fieldset class="no-print">
+      <legend>Medarbejdere</legend>
+      <div id="workers"></div>
+      <div class="row">
+        <button id="btnAddWorker" type="button">+ Tilføj mand</button>
+      </div>
+    </fieldset>
+    <div class="row no-print btn-group">
+      <button id="btnBeregnLon" type="button">Beregn løn</button>
+      <button id="btnPrint" type="button" disabled>Print</button>
+    </div>
+    <fieldset>
+      <legend>Resultat</legend>
+      <div id="lonResult"></div>
+    </fieldset>
+  </section>
 </main>
-<div id="guideModal" class="modal"><div class="inner"><h3>Guide</h3><p>Her kommer hjælpetekst.</p><button id="closeGuideModal">Luk</button></div></div>
+
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script src="main.js"></script>
 <script>if('serviceWorker' in navigator){ navigator.serviceWorker.register('./service-worker.js'); }</script>
-</body></html>
+</body>
+</html>
