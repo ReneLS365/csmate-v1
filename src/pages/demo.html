@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="da">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>CSMate Demo</title>
+  <link rel="stylesheet" href="../ui/numpad.css">
+  <link rel="stylesheet" href="./demo.css">
+</head>
+<body>
+  <main class="csmate-app">
+    <section class="csmate-card">
+      <h2>Sagsinfo</h2>
+      <form id="sagsinfoForm" class="csmate-grid cols-3">
+        <label for="sagsnummer"><span>Sagsnummer</span><input id="sagsnummer" name="sagsnummer" required></label>
+        <label for="opgave"><span>Opgave</span><input id="opgave" name="opgave" required></label>
+        <label for="adresse"><span>Adresse</span><input id="adresse" name="adresse" required></label>
+        <label for="kunde"><span>Kunde</span><input id="kunde" name="kunde" required></label>
+        <label for="dato"><span>Dato</span><input id="dato" name="dato" type="date" required></label>
+        <label for="montoer" class="full"><span>Montører</span><textarea id="montoer" name="montoer" placeholder="Anna Jensen; Bo Nielsen" required></textarea></label>
+      </form>
+      <div class="csmate-actions">
+        <button id="btn-export-e-komplet" type="button" disabled>Del til E-Komplet</button>
+        <button id="btn-export-pdf-csv" type="button" disabled>Eksportér CSV</button>
+        <button id="btn-print" type="button" disabled>Print</button>
+      </div>
+    </section>
+
+    <section class="csmate-card">
+      <h2>Tidsregistrering</h2>
+      <table class="csmate-time-table" aria-label="Timer" id="timeTable">
+        <thead>
+          <tr><th>Montør</th><th>Dato</th><th>Timer</th><th>Løntype</th><th></th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+      <button id="addTimeRow" type="button">Tilføj linje</button>
+      <div class="csmate-grid cols-2" style="margin-top:1rem;">
+        <label for="akkordAmount"><span>Akkord total</span><input id="akkordAmount" name="akkordAmount" type="number" step="0.01" inputmode="decimal" value="0"></label>
+      </div>
+    </section>
+
+    <section class="csmate-card">
+      <div id="eKompletPanel"></div>
+    </section>
+  </main>
+  <script type="module" src="./demo.js"></script>
+</body>
+</html>
