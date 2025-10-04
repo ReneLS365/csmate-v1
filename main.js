@@ -424,7 +424,7 @@ function hydrateMaterialListsFromJson() {
       return response.json();
     })
     .then(applyLists)
-    .then(applied => (applied ? applied : tryDatasetFallback()))
+    .then(applied => applied || tryDatasetFallback())
     .catch(err => {
       console.warn('Kunne ikke hente komplette materialelister', err);
       return tryDatasetFallback();
