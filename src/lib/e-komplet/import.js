@@ -109,7 +109,7 @@ export function applyMapping (rows, mapping) {
   return rows.map(row => {
     const mapped = {}
     CSV_HEADERS.forEach(header => {
-      if (Object.prototype.hasOwnProperty.call(row, header)) {
+      if (Object.hasOwn(row, header)) {
         mapped[header] = row[header] ?? ''
         return
       }
