@@ -1483,7 +1483,7 @@ function beregnLon() {
   const traelleSum = (traelle35 * TRAELLE_RATE35) + (traelle50 * TRAELLE_RATE50);
 
   let materialeTotal = 0;
-  let materialelinjer = '';
+  const materialLines = [];
   const materialerTilEkomplet = [];
   const allData = getAllData();
   if (Array.isArray(allData)) {
@@ -1497,7 +1497,12 @@ function beregnLon() {
       materialeTotal += lineTotal;
       const manualIndex = manualMaterials.indexOf(item);
       const label = item.manual ? (item.name?.trim() || `Manuelt materiale ${manualIndex + 1}`) : item.name;
-      materialelinjer += `<div>${label}: ${qty} × ${price.toFixed(2)} kr = ${lineTotal.toFixed(2)} kr</div>`;
+      materialLines.push({
+        label,
+        quantity: qty,
+        unitPrice: price,
+        lineTotal,
+      });
       materialerTilEkomplet.push({
         varenr: item.varenr || item.id || '',
         name: label,
@@ -1513,7 +1518,7 @@ function beregnLon() {
 
   const workers = document.querySelectorAll('.worker-row');
   let samletTimer = 0;
-  let arbejderLinjer = '';
+  const workerLines = [];
   let samletUdbetalt = 0;
   const beregnedeArbejdere = [];
 
@@ -1527,7 +1532,11 @@ function beregnLon() {
   if (samletTimer === 0) {
     const resultatDiv = document.getElementById('lonResult');
     if (resultatDiv) {
-      resultatDiv.innerHTML = "<div style='color:red;'>Indtast arbejdstimer for mindst én person</div>";
+      resultatDiv.innerHTML = '';
+      const message = document.createElement('div');
+      message.style.color = 'red';
+      message.textContent = 'Indtast arbejdstimer for mindst én person';
+      resultatDiv.appendChild(message);
     }
     laborEntries = [];
     return;
@@ -1561,7 +1570,12 @@ function beregnLon() {
     if (outputEl) {
       outputEl.textContent = `${timelon.toFixed(2)} kr/t | Total: ${total.toFixed(2)} kr`;
     }
-    arbejderLinjer += `<div>${workerName}: Timer: ${hours}, Timeløn: ${timelon.toFixed(2)} kr/t, Total: ${total.toFixed(2)} kr</div>`;
+    workerLines.push({
+      name: workerName,
+      hours,
+      rate: timelon,
+      total,
+    });
     const uddLabel = uddSelect?.selectedOptions?.[0]?.textContent?.trim() || '';
     beregnedeArbejdere.push({
       id: index + 1,
@@ -1583,32 +1597,110 @@ function beregnLon() {
   const projektsum = materialSum + samletUdbetalt;
   const datoDisplay = formatDateForDisplay(info.dato);
   if (resultatDiv) {
-    resultatDiv.innerHTML = `
-      <h3>Sagsinfo</h3>
-      <div><strong>Sagsnr.:</strong> ${escapeHtml(info.sagsnummer || '')}</div>
-      <div><strong>Navn:</strong> ${escapeHtml(info.navn || '')}</div>
-      <div><strong>Adresse:</strong> ${escapeHtml(info.adresse || '')}</div>
-      <div><strong>Dato:</strong> ${escapeHtml(datoDisplay)}</div>
-      <br><h3>Materialer brugt:</h3>
-      ${materialelinjer || '<div>Ingen materialer brugt</div>'}
-      <br><h3>Arbejdere:</h3>
-      ${arbejderLinjer || '<div>Ingen timer registreret</div>'}<br>
-      <h3>Oversigt:</h3>
-      <div><strong>Slæbebeløb:</strong> ${slaebebelob.toFixed(2)} kr</div>
-      <div><strong>Materialer (akkordberegnet):</strong> ${materialeTotal.toFixed(2)} kr</div>
-      <div><strong>Materialesum:</strong> ${materialSum.toFixed(2)} kr</div>
-      <div><strong>Ekstraarbejde:</strong> ${ekstraarbejde.toFixed(2)} kr</div>
-      <div><strong>Kilometer:</strong> ${kilometerPris.toFixed(2)} kr</div>
-      <div><strong>Samlet akkordsum:</strong> ${samletAkkordSum.toFixed(2)} kr</div>
-      <div><strong>Timer:</strong> ${samletTimer.toFixed(1)} t</div>
-      <div><strong>Timepris (uden tillæg):</strong> ${akkordTimeLøn.toFixed(2)} kr/t</div>
-      <div><strong>Lønsum:</strong> ${samletUdbetalt.toFixed(2)} kr</div>
-      <div><strong>Projektsum:</strong> ${projektsum.toFixed(2)} kr</div>
-      <div class="ekomplet-actions no-print">
-        <button id="btnEkompletExport" type="button">Indberet til E-komplet</button>
-        <p id="ekompletStatus" class="status-message" hidden aria-live="polite"></p>
-      </div>
-    `;
+    resultatDiv.innerHTML = '';
+
+    const sagsSection = document.createElement('div');
+    const sagsHeader = document.createElement('h3');
+    sagsHeader.textContent = 'Sagsinfo';
+    sagsSection.appendChild(sagsHeader);
+
+    const fields = [
+      { label: 'Sagsnr.', value: info.sagsnummer || '' },
+      { label: 'Navn', value: info.navn || '' },
+      { label: 'Adresse', value: info.adresse || '' },
+      { label: 'Dato', value: datoDisplay },
+    ];
+
+    fields.forEach(({ label, value }) => {
+      const line = document.createElement('div');
+      const strong = document.createElement('strong');
+      strong.textContent = `${label}: `;
+      line.appendChild(strong);
+      const span = document.createElement('span');
+      span.textContent = value;
+      line.appendChild(span);
+      sagsSection.appendChild(line);
+    });
+
+    resultatDiv.appendChild(sagsSection);
+
+    const matHeader = document.createElement('h3');
+    matHeader.textContent = 'Materialer brugt:';
+    resultatDiv.appendChild(matHeader);
+
+    if (materialLines.length > 0) {
+      materialLines.forEach(lineItem => {
+        const line = document.createElement('div');
+        line.textContent = `${lineItem.label}: ${lineItem.quantity} × ${lineItem.unitPrice.toFixed(2)} kr = ${lineItem.lineTotal.toFixed(2)} kr`;
+        resultatDiv.appendChild(line);
+      });
+    } else {
+      const none = document.createElement('div');
+      none.textContent = 'Ingen materialer brugt';
+      resultatDiv.appendChild(none);
+    }
+
+    const workersHeader = document.createElement('h3');
+    workersHeader.textContent = 'Arbejdere:';
+    resultatDiv.appendChild(workersHeader);
+
+    if (workerLines.length > 0) {
+      workerLines.forEach(workerLine => {
+        const line = document.createElement('div');
+        line.textContent = `${workerLine.name}: Timer: ${workerLine.hours}, Timeløn: ${workerLine.rate.toFixed(2)} kr/t, Total: ${workerLine.total.toFixed(2)} kr`;
+        resultatDiv.appendChild(line);
+      });
+    } else {
+      const none = document.createElement('div');
+      none.textContent = 'Ingen timer registreret';
+      resultatDiv.appendChild(none);
+    }
+
+    const oversigtHeader = document.createElement('h3');
+    oversigtHeader.textContent = 'Oversigt:';
+    resultatDiv.appendChild(oversigtHeader);
+
+    const oversigt = [
+      ['Slæbebeløb', `${slaebebelob.toFixed(2)} kr`],
+      ['Materialer (akkordberegnet)', `${materialeTotal.toFixed(2)} kr`],
+      ['Materialesum', `${materialSum.toFixed(2)} kr`],
+      ['Ekstraarbejde', `${ekstraarbejde.toFixed(2)} kr`],
+      ['Kilometer', `${kilometerPris.toFixed(2)} kr`],
+      ['Samlet akkordsum', `${samletAkkordSum.toFixed(2)} kr`],
+      ['Timer', `${samletTimer.toFixed(1)} t`],
+      ['Timepris (uden tillæg)', `${akkordTimeLøn.toFixed(2)} kr/t`],
+      ['Lønsum', `${samletUdbetalt.toFixed(2)} kr`],
+      ['Projektsum', `${projektsum.toFixed(2)} kr`],
+    ];
+
+    oversigt.forEach(([label, value]) => {
+      const line = document.createElement('div');
+      const strong = document.createElement('strong');
+      strong.textContent = `${label}: `;
+      line.appendChild(strong);
+      const span = document.createElement('span');
+      span.textContent = value;
+      line.appendChild(span);
+      resultatDiv.appendChild(line);
+    });
+
+    const actions = document.createElement('div');
+    actions.className = 'ekomplet-actions no-print';
+
+    const btn = document.createElement('button');
+    btn.id = 'btnEkompletExport';
+    btn.type = 'button';
+    btn.textContent = 'Indberet til E-komplet';
+    actions.appendChild(btn);
+
+    const status = document.createElement('p');
+    status.id = 'ekompletStatus';
+    status.className = 'status-message';
+    status.hidden = true;
+    status.setAttribute('aria-live', 'polite');
+    actions.appendChild(status);
+
+    resultatDiv.appendChild(actions);
   }
 
   laborEntries = beregnedeArbejdere;
