@@ -129,6 +129,7 @@ let workerCount = 0;
 let laborEntries = [];
 let lastLoensum = 0;
 let lastMaterialSum = 0;
+let lastEkompletData = null;
 const DEFAULT_ACTION_HINT = 'Udfyld Sagsinfo for at fortsætte.';
 
 // --- Scaffold Part Lists ---
@@ -1054,6 +1055,38 @@ function formatNumberForCSV(value) {
   return toNumber(value).toFixed(2).replace('.', ',');
 }
 
+function formatPercentForCSV(value) {
+  const num = toNumber(value);
+  return `${num.toFixed(2).replace('.', ',')} %`;
+}
+
+function formatDateForDisplay(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (!Number.isNaN(date.valueOf())) {
+    return date.toLocaleDateString('da-DK');
+  }
+  return String(value);
+}
+
+function setEkompletStatus(message, variant = 'success') {
+  const statusEl = document.getElementById('ekompletStatus');
+  if (!statusEl) return;
+  statusEl.classList.remove('success', 'error');
+  if (!message) {
+    statusEl.textContent = '';
+    statusEl.setAttribute('hidden', '');
+    return;
+  }
+  if (variant === 'success') {
+    statusEl.classList.add('success');
+  } else if (variant === 'error') {
+    statusEl.classList.add('error');
+  }
+  statusEl.textContent = message;
+  statusEl.removeAttribute('hidden');
+}
+
 function normalizeDateValue(value) {
   if (!value) return '';
   const trimmed = String(value).trim();
@@ -1413,122 +1446,306 @@ async function loadLocalData(key) {
 }
 
 function beregnLon() {
-  const sagsnummer = document.getElementById("sagsnummer").value.trim() || "uspecified";
-  const montagepris = parseFloat(document.getElementById("montagepris").value) || 0;
-  const demontagepris = parseFloat(document.getElementById("demontagepris").value) || 0;
-  const slaebePct = (parseFloat(document.getElementById("slaebePct").value) || 0) / 100;
-  const jobType = document.getElementById("jobType").value;
+  const info = collectSagsinfo();
+  const sagsnummer = info.sagsnummer?.trim() || 'uspecified';
+  const montagepris = parseFloat(document.getElementById('montagepris')?.value) || 0;
+  const demontagepris = parseFloat(document.getElementById('demontagepris')?.value) || 0;
+  const slaebePctInput = parseFloat(document.getElementById('slaebePct')?.value) || 0;
+  const slaebePct = slaebePctInput / 100;
+  const jobType = document.getElementById('jobType')?.value || 'montage';
 
-  const boringHullerPris = 4.70, lukHullerPris = 3.45, boringBetonPris = 11.49, kmPris = 2.12;
-  const grundloen = 147, tillægUdd1 = 42.98, tillægUdd2 = 49.38;
+  const boringHullerPris = 4.70;
+  const lukHullerPris = 3.45;
+  const boringBetonPris = 11.49;
+  const kmPris = 2.12;
+  const grundloen = 147;
+  const tillægUdd1 = 42.98;
+  const tillægUdd2 = 49.38;
+  const TRAELLE_RATE35 = 10.44;
+  const TRAELLE_RATE50 = 14.62;
 
-  const antalBoringHuller = parseFloat(document.getElementById("antalBoringHuller").value) || 0;
-  const antalLukHuller = parseFloat(document.getElementById("antalLukHuller").value) || 0;
-  const antalBoringBeton = parseFloat(document.getElementById("antalBoringBeton").value) || 0;
-  const antalKm = parseFloat(document.getElementById("km").value) || 0;
+  lastEkompletData = null;
 
-  const ekstraarbejde = (antalBoringHuller * boringHullerPris) + (antalLukHuller * lukHullerPris) + (antalBoringBeton * boringBetonPris);
+  const antalBoringHuller = parseFloat(document.getElementById('antalBoringHuller')?.value) || 0;
+  const antalLukHuller = parseFloat(document.getElementById('antalLukHuller')?.value) || 0;
+  const antalBoringBeton = parseFloat(document.getElementById('antalBoringBeton')?.value) || 0;
+  const antalKm = parseFloat(document.getElementById('km')?.value) || 0;
+
+  const traelle35 = parseFloat(document.getElementById('traelleloeft35')?.value) || 0;
+  const traelle50 = parseFloat(document.getElementById('traelleloeft50')?.value) || 0;
+
+  const boringHullerTotal = antalBoringHuller * boringHullerPris;
+  const lukHullerTotal = antalLukHuller * lukHullerPris;
+  const boringBetonTotal = antalBoringBeton * boringBetonPris;
+  const ekstraarbejde = boringHullerTotal + lukHullerTotal + boringBetonTotal;
   const kilometerPris = antalKm * kmPris;
   const slaebebelob = montagepris * slaebePct; // Slæb beregnes altid ud fra montagepris
+  const traelleSum = (traelle35 * TRAELLE_RATE35) + (traelle50 * TRAELLE_RATE50);
 
   let materialeTotal = 0;
-  let materialelinjer = "";
+  const materialLines = [];
+  const materialerTilEkomplet = [];
   const allData = getAllData();
   if (Array.isArray(allData)) {
     allData.forEach(item => {
       const qty = toNumber(item.quantity);
-      if (qty > 0) {
-        const price = toNumber(item.price);
-        const total = qty * price;
-        const justeretTotal = jobType === "montage" ? total : total / 2;
-        materialeTotal += justeretTotal;
-        const manualIndex = manualMaterials.indexOf(item);
-        const label = item.manual ? (item.name?.trim() || `Manuelt materiale ${manualIndex + 1}`) : item.name;
-        materialelinjer += `<div>${label}: ${qty} × ${price.toFixed(2)} kr = ${justeretTotal.toFixed(2)} kr</div>`;
-      }
+      if (qty <= 0) return;
+      const price = toNumber(item.price);
+      const baseTotal = qty * price;
+      const lineTotal = jobType === 'montage' ? baseTotal : baseTotal / 2;
+      const adjustedUnitPrice = qty > 0 ? lineTotal / qty : price;
+      materialeTotal += lineTotal;
+      const manualIndex = manualMaterials.indexOf(item);
+      const label = item.manual ? (item.name?.trim() || `Manuelt materiale ${manualIndex + 1}`) : item.name;
+      materialLines.push({
+        label,
+        quantity: qty,
+        unitPrice: price,
+        lineTotal,
+      });
+      materialerTilEkomplet.push({
+        varenr: item.varenr || item.id || '',
+        name: label,
+        quantity: qty,
+        unitPrice: adjustedUnitPrice,
+        baseUnitPrice: price,
+        lineTotal,
+      });
     });
   }
 
   const samletAkkordSum = materialeTotal + ekstraarbejde + kilometerPris + slaebebelob;
 
-  const workers = document.querySelectorAll(".worker-row");
+  const workers = document.querySelectorAll('.worker-row');
   let samletTimer = 0;
-  let arbejderLinjer = "";
+  const workerLines = [];
   let samletUdbetalt = 0;
   const beregnedeArbejdere = [];
 
-  workers.forEach((worker, index) => {
-    const hoursEl = worker.querySelector(".worker-hours");
-    const tillaegEl = worker.querySelector(".worker-tillaeg");
-    const uddEl = worker.querySelector(".worker-udd");
-    const outputEl = worker.querySelector(".worker-output");
-
+  workers.forEach(worker => {
+    const hoursEl = worker.querySelector('.worker-hours');
     const hours = parseFloat(hoursEl?.value) || 0;
     if (hours === 0) return;
-
-    const tillaeg = parseFloat(tillaegEl?.value) || 0;
-    const udd = uddEl?.value;
-
     samletTimer += hours;
   });
 
   if (samletTimer === 0) {
-    document.getElementById("lonResult").innerHTML = `<div style='color:red;'>Indtast arbejdstimer for mindst én person</div>`;
+    const resultatDiv = document.getElementById('lonResult');
+    if (resultatDiv) {
+      resultatDiv.innerHTML = '';
+      const message = document.createElement('div');
+      message.style.color = 'red';
+      message.textContent = 'Indtast arbejdstimer for mindst én person';
+      resultatDiv.appendChild(message);
+    }
+    laborEntries = [];
     return;
   }
 
   const akkordTimeLøn = samletAkkordSum / samletTimer;
 
   workers.forEach((worker, index) => {
-    const hours = parseFloat(worker.querySelector(".worker-hours").value) || 0;
-    const tillaeg = parseFloat(worker.querySelector(".worker-tillaeg").value) || 0;
-    const udd = worker.querySelector(".worker-udd").value;
-    const outputEl = worker.querySelector(".worker-output");
+    const hours = parseFloat(worker.querySelector('.worker-hours')?.value) || 0;
+    if (hours === 0) return;
+    const tillaeg = parseFloat(worker.querySelector('.worker-tillaeg')?.value) || 0;
+    const uddSelect = worker.querySelector('.worker-udd');
+    const udd = uddSelect?.value || '';
+    const outputEl = worker.querySelector('.worker-output');
+    const workerName = worker.querySelector('legend')?.textContent?.trim() || `Mand ${index + 1}`;
 
     let timelon = akkordTimeLøn;
+    let uddannelsesTillaeg = 0;
     timelon += tillaeg;
-    if (udd === "udd1") timelon += tillægUdd1;
-    else if (udd === "udd2") timelon += tillægUdd2;
+    if (udd === 'udd1') {
+      timelon += tillægUdd1;
+      uddannelsesTillaeg = tillægUdd1;
+    } else if (udd === 'udd2') {
+      timelon += tillægUdd2;
+      uddannelsesTillaeg = tillægUdd2;
+    }
 
     const total = timelon * hours;
     samletUdbetalt += total;
 
-    outputEl.textContent = `${timelon.toFixed(2)} kr/t | Total: ${total.toFixed(2)} kr`;
-    arbejderLinjer += `<div>Mand ${index + 1}: Timer: ${hours}, Timeløn: ${timelon.toFixed(2)} kr/t, Total: ${total.toFixed(2)} kr</div>`;
-    beregnedeArbejdere.push({ type: jobType, hours, rate: timelon, total });
+    if (outputEl) {
+      outputEl.textContent = `${timelon.toFixed(2)} kr/t | Total: ${total.toFixed(2)} kr`;
+    }
+    workerLines.push({
+      name: workerName,
+      hours,
+      rate: timelon,
+      total,
+    });
+    const uddLabel = uddSelect?.selectedOptions?.[0]?.textContent?.trim() || '';
+    beregnedeArbejdere.push({
+      id: index + 1,
+      name: workerName,
+      type: jobType,
+      hours,
+      rate: timelon,
+      baseRate: akkordTimeLøn,
+      mentortillaeg: tillaeg,
+      udd,
+      uddLabel,
+      uddannelsesTillaeg,
+      total,
+    });
   });
 
-  const resultatDiv = document.getElementById("lonResult");
+  const resultatDiv = document.getElementById('lonResult');
   const materialSum = calcMaterialesum();
   const projektsum = materialSum + samletUdbetalt;
-  resultatDiv.innerHTML = `
-    <h3>Materialer brugt:</h3>
-    ${materialelinjer || '<div>Ingen materialer brugt</div>'}
-    <br><h3>Arbejdere:</h3>
-    ${arbejderLinjer}<br>
-    <h3>Oversigt:</h3>
-    <div><strong>Slæbebeløb:</strong> ${slaebebelob.toFixed(2)} kr</div>
-    <div><strong>Materialer (akkordberegnet):</strong> ${materialeTotal.toFixed(2)} kr</div>
-    <div><strong>Materialesum:</strong> ${materialSum.toFixed(2)} kr</div>
-    <div><strong>Ekstraarbejde:</strong> ${ekstraarbejde.toFixed(2)} kr</div>
-    <div><strong>Kilometer:</strong> ${kilometerPris.toFixed(2)} kr</div>
-    <div><strong>Samlet akkordsum:</strong> ${samletAkkordSum.toFixed(2)} kr</div>
-    <div><strong>Timer:</strong> ${samletTimer.toFixed(1)} t</div>
-    <div><strong>Timepris (uden tillæg):</strong> ${akkordTimeLøn.toFixed(2)} kr/t</div>
-    <div><strong>Lønsum:</strong> ${samletUdbetalt.toFixed(2)} kr</div>
-    <div><strong>Projektsum:</strong> ${projektsum.toFixed(2)} kr</div>
+  const datoDisplay = formatDateForDisplay(info.dato);
+  if (resultatDiv) {
+    resultatDiv.innerHTML = '';
 
-  `;
+    const sagsSection = document.createElement('div');
+    const sagsHeader = document.createElement('h3');
+    sagsHeader.textContent = 'Sagsinfo';
+    sagsSection.appendChild(sagsHeader);
+
+    const fields = [
+      { label: 'Sagsnr.', value: info.sagsnummer || '' },
+      { label: 'Navn', value: info.navn || '' },
+      { label: 'Adresse', value: info.adresse || '' },
+      { label: 'Dato', value: datoDisplay },
+    ];
+
+    fields.forEach(({ label, value }) => {
+      const line = document.createElement('div');
+      const strong = document.createElement('strong');
+      strong.textContent = `${label}: `;
+      line.appendChild(strong);
+      const span = document.createElement('span');
+      span.textContent = value;
+      line.appendChild(span);
+      sagsSection.appendChild(line);
+    });
+
+    resultatDiv.appendChild(sagsSection);
+
+    const matHeader = document.createElement('h3');
+    matHeader.textContent = 'Materialer brugt:';
+    resultatDiv.appendChild(matHeader);
+
+    if (materialLines.length > 0) {
+      materialLines.forEach(lineItem => {
+        const line = document.createElement('div');
+        line.textContent = `${lineItem.label}: ${lineItem.quantity} × ${lineItem.unitPrice.toFixed(2)} kr = ${lineItem.lineTotal.toFixed(2)} kr`;
+        resultatDiv.appendChild(line);
+      });
+    } else {
+      const none = document.createElement('div');
+      none.textContent = 'Ingen materialer brugt';
+      resultatDiv.appendChild(none);
+    }
+
+    const workersHeader = document.createElement('h3');
+    workersHeader.textContent = 'Arbejdere:';
+    resultatDiv.appendChild(workersHeader);
+
+    if (workerLines.length > 0) {
+      workerLines.forEach(workerLine => {
+        const line = document.createElement('div');
+        line.textContent = `${workerLine.name}: Timer: ${workerLine.hours}, Timeløn: ${workerLine.rate.toFixed(2)} kr/t, Total: ${workerLine.total.toFixed(2)} kr`;
+        resultatDiv.appendChild(line);
+      });
+    } else {
+      const none = document.createElement('div');
+      none.textContent = 'Ingen timer registreret';
+      resultatDiv.appendChild(none);
+    }
+
+    const oversigtHeader = document.createElement('h3');
+    oversigtHeader.textContent = 'Oversigt:';
+    resultatDiv.appendChild(oversigtHeader);
+
+    const oversigt = [
+      ['Slæbebeløb', `${slaebebelob.toFixed(2)} kr`],
+      ['Materialer (akkordberegnet)', `${materialeTotal.toFixed(2)} kr`],
+      ['Materialesum', `${materialSum.toFixed(2)} kr`],
+      ['Ekstraarbejde', `${ekstraarbejde.toFixed(2)} kr`],
+      ['Kilometer', `${kilometerPris.toFixed(2)} kr`],
+      ['Samlet akkordsum', `${samletAkkordSum.toFixed(2)} kr`],
+      ['Timer', `${samletTimer.toFixed(1)} t`],
+      ['Timepris (uden tillæg)', `${akkordTimeLøn.toFixed(2)} kr/t`],
+      ['Lønsum', `${samletUdbetalt.toFixed(2)} kr`],
+      ['Projektsum', `${projektsum.toFixed(2)} kr`],
+    ];
+
+    oversigt.forEach(([label, value]) => {
+      const line = document.createElement('div');
+      const strong = document.createElement('strong');
+      strong.textContent = `${label}: `;
+      line.appendChild(strong);
+      const span = document.createElement('span');
+      span.textContent = value;
+      line.appendChild(span);
+      resultatDiv.appendChild(line);
+    });
+
+    const actions = document.createElement('div');
+    actions.className = 'ekomplet-actions no-print';
+
+    const btn = document.createElement('button');
+    btn.id = 'btnEkompletExport';
+    btn.type = 'button';
+    btn.textContent = 'Indberet til E-komplet';
+    actions.appendChild(btn);
+
+    const status = document.createElement('p');
+    status.id = 'ekompletStatus';
+    status.className = 'status-message';
+    status.hidden = true;
+    status.setAttribute('aria-live', 'polite');
+    actions.appendChild(status);
+
+    resultatDiv.appendChild(actions);
+  }
 
   laborEntries = beregnedeArbejdere;
+
+  lastEkompletData = {
+    sagsinfo: info,
+    jobType,
+    montagepris,
+    demontagepris,
+    extras: {
+      slaebePct: slaebePctInput,
+      slaebeBelob: slaebebelob,
+      boringHuller: { antal: antalBoringHuller, pris: boringHullerPris, total: boringHullerTotal },
+      lukHuller: { antal: antalLukHuller, pris: lukHullerPris, total: lukHullerTotal },
+      boringBeton: { antal: antalBoringBeton, pris: boringBetonPris, total: boringBetonTotal },
+      kilometer: { antal: antalKm, pris: kmPris, total: kilometerPris },
+    },
+    materialer: materialerTilEkomplet,
+    arbejdere: beregnedeArbejdere,
+    totals: {
+      materialeAkkord: materialeTotal,
+      ekstraarbejde,
+      kilometerPris,
+      slaebeBelob: slaebebelob,
+      akkordsum: samletAkkordSum,
+      timer: samletTimer,
+      akkordTimeLon: akkordTimeLøn,
+      loensum: samletUdbetalt,
+      projektsum,
+      materialSum,
+      traelleSum,
+    },
+    traelle: {
+      antal35: traelle35,
+      antal50: traelle50,
+      rate35: TRAELLE_RATE35,
+      rate50: TRAELLE_RATE50,
+      sum: traelleSum,
+    },
+  };
+
   updateTotals(true);
+  attachEkompletButton();
 
   if (typeof window !== 'undefined') {
-    const traelle35 = parseFloat(document.getElementById('traelleloeft35')?.value) || 0;
-    const traelle50 = parseFloat(document.getElementById('traelleloeft50')?.value) || 0;
-    const TRAELLE_RATE35 = 10.44;
-    const TRAELLE_RATE50 = 14.62;
-    const traelleSum = (traelle35 * TRAELLE_RATE35) + (traelle50 * TRAELLE_RATE50);
     window.__beregnLonCache = {
       materialSum: lastMaterialSum,
       laborSum: lastLoensum,
@@ -1539,6 +1756,166 @@ function beregnLon() {
   }
 
   return sagsnummer;
+}
+
+
+function attachEkompletButton() {
+  const button = document.getElementById('btnEkompletExport');
+  if (!button) return;
+  button.addEventListener('click', () => downloadEkompletCSV());
+}
+
+function downloadEkompletCSV() {
+  if (!validateSagsinfo()) {
+    setEkompletStatus('Udfyld Sagsinfo før du indberetter til E-komplet.', 'error');
+    updateActionHint('Udfyld Sagsinfo for at indberette.', 'error');
+    return;
+  }
+
+  const data = lastEkompletData;
+  if (!data) {
+    setEkompletStatus('Beregn løn først, så alle data er opdaterede.', 'error');
+    return;
+  }
+
+  const rows = [];
+  const sagsinfo = data.sagsinfo || {};
+  const jobTypeLabel = data.jobType === 'demontage' ? 'Demontage (50%)' : 'Montage';
+
+  rows.push(['Sektion', 'Felt', 'Værdi']);
+  rows.push(['Sagsinfo', 'Sagsnummer', sagsinfo.sagsnummer || '']);
+  rows.push(['Sagsinfo', 'Navn', sagsinfo.navn || '']);
+  rows.push(['Sagsinfo', 'Adresse', sagsinfo.adresse || '']);
+  rows.push(['Sagsinfo', 'Dato', formatDateForDisplay(sagsinfo.dato || '')]);
+  rows.push([]);
+
+  rows.push(['Materialer', 'Varenr', 'Beskrivelse', 'Antal', 'Sats', 'Linjesum']);
+  if (Array.isArray(data.materialer) && data.materialer.length > 0) {
+    data.materialer.forEach(item => {
+      rows.push([
+        'Materiale',
+        item.varenr || '',
+        item.name || '',
+        formatNumberForCSV(item.quantity || 0),
+        formatNumberForCSV(item.unitPrice || 0),
+        formatNumberForCSV(item.lineTotal || 0),
+      ]);
+    });
+  } else {
+    rows.push(['Materiale', '', 'Ingen registrering', '0', '0,00', '0,00']);
+  }
+  rows.push([]);
+
+  rows.push(['Arbejdere', 'Navn', 'Timer', 'Uddannelse', 'Mentortillæg', 'Udd.tillæg', 'Sats', 'Linjesum']);
+  if (Array.isArray(data.arbejdere) && data.arbejdere.length > 0) {
+    data.arbejdere.forEach(worker => {
+      rows.push([
+        'Arbejder',
+        worker.name || '',
+        formatNumberForCSV(worker.hours || 0),
+        worker.uddLabel || worker.udd || '',
+        formatNumberForCSV(worker.mentortillaeg || 0),
+        formatNumberForCSV(worker.uddannelsesTillaeg || 0),
+        formatNumberForCSV(worker.rate || 0),
+        formatNumberForCSV(worker.total || 0),
+      ]);
+    });
+  } else {
+    rows.push(['Arbejder', 'Ingen timer registreret', '0', '', '0,00', '0,00', '0,00', '0,00']);
+  }
+  rows.push([]);
+
+  rows.push(['Tillæg', 'Type', 'Antal/Procent', 'Sats', 'Beløb']);
+  const extras = data.extras || {};
+  rows.push([
+    'Tillæg',
+    'Slæb',
+    formatPercentForCSV(extras.slaebePct || 0),
+    formatNumberForCSV(data.montagepris || 0),
+    formatNumberForCSV(extras.slaebeBelob || 0),
+  ]);
+  const boringHuller = extras.boringHuller || {};
+  rows.push([
+    'Tillæg',
+    'Boring af huller',
+    formatNumberForCSV(boringHuller.antal || 0),
+    formatNumberForCSV(boringHuller.pris || 0),
+    formatNumberForCSV(boringHuller.total || 0),
+  ]);
+  const lukHuller = extras.lukHuller || {};
+  rows.push([
+    'Tillæg',
+    'Luk af hul',
+    formatNumberForCSV(lukHuller.antal || 0),
+    formatNumberForCSV(lukHuller.pris || 0),
+    formatNumberForCSV(lukHuller.total || 0),
+  ]);
+  const boringBeton = extras.boringBeton || {};
+  rows.push([
+    'Tillæg',
+    'Boring i beton',
+    formatNumberForCSV(boringBeton.antal || 0),
+    formatNumberForCSV(boringBeton.pris || 0),
+    formatNumberForCSV(boringBeton.total || 0),
+  ]);
+  const kilometer = extras.kilometer || {};
+  rows.push([
+    'Tillæg',
+    'Kilometer',
+    formatNumberForCSV(kilometer.antal || 0),
+    formatNumberForCSV(kilometer.pris || 0),
+    formatNumberForCSV(kilometer.total || 0),
+  ]);
+  const traelle = data.traelle || {};
+  rows.push([
+    'Tillæg',
+    'Tralleløft 0,35 m',
+    formatNumberForCSV(traelle.antal35 || 0),
+    formatNumberForCSV(traelle.rate35 || 0),
+    formatNumberForCSV((traelle.antal35 || 0) * (traelle.rate35 || 0)),
+  ]);
+  rows.push([
+    'Tillæg',
+    'Tralleløft 0,50 m',
+    formatNumberForCSV(traelle.antal50 || 0),
+    formatNumberForCSV(traelle.rate50 || 0),
+    formatNumberForCSV((traelle.antal50 || 0) * (traelle.rate50 || 0)),
+  ]);
+  rows.push([]);
+
+  rows.push(['Projekt', 'Felt', 'Værdi']);
+  rows.push(['Projekt', 'Arbejdstype', jobTypeLabel]);
+  rows.push(['Projekt', 'Montagepris', formatNumberForCSV(data.montagepris || 0)]);
+  rows.push(['Projekt', 'Demontagepris', formatNumberForCSV(data.demontagepris || 0)]);
+  rows.push(['Projekt', 'Materialer (akkord)', formatNumberForCSV(data.totals?.materialeAkkord || 0)]);
+  rows.push(['Projekt', 'Materialesum', formatNumberForCSV(data.totals?.materialSum || 0)]);
+  rows.push(['Projekt', 'Ekstraarbejde', formatNumberForCSV(data.totals?.ekstraarbejde || 0)]);
+  rows.push(['Projekt', 'Kilometer', formatNumberForCSV(data.totals?.kilometerPris || 0)]);
+  rows.push(['Projekt', 'Slæbebeløb', formatNumberForCSV(data.totals?.slaebeBelob || 0)]);
+  rows.push(['Projekt', 'Tralleløft i alt', formatNumberForCSV(data.totals?.traelleSum || 0)]);
+  rows.push(['Projekt', 'Samlet akkordsum', formatNumberForCSV(data.totals?.akkordsum || 0)]);
+  rows.push(['Projekt', 'Timer', formatNumberForCSV(data.totals?.timer || 0)]);
+  rows.push(['Projekt', 'Timepris (uden tillæg)', formatNumberForCSV(data.totals?.akkordTimeLon || 0)]);
+  rows.push(['Projekt', 'Lønsum', formatNumberForCSV(data.totals?.loensum || 0)]);
+  rows.push(['Projekt', 'Projektsum', formatNumberForCSV(data.totals?.projektsum || 0)]);
+
+  const csvContent = rows
+    .map(row => row.map(cell => escapeCSV(cell ?? '')).join(';'))
+    .join('\n');
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const baseName = sanitizeFilename(sagsinfo.sagsnummer || 'sag') || 'sag';
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `${baseName}-ekomplet.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+
+  setEkompletStatus('Filen er hentet og klar til upload i E-komplet.', 'success');
+  updateActionHint('E-komplet fil er genereret.', 'success');
 }
 
 
@@ -2159,6 +2536,22 @@ function initApp() {
   updateTotals(true);
   numericKeyboard.init();
   setupMobileKeyboardDismissal();
+
+  const calendarIcon = document.getElementById('calendarIcon');
+  if (calendarIcon) {
+    calendarIcon.addEventListener('click', () => {
+      const dateField = document.getElementById('sagsdato');
+      if (!dateField) return;
+      if (typeof dateField.showPicker === 'function') {
+        dateField.showPicker();
+      } else {
+        dateField.focus();
+        if (typeof dateField.click === 'function') {
+          dateField.click();
+        }
+      }
+    });
+  }
 }
 
 if (document.readyState === 'loading') {

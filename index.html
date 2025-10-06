@@ -40,9 +40,12 @@
           <span>Kunde</span>
           <input id="sagskunde" name="kunde" type="text" required>
         </label>
-        <label for="sagsdato">
+        <label for="sagsdato" class="date-field">
           <span>Dato</span>
-          <input id="sagsdato" name="dato" type="date" required inputmode="numeric">
+          <div class="date-input-wrapper">
+            <input id="sagsdato" name="dato" type="date" required inputmode="numeric">
+            <button id="calendarIcon" class="date-picker-trigger" type="button" aria-label="Åbn kalender">📅</button>
+          </div>
         </label>
         <label for="sagsmontoer" class="col-span-3">
           <span>Montørnavne</span>
