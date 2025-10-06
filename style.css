@@ -22,6 +22,10 @@ fieldset{border:1px solid var(--border);background:var(--panel);border-radius:12
 legend{color:var(--muted);padding:0 6px}
 label{display:flex;flex-direction:column;gap:6px;font-size:0.95rem}
 label span{color:var(--muted);font-size:0.85rem}
+.date-field .date-input-wrapper{display:flex;align-items:center;gap:8px}
+.date-field .date-input-wrapper input[type=date]{flex:1}
+.date-picker-trigger{display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:44px;padding:0 12px;font-size:1.25rem;line-height:1;border:1px solid var(--border);background:var(--elev)}
+.date-picker-trigger:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 input,select,textarea,button{background:var(--panel);color:var(--text);border:1px solid var(--border);border-radius:10px;min-height:44px;padding:10px;font-size:16px}
 textarea{resize:vertical}
 button{cursor:pointer}
@@ -77,6 +81,8 @@ button{cursor:pointer}
 .status-message{margin:6px 0 0;font-size:0.85rem}
 .status-message.success{color:#8adbae}
 .status-message.error{color:#ff9b9b}
+.ekomplet-actions{margin-top:16px;display:flex;flex-direction:column;gap:10px}
+.ekomplet-actions button{align-self:flex-start}
 .modal{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:none;align-items:center;justify-content:center;padding:24px;z-index:999}
 .modal.open{display:flex}
 .modal[hidden]{display:none!important}
