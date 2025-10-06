@@ -4,10 +4,23 @@ function resolveSectionId(id) {
   return id.endsWith('Section') ? id : `${id}Section`;
 }
 
+function forEachNode(nodeList, callback) {
+  if (!nodeList || typeof callback !== 'function') return;
+
+  if (typeof nodeList.forEach === 'function') {
+    nodeList.forEach(callback);
+    return;
+  }
+
+  for (let index = 0; index < nodeList.length; index += 1) {
+    callback(nodeList[index], index, nodeList);
+  }
+}
+
 function vis(id) {
   const targetId = resolveSectionId(id);
 
-  document.querySelectorAll('.sektion').forEach(section => {
+  forEachNode(document.querySelectorAll('.sektion'), section => {
     const isActive = section.id === targetId;
     section.toggleAttribute('hidden', !isActive);
     if (isActive) {
@@ -17,7 +30,7 @@ function vis(id) {
     }
   });
 
-  document.querySelectorAll('header nav button[data-section]').forEach(btn => {
+  forEachNode(document.querySelectorAll('header nav button[data-section]'), btn => {
     const buttonTarget = resolveSectionId(btn.dataset.section);
     btn.classList.toggle('active', buttonTarget === targetId);
   });
@@ -32,12 +45,16 @@ function toNumber(value) {
   return Number.isFinite(num) ? num : 0;
 }
 
+const DIACRITIC_REGEX = /[\u0300-\u036f]/g;
+const NON_ALPHANUMERIC_REGEX = /[^a-z0-9]/g;
+
 function normalizeKey(value) {
-  return value
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '')
-    .replace(/[^a-z0-9]/g, '');
+  if (value == null) return '';
+  const lower = String(value).toLowerCase();
+  const canNormalize = typeof String.prototype.normalize === 'function';
+  const normalized = canNormalize ? lower.normalize('NFD') : lower;
+  const stripped = canNormalize ? normalized.replace(DIACRITIC_REGEX, '') : normalized;
+  return stripped.replace(NON_ALPHANUMERIC_REGEX, '');
 }
 
 // --- Global Variables ---
@@ -1657,10 +1674,15 @@ const numericKeyboard = (() => {
 
 
 // --- Initialization ---
-document.addEventListener('DOMContentLoaded', () => {
+let appInitialized = false;
+
+function initApp() {
+  if (appInitialized) return;
+  appInitialized = true;
+
   vis('sagsinfoSection');
 
-  document.querySelectorAll('header nav button[data-section]').forEach(button => {
+  toNodeArray(document.querySelectorAll('header nav button[data-section]')).forEach(button => {
     button.addEventListener('click', () => vis(button.dataset.section));
   });
 
@@ -1699,7 +1721,13 @@ document.addEventListener('DOMContentLoaded', () => {
   validateSagsinfo();
   updateTotals();
   numericKeyboard.init();
-});
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initApp, { once: true });
+} else {
+  initApp();
+}
 
 
 // --- Tralleløft patch (0,35 & 0,50) ---
