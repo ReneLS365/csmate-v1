@@ -48,7 +48,7 @@ export function getTimeRows() {
 export function saveTimeRows(rows = getTimeRows()) {
   const sanitized = rows.map(row => ({
     employeeName: String(row.employeeName ?? '').trim(),
-    employeeId: row.employeeId === undefined || row.employeeId === null ? '' : String(row.employeeId).trim(),
+    employeeId: String(row.employeeId ?? '').trim(),
     date: String(row.date ?? '').trim(),
     hours: toNumber(row.hours),
     wageType: String(row.wageType ?? '').trim(),
