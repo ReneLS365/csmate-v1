@@ -371,14 +371,31 @@ const dataModex = [
 // The Alfix list contains a small set of components sourced from the provided Excel sheet.  Each item gets a
 // consecutive id following the existing datasets to avoid collisions.
 const dataAlfix = [
-  { id: 229, name: "Kipdrager 4,5 m", price: 249.66, quantity: 0 },
-  { id: 230, name: "4,5 m kederdrager", price: 175.68, quantity: 0 },
-  { id: 231, name: "3 m kededrager", price: 117.12, quantity: 0 },
-  { id: 232, name: "2,25 m kederdrager", price: 87.84, quantity: 0 },
-  { id: 233, name: "1,5 m kederdrager", price: 58.56, quantity: 0 },
-  { id: 234, name: "Horisontal/gelænder", price: 5.22, quantity: 0 },
-  { id: 235, name: "Diagonal", price: 9.40, quantity: 0 },
-  { id: 236, name: "Keder-teltdug pr. m2", price: 6.42, quantity: 0 },
+  { id: 201, name: 'Kipdrager 4,5 m', price: 249.66, quantity: 0 },
+  { id: 202, name: 'Alu drager pr. m', price: 17.12, quantity: 0 },
+  { id: 203, name: '4,5 m kederdrager', price: 175.68, quantity: 0 },
+  { id: 204, name: 'Samlerør til aludrager', price: 14.26, quantity: 0 },
+  { id: 205, name: '3 m kededrager', price: 117.12, quantity: 0 },
+  { id: 206, name: '2,25 m kederdrager', price: 87.84, quantity: 0 },
+  { id: 207, name: '1,5 m kederdrager', price: 58.56, quantity: 0 },
+  { id: 208, name: 'Flapper/singel', price: 3.99, quantity: 0 },
+  { id: 209, name: 'Fastkobling', price: 3.99, quantity: 0 },
+  { id: 210, name: 'Horisontal/gelænder', price: 5.22, quantity: 0 },
+  { id: 211, name: 'Drejekobling', price: 3.99, quantity: 0 },
+  { id: 212, name: 'Diagonal', price: 9.40, quantity: 0 },
+  { id: 213, name: 'Kipfingerkobling', price: 3.99, quantity: 0 },
+  { id: 214, name: 'SK kobling', price: 3.99, quantity: 0 },
+  { id: 215, name: 'Keder-teltdug pr. m²', price: 6.42, quantity: 0 },
+  { id: 216, name: 'Rørsamler', price: 3.99, quantity: 0 },
+  { id: 217, name: 'Stilladsrør 1M', price: 5.51, quantity: 0 },
+  { id: 218, name: 'Stilladsrør 2M', price: 11.02, quantity: 0 },
+  { id: 219, name: 'Stilladsrør 3M', price: 16.53, quantity: 0 },
+  { id: 220, name: 'Stilladsrør 4M', price: 22.04, quantity: 0 },
+  { id: 221, name: 'Stilladsrør 5M', price: 27.55, quantity: 0 },
+  { id: 222, name: 'Stilladsrør 6M', price: 33.06, quantity: 0 },
+  { id: 223, name: 'Stilladsrør 6M alu', price: 23.94, quantity: 0 },
+  { id: 224, name: 'Dragestyr', price: 10.13, quantity: 0 },
+  { id: 225, name: 'Trekantdrager pr. m', price: 35.53, quantity: 0 },
 ];
 dataAlfix.forEach(item => {
   if (item && typeof item === 'object') {
@@ -390,19 +407,17 @@ const systemOptions = [
   { key: 'bosta', label: 'Bosta', dataset: dataBosta },
   { key: 'haki', label: 'HAKI', dataset: dataHaki },
   { key: 'modex', label: 'MODEX', dataset: dataModex },
+  { key: 'alfix', label: 'Alfix', dataset: dataAlfix },
 ];
 
-const systemDatasetMap = systemOptions.reduce((map, option) => {
-  map[option.key] = option.dataset;
-  if (Array.isArray(option.dataset)) {
-    option.dataset.forEach(item => {
-      if (item && typeof item === 'object') {
-        item.systemKey = option.key;
-      }
-    });
-  }
-  return map;
-}, {});
+systemOptions.forEach(option => {
+  if (!Array.isArray(option.dataset)) return;
+  option.dataset.forEach(item => {
+    if (item && typeof item === 'object') {
+      item.systemKey = option.key;
+    }
+  });
+});
 
 const systemLabelMap = new Map(systemOptions.map(option => [option.key, option.label]));
 
@@ -419,22 +434,95 @@ function getSelectedSystemKeys() {
   return Array.from(selectedSystemKeys);
 }
 
-function aggregateSelectedSystemData() {
-  const keys = getSelectedSystemKeys();
-  const seen = new Set();
-  const aggregated = [];
+function getDatasetForSelectedSystems(selected) {
+  const lists = [];
+  const rawSelection = Array.isArray(selected)
+    ? selected
+    : (selected && typeof selected[Symbol.iterator] === 'function'
+      ? Array.from(selected)
+      : []);
+  const normalizedSelection = rawSelection.map(value => normalizeKey(value));
+  const selectionSet = new Set(normalizedSelection);
 
-  keys.forEach(key => {
-    const dataset = systemDatasetMap[key];
+  const addIfSelected = (synonyms, dataset) => {
     if (!Array.isArray(dataset)) return;
-    dataset.forEach(item => {
-      const id = String(item.id);
-      if (seen.has(id)) return;
-      seen.add(id);
-      aggregated.push(item);
-    });
+    const match = synonyms.some(key => selectionSet.has(normalizeKey(key)));
+    if (match) {
+      lists.push(dataset);
+    }
+  };
+
+  addIfSelected(['bosta', 'bostadata'], dataBosta);
+  addIfSelected(['haki', 'hakidata'], dataHaki);
+  addIfSelected(['modex', 'modexdata'], dataModex);
+  addIfSelected(['alfix', 'alfixdata'], dataAlfix);
+
+  return lists.flat();
+}
+
+function toggleDuplicateWarning(duplicates = [], conflicts = []) {
+  const warning = document.getElementById('systemDuplicateWarning');
+  if (!warning) return;
+  const duplicateNames = Array.from(new Set(duplicates.filter(Boolean))).slice(0, 6);
+  const conflictNames = Array.from(new Set(conflicts.filter(Boolean))).slice(0, 6);
+  if (duplicateNames.length === 0 && conflictNames.length === 0) {
+    warning.textContent = '';
+    warning.setAttribute('hidden', '');
+    return;
+  }
+
+  const parts = [];
+  if (duplicateNames.length) {
+    parts.push(`Materialer slået sammen: ${duplicateNames.join(', ')}`);
+  }
+  if (conflictNames.length) {
+    parts.push(`Kontroller varenr.: ${conflictNames.join(', ')}`);
+  }
+  warning.textContent = parts.join('. ');
+  warning.removeAttribute('hidden');
+}
+
+function aggregateSelectedSystemData() {
+  const datasets = getDatasetForSelectedSystems(getSelectedSystemKeys());
+  const aggregated = [];
+  const seenIds = new Map();
+  const seenNames = new Map();
+  const duplicateNames = new Set();
+  const conflictingIds = new Set();
+
+  datasets.forEach(item => {
+    if (!item) return;
+    const idKey = item.id != null ? String(item.id) : null;
+    const nameKey = item.name ? normalizeKey(item.name) : null;
+    const existingByName = nameKey ? seenNames.get(nameKey) : null;
+    if (existingByName && existingByName !== item) {
+      duplicateNames.add(existingByName.name);
+      duplicateNames.add(item.name);
+      return;
+    }
+
+    const existingById = idKey ? seenIds.get(idKey) : null;
+    if (existingById && existingById !== item) {
+      const existingNameKey = existingById.name ? normalizeKey(existingById.name) : null;
+      if (existingNameKey && nameKey && existingNameKey === nameKey) {
+        duplicateNames.add(existingById.name);
+        duplicateNames.add(item.name);
+        return;
+      }
+      conflictingIds.add(existingById.name);
+      conflictingIds.add(item.name);
+    }
+
+    aggregated.push(item);
+    if (idKey) {
+      seenIds.set(idKey, item);
+    }
+    if (nameKey) {
+      seenNames.set(nameKey, item);
+    }
   });
 
+  toggleDuplicateWarning(Array.from(duplicateNames), Array.from(conflictingIds));
   return aggregated;
 }
 
@@ -565,22 +653,13 @@ function hydrateMaterialListsFromJson() {
 }
 
 function getAllData(includeManual = true) {
-  const combined = aggregateSelectedSystemData().slice();
-  const alfixHasEntries = dataAlfix.some(item => toNumber(item.quantity) > 0);
-  if (alfixHasEntries) {
-    dataAlfix.forEach(item => {
-      if (!combined.includes(item)) {
-        combined.push(item);
-      }
-    });
-  }
+  const combined = aggregateSelectedSystemData();
   if (!includeManual) return combined;
   return combined.concat(manualMaterials);
 }
 
 function getActiveMaterialList() {
-  const aggregated = aggregateSelectedSystemData();
-  return aggregated;
+  return aggregateSelectedSystemData();
 }
 
 function findMaterialById(id) {
@@ -597,6 +676,7 @@ function setupListSelectors() {
   const container = document.getElementById('listSelectors');
   if (!container) return;
   const warningId = 'systemSelectionWarning';
+  const duplicateWarningId = 'systemDuplicateWarning';
   const optionsHtml = systemOptions
     .map(option => {
       const checked = selectedSystemKeys.has(option.key) ? 'checked' : '';
@@ -615,6 +695,7 @@ function setupListSelectors() {
       <div class="system-selector-options">${optionsHtml}</div>
     </div>
     <p id="${warningId}" class="hint system-warning" hidden>Vælg mindst ét system.</p>
+    <p id="${duplicateWarningId}" class="hint system-warning" hidden></p>
   `;
 
   syncSystemSelectorState();
@@ -681,9 +762,10 @@ function renderOptaelling() {
     }
     if (item.manual) {
       row.innerHTML = `
-        <label>
+        <label class="manual-name-cell">
           <span class="cell-label">Materiale</span>
           <input type="text" class="manual-name" data-id="${item.id}" placeholder="Materiale" value="${item.name || ''}">
+          <span class="item-id">ID: ${item.id}</span>
         </label>
         <label>
           <span class="cell-label">Pris</span>
@@ -691,17 +773,21 @@ function renderOptaelling() {
         </label>
         <label>
           <span class="cell-label">Antal</span>
-          <input type="number" class="qty" data-id="${item.id}" step="1" min="0" inputmode="numeric" placeholder="Antal" value="${item.quantity ? item.quantity : ''}">
+          <input type="number" class="qty" data-id="${item.id}" step="0.01" min="0" inputmode="decimal" placeholder="Antal" value="${item.quantity ? item.quantity : ''}">
         </label>
         <strong class="item-total">${formatCurrency((item.price || 0) * (item.quantity || 0))} kr</strong>
       `;
     } else {
       const systemLabel = item.systemKey ? systemLabelMap.get(item.systemKey) || item.systemKey : '';
+      const badge = systemLabel ? `<span class="system-badge">${systemLabel}</span>` : '';
       row.innerHTML = `
-        <div class="item-name">${item.name}${systemLabel ? `<span class="system-badge">${systemLabel}</span>` : ''}</div>
+        <div class="item-name-wrapper">
+          <div class="item-name">${item.name}${badge}</div>
+          <span class="item-id">Varenr. ${item.id}</span>
+        </div>
         <label>
           <span class="cell-label">Antal</span>
-          <input type="number" class="qty" data-id="${item.id}" min="0" step="1" inputmode="numeric" value="${item.quantity || 0}">
+          <input type="number" class="qty" data-id="${item.id}" min="0" step="0.01" inputmode="decimal" value="${item.quantity || 0}">
         </label>
         <label>
           <span class="cell-label">Pris</span>
@@ -1982,6 +2068,18 @@ function setupMobileKeyboardDismissal() {
     if (type === 'number' || mode === 'numeric' || mode === 'decimal') {
       event.preventDefault();
       target.blur();
+    }
+  });
+
+  document.addEventListener('change', event => {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) return;
+    const type = target.type?.toLowerCase?.() || '';
+    const mode = target.inputMode?.toLowerCase?.() || '';
+    if (type === 'number' || mode === 'numeric' || mode === 'decimal') {
+      if (typeof target.blur === 'function') {
+        target.blur();
+      }
     }
   });
 }
