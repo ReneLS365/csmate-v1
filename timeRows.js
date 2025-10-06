@@ -113,8 +113,7 @@ export function mergeRowsWithSag(imported = {}) {
   const rawRows = Array.isArray(imported.TIME) ? imported.TIME : [];
   const uiRows = rawRows.map(toUiTimeRow);
   const state = getTimeRows();
-  state.splice(0, state.length);
-  uiRows.forEach(row => state.push(row));
+  state.splice(0, state.length, ...uiRows);
   saveTimeRows(state);
   const current = getTimeRows().map(row => ({ ...row }));
   return { ...imported, TIME: current };
