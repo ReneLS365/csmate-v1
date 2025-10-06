@@ -129,6 +129,7 @@ let workerCount = 0;
 let laborEntries = [];
 let lastLoensum = 0;
 let lastMaterialSum = 0;
+const DEFAULT_ACTION_HINT = 'Udfyld Sagsinfo for at fortsætte.';
 
 // --- Scaffold Part Lists ---
 const dataBosta = [
@@ -379,6 +380,11 @@ const dataAlfix = [
   { id: 235, name: "Diagonal", price: 9.40, quantity: 0 },
   { id: 236, name: "Keder-teltdug pr. m2", price: 6.42, quantity: 0 },
 ];
+dataAlfix.forEach(item => {
+  if (item && typeof item === 'object') {
+    item.systemKey = 'alfix';
+  }
+});
 
 const systemOptions = [
   { key: 'bosta', label: 'Bosta', dataset: dataBosta },
@@ -388,10 +394,49 @@ const systemOptions = [
 
 const systemDatasetMap = systemOptions.reduce((map, option) => {
   map[option.key] = option.dataset;
+  if (Array.isArray(option.dataset)) {
+    option.dataset.forEach(item => {
+      if (item && typeof item === 'object') {
+        item.systemKey = option.key;
+      }
+    });
+  }
   return map;
 }, {});
 
-let currentSystemKey = systemOptions[0]?.key || 'bosta';
+const systemLabelMap = new Map(systemOptions.map(option => [option.key, option.label]));
+
+const selectedSystemKeys = new Set(systemOptions.length ? [systemOptions[0].key] : []);
+
+function ensureSystemSelection() {
+  if (selectedSystemKeys.size === 0 && systemOptions.length) {
+    selectedSystemKeys.add(systemOptions[0].key);
+  }
+}
+
+function getSelectedSystemKeys() {
+  ensureSystemSelection();
+  return Array.from(selectedSystemKeys);
+}
+
+function aggregateSelectedSystemData() {
+  const keys = getSelectedSystemKeys();
+  const seen = new Set();
+  const aggregated = [];
+
+  keys.forEach(key => {
+    const dataset = systemDatasetMap[key];
+    if (!Array.isArray(dataset)) return;
+    dataset.forEach(item => {
+      const id = String(item.id);
+      if (seen.has(id)) return;
+      seen.add(id);
+      aggregated.push(item);
+    });
+  });
+
+  return aggregated;
+}
 
 const manualMaterials = Array.from({ length: 3 }, (_, index) => ({
   id: `manual-${index + 1}`,
@@ -460,7 +505,7 @@ function hydrateMaterialListsFromJson() {
 
     if (hydrated) {
       renderOptaelling();
-      updateTotals();
+      updateTotals(true);
     }
 
     return hydrated;
@@ -520,19 +565,22 @@ function hydrateMaterialListsFromJson() {
 }
 
 function getAllData(includeManual = true) {
-  const combined = [dataBosta, dataHaki, dataModex, dataAlfix]
-    .reduce((acc, list) => acc.concat(list), []);
+  const combined = aggregateSelectedSystemData().slice();
+  const alfixHasEntries = dataAlfix.some(item => toNumber(item.quantity) > 0);
+  if (alfixHasEntries) {
+    dataAlfix.forEach(item => {
+      if (!combined.includes(item)) {
+        combined.push(item);
+      }
+    });
+  }
   if (!includeManual) return combined;
   return combined.concat(manualMaterials);
 }
 
 function getActiveMaterialList() {
-  const dataset = systemDatasetMap[currentSystemKey];
-  if (Array.isArray(dataset)) {
-    return dataset;
-  }
-  const fallbackKey = systemOptions[0]?.key;
-  return systemDatasetMap[fallbackKey] || dataBosta;
+  const aggregated = aggregateSelectedSystemData();
+  return aggregated;
 }
 
 function findMaterialById(id) {
@@ -548,28 +596,64 @@ function findMaterialById(id) {
 function setupListSelectors() {
   const container = document.getElementById('listSelectors');
   if (!container) return;
-  const selectId = 'systemSelect';
+  const warningId = 'systemSelectionWarning';
   const optionsHtml = systemOptions
-    .map(option => `<option value="${option.key}">${option.label}</option>`)
+    .map(option => {
+      const checked = selectedSystemKeys.has(option.key) ? 'checked' : '';
+      return `
+        <label class="system-option">
+          <input type="checkbox" value="${option.key}" ${checked}>
+          <span>${option.label}</span>
+        </label>
+      `;
+    })
     .join('');
 
   container.innerHTML = `
-    <label for="${selectId}">System</label>
-    <select id="${selectId}">${optionsHtml}</select>
+    <div class="system-selector" role="group" aria-labelledby="systemSelectorLabel">
+      <span id="systemSelectorLabel" class="cell-label">Systemer</span>
+      <div class="system-selector-options">${optionsHtml}</div>
+    </div>
+    <p id="${warningId}" class="hint system-warning" hidden>Vælg mindst ét system.</p>
   `;
 
-  const select = document.getElementById(selectId);
-  if (select) {
-    if (!systemDatasetMap[currentSystemKey]) {
-      currentSystemKey = systemOptions[0]?.key || 'bosta';
+  syncSystemSelectorState();
+  const warning = document.getElementById(warningId);
+
+  container.addEventListener('change', event => {
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement) || target.type !== 'checkbox') return;
+
+    const { value } = target;
+    if (target.checked) {
+      selectedSystemKeys.add(value);
+    } else {
+      selectedSystemKeys.delete(value);
+      if (selectedSystemKeys.size === 0) {
+        warning?.removeAttribute('hidden');
+        selectedSystemKeys.add(value);
+        target.checked = true;
+        updateActionHint('Vælg mindst ét system for at fortsætte optællingen.', 'error');
+        return;
+      }
     }
-    select.value = currentSystemKey;
-    select.addEventListener('change', event => {
-      const { value } = event.target;
-      currentSystemKey = value;
-      renderOptaelling();
-    });
-  }
+
+    warning?.setAttribute('hidden', '');
+    const hint = document.getElementById('actionHint');
+    if (hint && hint.textContent === 'Vælg mindst ét system for at fortsætte optællingen.') {
+      updateActionHint('');
+    }
+    renderOptaelling();
+    updateTotals(true);
+  });
+}
+
+function syncSystemSelectorState() {
+  const container = document.getElementById('listSelectors');
+  if (!container) return;
+  container.querySelectorAll('input[type="checkbox"]').forEach(input => {
+    input.checked = selectedSystemKeys.has(input.value);
+  });
 }
 
 // --- Rendering Functions ---
@@ -577,15 +661,24 @@ function renderOptaelling() {
   const container = document.getElementById('optaellingContainer');
   if (!container) return;
   container.innerHTML = '';
+  syncSystemSelectorState();
 
   const activeItems = getActiveMaterialList();
   const items = Array.isArray(activeItems)
     ? activeItems.concat(manualMaterials)
     : manualMaterials.slice();
 
+  if (items.length === 0) {
+    container.innerHTML = '<p class="empty-state">Ingen systemer valgt. Vælg et eller flere systemer for at starte optællingen.</p>';
+    return;
+  }
+
   items.forEach(item => {
     const row = document.createElement('div');
     row.className = `material-row${item.manual ? ' manual' : ''}`;
+    if (item.systemKey) {
+      row.dataset.system = item.systemKey;
+    }
     if (item.manual) {
       row.innerHTML = `
         <label>
@@ -594,24 +687,25 @@ function renderOptaelling() {
         </label>
         <label>
           <span class="cell-label">Pris</span>
-          <input type="number" class="price" data-id="${item.id}" step="0.01" inputmode="decimal" placeholder="Pris" value="${item.price ? item.price : ''}">
+          <input type="number" class="price" data-id="${item.id}" step="0.01" min="0" inputmode="decimal" placeholder="Pris" value="${item.price ? item.price : ''}">
         </label>
         <label>
           <span class="cell-label">Antal</span>
-          <input type="number" class="qty" data-id="${item.id}" step="1" inputmode="numeric" placeholder="Antal" value="${item.quantity ? item.quantity : ''}">
+          <input type="number" class="qty" data-id="${item.id}" step="1" min="0" inputmode="numeric" placeholder="Antal" value="${item.quantity ? item.quantity : ''}">
         </label>
         <strong class="item-total">${formatCurrency((item.price || 0) * (item.quantity || 0))} kr</strong>
       `;
     } else {
+      const systemLabel = item.systemKey ? systemLabelMap.get(item.systemKey) || item.systemKey : '';
       row.innerHTML = `
-        <div class="item-name">${item.name}</div>
+        <div class="item-name">${item.name}${systemLabel ? `<span class="system-badge">${systemLabel}</span>` : ''}</div>
         <label>
           <span class="cell-label">Antal</span>
           <input type="number" class="qty" data-id="${item.id}" min="0" step="1" inputmode="numeric" value="${item.quantity || 0}">
         </label>
         <label>
           <span class="cell-label">Pris</span>
-          <input type="number" class="price" data-id="${item.id}" step="0.01" inputmode="decimal" value="${item.price.toFixed(2)}" ${!admin ? 'disabled' : ''}>
+          <input type="number" class="price" data-id="${item.id}" step="0.01" min="0" inputmode="decimal" value="${item.price.toFixed(2)}" ${!admin ? 'disabled' : ''}>
         </label>
         <strong class="item-total">${formatCurrency(item.quantity * item.price)} kr</strong>
       `;
@@ -619,7 +713,7 @@ function renderOptaelling() {
     container.appendChild(row);
   });
 
-  updateTotal();
+  updateTotals(true);
 }
 
 // --- Update Functions ---
@@ -731,7 +825,9 @@ function renderCurrency(target, value) {
   el.textContent = `${formatCurrency(value)} kr`;
 }
 
-function updateTotals() {
+let totalsUpdateTimer = null;
+
+function performTotalsUpdate() {
   const materialSum = calcMaterialesum();
   lastMaterialSum = materialSum;
   renderCurrency('#total-material', materialSum);
@@ -750,6 +846,26 @@ function updateTotals() {
   if (demontageField) {
     demontageField.value = (materialSum * 0.5).toFixed(2);
   }
+}
+
+function updateTotals(options = {}) {
+  const immediate = options === true || options?.immediate;
+  if (immediate) {
+    if (totalsUpdateTimer) {
+      clearTimeout(totalsUpdateTimer);
+      totalsUpdateTimer = null;
+    }
+    performTotalsUpdate();
+    return;
+  }
+
+  if (totalsUpdateTimer) {
+    clearTimeout(totalsUpdateTimer);
+  }
+  totalsUpdateTimer = setTimeout(() => {
+    totalsUpdateTimer = null;
+    performTotalsUpdate();
+  }, 80);
 }
 
 function updateTotal() {
@@ -775,6 +891,24 @@ function setSagsinfoField(id, value) {
   el.value = value;
 }
 
+function updateActionHint(message = '', variant = 'info') {
+  const hint = document.getElementById('actionHint');
+  if (!hint) return;
+  hint.classList.remove('error', 'success');
+  if (!message) {
+    hint.textContent = DEFAULT_ACTION_HINT;
+    hint.style.display = 'none';
+    return;
+  }
+  hint.textContent = message;
+  if (variant === 'error') {
+    hint.classList.add('error');
+  } else if (variant === 'success') {
+    hint.classList.add('success');
+  }
+  hint.style.display = '';
+}
+
 function validateSagsinfo() {
   let isValid = true;
   sagsinfoFieldIds.forEach(id => {
@@ -796,9 +930,10 @@ function validateSagsinfo() {
     if (btn) btn.disabled = !isValid;
   });
 
-  const hint = document.getElementById('actionHint');
-  if (hint) {
-    hint.style.display = isValid ? 'none' : '';
+  if (isValid) {
+    updateActionHint('');
+  } else {
+    updateActionHint(DEFAULT_ACTION_HINT, 'error');
   }
 
   return isValid;
@@ -938,7 +1073,12 @@ function populateWorkersFromLabor(entries) {
 function matchMaterialByName(name) {
   if (!name) return null;
   const targetKey = normalizeKey(name);
-  return getAllData(false).find(item => normalizeKey(item.name) === targetKey) || null;
+  const allLists = [dataBosta, dataHaki, dataModex, dataAlfix, manualMaterials];
+  for (const list of allLists) {
+    const match = list.find(item => normalizeKey(item.name) === targetKey);
+    if (match) return match;
+  }
+  return null;
 }
 
 function assignMaterialRow(row) {
@@ -1035,11 +1175,20 @@ function applyCSVRows(rows) {
   }
 
   materials.forEach(assignMaterialRow);
+
+  const systemsWithQuantities = systemOptions.filter(option =>
+    option.dataset.some(item => toNumber(item.quantity) > 0)
+  );
+  if (systemsWithQuantities.length > 0) {
+    selectedSystemKeys.clear();
+    systemsWithQuantities.forEach(option => selectedSystemKeys.add(option.key));
+  }
+
   renderOptaelling();
 
   laborEntries = labor.filter(entry => entry.hours > 0 || entry.rate > 0 || entry.type);
   populateWorkersFromLabor(laborEntries);
-  updateTotals();
+  updateTotals(true);
 
   if (laborEntries.length > 0) {
     const firstType = laborEntries[0].type?.toLowerCase() || '';
@@ -1100,11 +1249,30 @@ function setupCSVImport() {
 }
 
 // --- Authentication ---
-function login() { 
-  if(document.getElementById("adminCode").value === "StilAce") {
-    admin = true; renderOptaelling();
+function login() {
+  const codeInput = document.getElementById('adminCode');
+  const feedback = document.getElementById('adminFeedback');
+  if (!codeInput) return;
+
+  const isValid = codeInput.value.trim() === 'StilAce';
+  if (isValid) {
+    admin = true;
+    codeInput.value = '';
+    feedback?.classList.remove('error');
+    feedback?.classList.add('success');
+    if (feedback) {
+      feedback.textContent = 'Admin-tilstand aktiveret. Prisfelter er nu redigerbare.';
+      feedback.removeAttribute('hidden');
+    }
+    renderOptaelling();
+    updateTotals(true);
   } else {
-    alert("Forkert kode");
+    if (feedback) {
+      feedback.textContent = 'Forkert kode. Prøv igen.';
+      feedback.classList.remove('success');
+      feedback.classList.add('error');
+      feedback.removeAttribute('hidden');
+    }
   }
 }
 
@@ -1116,15 +1284,24 @@ function addWorker() {
   w.id = `worker${workerCount}`;
   w.innerHTML = `
     <legend>Mand ${workerCount}</legend>
-    <label>Timer: <input type="number" class="worker-hours" value="0"></label>
-    <label>Uddannelse:
-      <select class="worker-udd">
-        <option value="udd1">Udd1 (42,98 kr)</option>
-        <option value="udd2">Udd2 (49,38 kr)</option>
-      </select>
-    </label>
-    <label>Mentortillæg (22,26 kr/t): <input type="number" class="worker-tillaeg" value="0"></label>
-    <div class="worker-output"></div>
+    <div class="worker-grid">
+      <label>
+        <span>Timer</span>
+        <input type="number" class="worker-hours" value="0" min="0" step="0.25" inputmode="decimal">
+      </label>
+      <label>
+        <span>Uddannelse</span>
+        <select class="worker-udd">
+          <option value="udd1">Udd1 (42,98 kr)</option>
+          <option value="udd2">Udd2 (49,38 kr)</option>
+        </select>
+      </label>
+      <label>
+        <span>Mentortillæg (kr/t)</span>
+        <input type="number" class="worker-tillaeg" value="0" min="0" step="0.01" inputmode="decimal">
+      </label>
+    </div>
+    <div class="worker-output" aria-live="polite"></div>
   `;
   document.getElementById("workers").appendChild(w);
 }
@@ -1258,7 +1435,7 @@ function beregnLon() {
   `;
 
   laborEntries = beregnedeArbejdere;
-  updateTotals();
+  updateTotals(true);
 
   if (typeof window !== 'undefined') {
     const traelle35 = parseFloat(document.getElementById('traelleloeft35')?.value) || 0;
@@ -1282,7 +1459,7 @@ function beregnLon() {
 // --- CSV-eksport ---
 function downloadCSV(customSagsnummer, options = {}) {
   if (!options?.skipValidation && !validateSagsinfo()) {
-    alert('Udfyld Sagsinfo for at eksportere.');
+    updateActionHint('Udfyld Sagsinfo for at eksportere.', 'error');
     return false;
   }
   if (!options?.skipBeregn) {
@@ -1380,13 +1557,14 @@ function downloadCSV(customSagsnummer, options = {}) {
   link.click();
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
+  updateActionHint('CSV er gemt til din enhed.', 'success');
   return true;
 }
 
 // --- PDF-eksport (html2canvas + jsPDF) ---
 async function exportPDF(customSagsnummer, options = {}) {
   if (!validateSagsinfo()) {
-    alert('Udfyld Sagsinfo for at eksportere.');
+    updateActionHint('Udfyld Sagsinfo for at eksportere.', 'error');
     return;
   }
   if (!options?.skipBeregn) {
@@ -1510,8 +1688,10 @@ async function exportPDF(customSagsnummer, options = {}) {
     doc.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, canvas.width, canvas.height);
     const fileName = sanitizeFilename(info.sagsnummer || 'akkordseddel');
     doc.save(`${fileName}.pdf`);
+    updateActionHint('PDF er gemt til din enhed.', 'success');
   } catch (err) {
     console.error('PDF eksport fejlede:', err);
+    updateActionHint('PDF eksport fejlede. Prøv igen.', 'error');
   } finally {
     document.body.removeChild(wrapper);
   }
@@ -1520,20 +1700,21 @@ async function exportPDF(customSagsnummer, options = {}) {
 // --- Samlet eksport ---
 async function exportAll(customSagsnummer) {
   if (!validateSagsinfo()) {
-    alert('Udfyld Sagsinfo for at eksportere.');
+    updateActionHint('Udfyld Sagsinfo for at eksportere.', 'error');
     return;
   }
   const sagsnummer = customSagsnummer || beregnLon();
   if (!sagsnummer) return;
   downloadCSV(sagsnummer, { skipBeregn: true, skipValidation: true });
   await exportPDF(sagsnummer, { skipBeregn: true });
+  updateActionHint('Eksport af PDF og CSV er fuldført.', 'success');
 }
 
 // --- CSV-import for optælling ---
 function uploadCSV(file) {
   if (!file) return;
   if (!/\.csv$/i.test(file.name) && !(file.type && file.type.includes('csv'))) {
-    alert('Vælg en gyldig CSV-fil.');
+    updateActionHint('Vælg en gyldig CSV-fil for at importere.', 'error');
     return;
   }
   const reader = new FileReader();
@@ -1541,9 +1722,10 @@ function uploadCSV(file) {
     try {
       const rows = parseCSV(event.target.result);
       applyCSVRows(rows);
+      updateActionHint('CSV er importeret.', 'success');
     } catch (err) {
       console.error('Kunne ikke importere CSV', err);
-      alert('Kunne ikke importere CSV-filen.');
+      updateActionHint('Kunne ikke importere CSV-filen.', 'error');
     }
   };
   reader.readAsText(file, 'utf-8');
@@ -1604,7 +1786,10 @@ const numericKeyboard = (() => {
       if (event.target === overlay) hide();
     });
 
-    overlay.querySelector('.keypad-close').addEventListener('click', hide);
+    const closeButton = overlay.querySelector('.keypad-close');
+    if (closeButton) {
+      closeButton.addEventListener('click', () => hide());
+    }
     overlay.addEventListener('keydown', handleOverlayKeydown);
 
     overlay.querySelectorAll('[data-key]').forEach(btn => {
@@ -1678,17 +1863,23 @@ const numericKeyboard = (() => {
     });
   }
 
-  function hide() {
+  function hide(options = {}) {
+    const restoreFocus = options?.restoreFocus !== false;
     if (!overlay) return;
     overlay.classList.remove('show');
     overlay.setAttribute('aria-hidden', 'true');
     const target = currentInput;
     currentInput = null;
     buffer = '';
-    if (previousFocus && typeof previousFocus.focus === 'function') {
-      previousFocus.focus();
-    } else if (target && typeof target.focus === 'function') {
-      target.focus();
+    const lastFocus = previousFocus;
+    previousFocus = null;
+    if (target && typeof target.blur === 'function') {
+      target.blur();
+    }
+    if (restoreFocus && lastFocus && lastFocus !== target && typeof lastFocus.focus === 'function') {
+      requestAnimationFrame(() => {
+        lastFocus.focus();
+      });
     }
   }
 
@@ -1755,7 +1946,7 @@ const numericKeyboard = (() => {
     currentInput.value = normalized;
     currentInput.dispatchEvent(new Event('input', { bubbles: true }));
     currentInput.dispatchEvent(new Event('change', { bubbles: true }));
-    hide();
+    hide({ restoreFocus: false });
   }
 
   function handleOverlayKeydown(event) {
@@ -1780,6 +1971,20 @@ const numericKeyboard = (() => {
     hide,
   };
 })();
+
+function setupMobileKeyboardDismissal() {
+  document.addEventListener('keydown', event => {
+    if (event.key !== 'Enter') return;
+    const target = event.target;
+    if (!(target instanceof HTMLInputElement)) return;
+    const type = target.type?.toLowerCase?.() || '';
+    const mode = target.inputMode?.toLowerCase?.() || '';
+    if (type === 'number' || mode === 'numeric' || mode === 'decimal') {
+      event.preventDefault();
+      target.blur();
+    }
+  });
+}
 
 
 // --- Initialization ---
@@ -1832,7 +2037,7 @@ function initApp() {
     if (validateSagsinfo()) {
       window.print();
     } else {
-      alert('Udfyld Sagsinfo for at kunne printe.');
+      updateActionHint('Udfyld Sagsinfo for at kunne printe.', 'error');
     }
   });
 
@@ -1853,8 +2058,9 @@ function initApp() {
   });
 
   validateSagsinfo();
-  updateTotals();
+  updateTotals(true);
   numericKeyboard.init();
+  setupMobileKeyboardDismissal();
 }
 
 if (document.readyState === 'loading') {
