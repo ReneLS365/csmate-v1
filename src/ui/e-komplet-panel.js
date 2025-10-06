@@ -176,14 +176,24 @@ export class EKompletPanel {
       this.statusEl.textContent = 'Kunne ikke læse filen.'
       return
     }
-    let mapping = this.state.mapping
+    const savedMapping = this.state.mapping || {}
+    const inferred = inferMapping(headers)
+    const cleanedMapping = { ...savedMapping }
+    CSV_HEADERS.forEach(header => {
+      if (headers.includes(header)) {
+        delete cleanedMapping[header]
+      }
+    })
+    const mapping = { ...cleanedMapping, ...inferred }
     if (needsMapping(headers)) {
-      mapping = { ...mapping, ...inferMapping(headers) }
+      this.state.mapping = mapping
       this.pendingImport = { headers, rows }
       this._renderMapping(headers, mapping)
       this.statusEl.textContent = 'Vælg kolonner for at fortsætte.'
       return
     }
+    this.state.mapping = mapping
+    persistMapping(mapping)
     this._applyImportedRows(headers, rows, mapping)
   }
 
