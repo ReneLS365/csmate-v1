@@ -313,6 +313,124 @@ const manualMaterials = Array.from({ length: 3 }, (_, index) => ({
   manual: true,
 }));
 
+function hydrateMaterialListsFromJson() {
+  const mapList = (target, entries, prefix) => {
+    if (!Array.isArray(entries) || entries.length === 0) return false;
+    const previous = new Map(
+      target.map(item => [normalizeKey(item.name || ''), item.quantity || 0])
+    );
+    const next = entries.map((entry, index) => {
+      const rawName = entry?.beskrivelse ?? entry?.navn ?? entry?.name ?? '';
+      const baseName = String(rawName).trim();
+      const name = baseName || `${prefix} materiale ${index + 1}`;
+      const key = normalizeKey(name);
+      const priceValue = entry?.pris ?? entry?.price ?? 0;
+      return {
+        id: `${prefix}-${index + 1}`,
+        name,
+        price: toNumber(priceValue),
+        quantity: previous.get(key) ?? 0,
+      };
+    });
+    target.splice(0, target.length, ...next);
+    return true;
+  };
+
+  const candidateSources = [
+    { target: dataBosta, prefix: 'B', sources: ['Bosta', 'bosta', 'BOSTA', 'BOSTA_DATA'] },
+    { target: dataHaki, prefix: 'H', sources: ['HAKI', 'haki', 'HAKI_DATA'] },
+    { target: dataModex, prefix: 'M', sources: ['MODEX', 'modex', 'MODEX_DATA'] },
+    { target: dataAlfix, prefix: 'A', sources: ['Alfix', 'alfix', 'ALFIX', 'ALFIX_DATA'] },
+  ].map(({ target, prefix, sources }) => ({
+    target,
+    prefix,
+    normalizedSources: sources
+      .map(source => normalizeKey(source)),
+  }));
+
+  const applyLists = lists => {
+    if (!lists || typeof lists !== 'object') return false;
+    const normalizedLists = new Map();
+    for (const [rawKey, value] of Object.entries(lists)) {
+      const normalizedKey = normalizeKey(rawKey);
+      if (normalizedKey) {
+        normalizedLists.set(normalizedKey, value);
+      }
+    }
+
+    let hydrated = false;
+    for (const { target, prefix, normalizedSources } of candidateSources) {
+      for (const candidateKey of normalizedSources) {
+        if (!normalizedLists.has(candidateKey)) continue;
+        const entries = normalizedLists.get(candidateKey);
+        if (mapList(target, entries, prefix)) {
+          hydrated = true;
+          break;
+        }
+      }
+    }
+
+    if (hydrated) {
+      render();
+      updateTotals();
+    }
+
+    return hydrated;
+  };
+
+  const tryDatasetFallback = () => {
+    if (typeof fetch !== 'function') return Promise.resolve(false);
+
+    return fetch('./dataset.js')
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        return response.text();
+      })
+      .then(script => {
+        const factory = new Function(
+          `${script}; return {
+            BOSTA_DATA: typeof BOSTA_DATA !== 'undefined' ? BOSTA_DATA : undefined,
+            HAKI_DATA: typeof HAKI_DATA !== 'undefined' ? HAKI_DATA : undefined,
+            MODEX_DATA: typeof MODEX_DATA !== 'undefined' ? MODEX_DATA : undefined,
+            ALFIX_DATA: typeof ALFIX_DATA !== 'undefined' ? ALFIX_DATA : undefined,
+          };`
+        );
+        const data = factory();
+        return applyLists({
+          BOSTA_DATA: data?.BOSTA_DATA,
+          HAKI_DATA: data?.HAKI_DATA,
+          MODEX_DATA: data?.MODEX_DATA,
+          ALFIX_DATA: data?.ALFIX_DATA,
+        });
+      })
+      .catch(err => {
+        console.error('Kunne ikke indlæse fallback dataset.js', err);
+        return false;
+      });
+  };
+
+  if (typeof fetch !== 'function') {
+    applyLists(typeof window !== 'undefined' ? window.COMPLETE_LISTS : undefined);
+    return;
+  }
+
+  fetch('./complete_lists.json')
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      return response.json();
+    })
+    .then(applyLists)
+    .then(applied => applied || tryDatasetFallback())
+    .catch(err => {
+      console.warn('Kunne ikke hente komplette materialelister', err);
+      return tryDatasetFallback();
+    });
+}
+
 function getAllData(includeManual = true) {
   let combined = [];
   if (includeBosta) combined = combined.concat(dataBosta);
@@ -1546,6 +1664,7 @@ document.addEventListener('DOMContentLoaded', () => {
     button.addEventListener('click', () => vis(button.dataset.section));
   });
 
+  hydrateMaterialListsFromJson();
   setupListSelectors();
   render();
   addWorker();
