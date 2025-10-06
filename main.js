@@ -757,7 +757,7 @@ function applyCSVRows(rows) {
       normalized[normalizeKey(key)] = (value ?? '').toString().trim();
     });
 
-    const sectionVal = (row['Sektion'] ?? row['sektion'] ?? row['section'] ?? normalized['sektion'] ?? normalized['section'] ?? '').toString().trim();
+    const sectionVal = (normalized['sektion'] ?? normalized['section'] ?? '').toString().trim();
     if (sectionVal.toLowerCase() === 'time') {
       importedTimeRows.push(row);
     }
