@@ -54,7 +54,8 @@ export function saveTimeRows(rows = getTimeRows()) {
     wageType: String(row.wageType ?? '').trim(),
     notes: String(row.notes ?? '').trim(),
   }));
-  timeRowsState.splice(0, timeRowsState.length, ...sanitized);
+  timeRowsState.length = 0;
+  timeRowsState.push(...sanitized);
   renderTimeRows();
   return timeRowsState;
 }
