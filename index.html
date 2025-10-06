@@ -12,9 +12,10 @@
   <div class="bar">
     <div class="ttl">akkordseddel</div>
     <nav>
-      <button id="btnSagsinfo" data-section="sagsinfoSection" class="active" type="button">Sagsinfo</button>
-      <button id="btnOptaelling" data-section="optaellingSection" type="button">Optælling</button>
-      <button id="btnLon" data-section="lonSection" type="button">Løn</button>
+      <button id="btnSagsinfo" data-section="sagsinfo" class="active" type="button">Sagsinfo</button>
+      <button id="btnOptaelling" data-section="optaelling" type="button">Optælling</button>
+      <button id="btnLon" data-section="lon" type="button">Løn</button>
+      <button id="btnGuide" data-section="guide" type="button">Guide</button>
     </nav>
   </div>
 </header>
@@ -170,7 +171,38 @@
       <div id="lonResult"></div>
     </fieldset>
   </section>
+
+  <section id="guideSection" class="sektion" hidden>
+    <article class="guide-intro">
+      <h2>Sådan bruger du CSMate</h2>
+      <p>
+        Brug fanerne øverst til at udfylde sagsinfo, registrere materialer og beregne løn. Klik på
+        knappen herunder for at åbne den detaljerede trin-for-trin guide.
+      </p>
+      <button id="btnOpenGuideModal" type="button">Åbn guide</button>
+    </article>
+  </section>
 </main>
+
+<div id="guideModal" class="modal" hidden aria-hidden="true">
+  <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="guideModalTitle" tabindex="-1">
+    <button type="button" class="modal-close" aria-label="Luk">×</button>
+    <h2 id="guideModalTitle">Guide til CSMate</h2>
+    <p>
+      Følg disse trin for at genskabe den stabile arbejdsgang:
+    </p>
+    <ol>
+      <li>Udfyld <strong>Sagsinfo</strong> med de grundlæggende oplysninger.</li>
+      <li>Vælg system i <strong>Optælling</strong> og indtast materialer.</li>
+      <li>Importer eller eksporter CSV efter behov og generér PDF.</li>
+      <li>Tilføj medarbejdere under <strong>Løn</strong> og beregn akkord.</li>
+    </ol>
+    <p>
+      Har du brug for yderligere hjælp, kan du kontakte administratoren eller slå op i virksomhedens
+      interne vejledninger.
+    </p>
+  </div>
+</div>
 
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>

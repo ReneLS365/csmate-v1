@@ -1,7 +1,10 @@
 // --- Utility Functions ---
 function resolveSectionId(id) {
   if (!id) return '';
-  return id.endsWith('Section') ? id : `${id}Section`;
+  const base = id.endsWith('Section') ? id.slice(0, -7) : id;
+  const normalized = normalizeKey(base);
+  const finalBase = normalized || base.replace(/Section$/i, '');
+  return `${finalBase}Section`;
 }
 
 function forEachNode(nodeList, callback) {
@@ -36,6 +39,69 @@ function vis(id) {
   });
 }
 
+let guideModalPreviousFocus = null;
+
+function getGuideModalElement() {
+  return document.getElementById('guideModal');
+}
+
+function openGuideModal() {
+  const modal = getGuideModalElement();
+  if (!modal) return;
+  guideModalPreviousFocus = document.activeElement instanceof HTMLElement
+    ? document.activeElement
+    : null;
+  modal.removeAttribute('hidden');
+  modal.classList.add('open');
+  modal.setAttribute('aria-hidden', 'false');
+  const content = modal.querySelector('.modal-content');
+  if (content && typeof content.focus === 'function') {
+    content.focus();
+  }
+}
+
+function closeGuideModal() {
+  const modal = getGuideModalElement();
+  if (!modal) return;
+  modal.classList.remove('open');
+  modal.setAttribute('aria-hidden', 'true');
+  modal.setAttribute('hidden', '');
+  if (guideModalPreviousFocus && typeof guideModalPreviousFocus.focus === 'function') {
+    guideModalPreviousFocus.focus();
+  }
+  guideModalPreviousFocus = null;
+}
+
+function setupGuideModal() {
+  const modal = getGuideModalElement();
+  if (!modal) return;
+
+  const closeBtn = modal.querySelector('.modal-close');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', () => closeGuideModal());
+  }
+
+  modal.addEventListener('click', event => {
+    if (event.target === modal) {
+      closeGuideModal();
+    }
+  });
+
+  document.getElementById('btnOpenGuideModal')?.addEventListener('click', () => {
+    vis('guide');
+    openGuideModal();
+  });
+
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') {
+      const currentModal = getGuideModalElement();
+      if (currentModal && currentModal.classList.contains('open')) {
+        closeGuideModal();
+      }
+    }
+  });
+}
+
 function formatCurrency(value) {
   return new Intl.NumberFormat('da-DK', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value || 0);
 }
@@ -63,9 +129,6 @@ let workerCount = 0;
 let laborEntries = [];
 let lastLoensum = 0;
 let lastMaterialSum = 0;
-
-// Flag to control inclusion of each material system
-let includeAlfix = true;
 
 // --- Scaffold Part Lists ---
 const dataBosta = [
@@ -317,10 +380,18 @@ const dataAlfix = [
   { id: 236, name: "Keder-teltdug pr. m2", price: 6.42, quantity: 0 },
 ];
 
-// Active lists flags
-let includeBosta = true;
-let includeHaki  = true;
-let includeModex = true;
+const systemOptions = [
+  { key: 'bosta', label: 'Bosta', dataset: dataBosta },
+  { key: 'haki', label: 'HAKI', dataset: dataHaki },
+  { key: 'modex', label: 'MODEX', dataset: dataModex },
+];
+
+const systemDatasetMap = systemOptions.reduce((map, option) => {
+  map[option.key] = option.dataset;
+  return map;
+}, {});
+
+let currentSystemKey = systemOptions[0]?.key || 'bosta';
 
 const manualMaterials = Array.from({ length: 3 }, (_, index) => ({
   id: `manual-${index + 1}`,
@@ -388,7 +459,7 @@ function hydrateMaterialListsFromJson() {
     }
 
     if (hydrated) {
-      render();
+      renderOptaelling();
       updateTotals();
     }
 
@@ -449,13 +520,19 @@ function hydrateMaterialListsFromJson() {
 }
 
 function getAllData(includeManual = true) {
-  let combined = [];
-  if (includeBosta) combined = combined.concat(dataBosta);
-  if (includeHaki)  combined = combined.concat(dataHaki);
-  if (includeModex) combined = combined.concat(dataModex);
-  if (includeAlfix) combined = combined.concat(dataAlfix);
-  if (includeManual) combined = combined.concat(manualMaterials);
-  return combined;
+  const combined = [dataBosta, dataHaki, dataModex, dataAlfix]
+    .reduce((acc, list) => acc.concat(list), []);
+  if (!includeManual) return combined;
+  return combined.concat(manualMaterials);
+}
+
+function getActiveMaterialList() {
+  const dataset = systemDatasetMap[currentSystemKey];
+  if (Array.isArray(dataset)) {
+    return dataset;
+  }
+  const fallbackKey = systemOptions[0]?.key;
+  return systemDatasetMap[fallbackKey] || dataBosta;
 }
 
 function findMaterialById(id) {
@@ -471,25 +548,40 @@ function findMaterialById(id) {
 function setupListSelectors() {
   const container = document.getElementById('listSelectors');
   if (!container) return;
+  const selectId = 'systemSelect';
+  const optionsHtml = systemOptions
+    .map(option => `<option value="${option.key}">${option.label}</option>`)
+    .join('');
+
   container.innerHTML = `
-    <label><input type="checkbox" id="chkBosta" ${includeBosta ? 'checked' : ''}> Bosta</label>
-    <label><input type="checkbox" id="chkHaki" ${includeHaki ? 'checked' : ''}> Haki</label>
-    <label><input type="checkbox" id="chkModex" ${includeModex ? 'checked' : ''}> Modex</label>
-    <label><input type="checkbox" id="chkAlfix" ${includeAlfix ? 'checked' : ''}> Alfix</label>
+    <label for="${selectId}">System</label>
+    <select id="${selectId}">${optionsHtml}</select>
   `;
-  document.getElementById('chkBosta').addEventListener('change', e => { includeBosta = e.target.checked; render(); });
-  document.getElementById('chkHaki').addEventListener('change', e => { includeHaki = e.target.checked; render(); });
-  document.getElementById('chkModex').addEventListener('change', e => { includeModex = e.target.checked; render(); });
-  document.getElementById('chkAlfix').addEventListener('change', e => { includeAlfix = e.target.checked; render(); });
+
+  const select = document.getElementById(selectId);
+  if (select) {
+    if (!systemDatasetMap[currentSystemKey]) {
+      currentSystemKey = systemOptions[0]?.key || 'bosta';
+    }
+    select.value = currentSystemKey;
+    select.addEventListener('change', event => {
+      const { value } = event.target;
+      currentSystemKey = value;
+      renderOptaelling();
+    });
+  }
 }
 
 // --- Rendering Functions ---
-function render() {
+function renderOptaelling() {
   const container = document.getElementById('optaellingContainer');
   if (!container) return;
   container.innerHTML = '';
 
-  const items = getAllData();
+  const activeItems = getActiveMaterialList();
+  const items = Array.isArray(activeItems)
+    ? activeItems.concat(manualMaterials)
+    : manualMaterials.slice();
 
   items.forEach(item => {
     const row = document.createElement('div');
@@ -527,24 +619,22 @@ function render() {
     container.appendChild(row);
   });
 
-  container.querySelectorAll('.qty').forEach(input => {
-    input.addEventListener('input', handleQuantityChange);
-    input.addEventListener('change', handleQuantityChange);
-  });
-
-  container.querySelectorAll('.price').forEach(input => {
-    input.addEventListener('input', handlePriceChange);
-    input.addEventListener('change', handlePriceChange);
-  });
-
-  container.querySelectorAll('.manual-name').forEach(input => {
-    input.addEventListener('input', handleManualNameChange);
-  });
-
-  updateTotals();
+  updateTotal();
 }
 
 // --- Update Functions ---
+function handleOptaellingInput(event) {
+  const target = event.target;
+  if (!target || !target.classList) return;
+  if (target.classList.contains('qty')) {
+    handleQuantityChange(event);
+  } else if (target.classList.contains('price')) {
+    handlePriceChange(event);
+  } else if (target.classList.contains('manual-name')) {
+    handleManualNameChange(event);
+  }
+}
+
 function handleQuantityChange(event) {
   const { id } = event.target.dataset;
   updateQty(id, event.target.value);
@@ -660,6 +750,10 @@ function updateTotals() {
   if (demontageField) {
     demontageField.value = (materialSum * 0.5).toFixed(2);
   }
+}
+
+function updateTotal() {
+  updateTotals();
 }
 
 const sagsinfoFieldIds = ['sagsnummer', 'sagsnavn', 'sagsadresse', 'sagskunde', 'sagsdato', 'sagsmontoer'];
@@ -941,7 +1035,7 @@ function applyCSVRows(rows) {
   }
 
   materials.forEach(assignMaterialRow);
-  render();
+  renderOptaelling();
 
   laborEntries = labor.filter(entry => entry.hours > 0 || entry.rate > 0 || entry.type);
   populateWorkersFromLabor(laborEntries);
@@ -1008,7 +1102,7 @@ function setupCSVImport() {
 // --- Authentication ---
 function login() { 
   if(document.getElementById("adminCode").value === "StilAce") {
-    admin = true; render();
+    admin = true; renderOptaelling();
   } else {
     alert("Forkert kode");
   }
@@ -1186,13 +1280,18 @@ function beregnLon() {
 
 
 // --- CSV-eksport ---
-function downloadCSV() {
-  if (!validateSagsinfo()) {
+function downloadCSV(customSagsnummer, options = {}) {
+  if (!options?.skipValidation && !validateSagsinfo()) {
     alert('Udfyld Sagsinfo for at eksportere.');
     return false;
   }
+  if (!options?.skipBeregn) {
+    beregnLon();
+  }
   const info = collectSagsinfo();
-  beregnLon();
+  if (customSagsnummer) {
+    info.sagsnummer = customSagsnummer;
+  }
   const cache = typeof window !== 'undefined' ? window.__beregnLonCache : null;
   const tralleState = typeof window !== 'undefined' ? window.__traelleloeft : null;
   const materials = getAllData().filter(item => {
@@ -1276,7 +1375,7 @@ function downloadCSV() {
 
   const link = document.createElement('a');
   link.href = url;
-  link.download = `${fileName}_data.csv`;
+  link.download = `${fileName}.csv`;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
@@ -1285,13 +1384,18 @@ function downloadCSV() {
 }
 
 // --- PDF-eksport (html2canvas + jsPDF) ---
-async function exportPDF() {
+async function exportPDF(customSagsnummer, options = {}) {
   if (!validateSagsinfo()) {
     alert('Udfyld Sagsinfo for at eksportere.');
     return;
   }
+  if (!options?.skipBeregn) {
+    beregnLon();
+  }
   const info = collectSagsinfo();
-  beregnLon();
+  if (customSagsnummer) {
+    info.sagsnummer = customSagsnummer;
+  }
   const cache = typeof window !== 'undefined' ? window.__beregnLonCache : null;
   const tralleState = typeof window !== 'undefined' ? window.__traelleloeft : null;
   const materials = getAllData().filter(item => {
@@ -1405,7 +1509,7 @@ async function exportPDF() {
     const doc = new jsPDF({ unit: 'px', format: [canvas.width, canvas.height] });
     doc.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, canvas.width, canvas.height);
     const fileName = sanitizeFilename(info.sagsnummer || 'akkordseddel');
-    doc.save(`${fileName}_oversigt.pdf`);
+    doc.save(`${fileName}.pdf`);
   } catch (err) {
     console.error('PDF eksport fejlede:', err);
   } finally {
@@ -1414,10 +1518,15 @@ async function exportPDF() {
 }
 
 // --- Samlet eksport ---
-async function exportAll() {
-  if (!downloadCSV()) return;
-  beregnLon();
-  await exportPDF();
+async function exportAll(customSagsnummer) {
+  if (!validateSagsinfo()) {
+    alert('Udfyld Sagsinfo for at eksportere.');
+    return;
+  }
+  const sagsnummer = customSagsnummer || beregnLon();
+  if (!sagsnummer) return;
+  downloadCSV(sagsnummer, { skipBeregn: true, skipValidation: true });
+  await exportPDF(sagsnummer, { skipBeregn: true });
 }
 
 // --- CSV-import for optælling ---
@@ -1680,18 +1789,43 @@ function initApp() {
   if (appInitialized) return;
   appInitialized = true;
 
-  vis('sagsinfoSection');
+  vis('sagsinfo');
 
-  toNodeArray(document.querySelectorAll('header nav button[data-section]')).forEach(button => {
-    button.addEventListener('click', () => vis(button.dataset.section));
+  const navConfig = [
+    { id: 'btnSagsinfo', section: 'sagsinfo' },
+    { id: 'btnOptaelling', section: 'optaelling' },
+    { id: 'btnLon', section: 'lon' },
+    { id: 'btnGuide', section: 'guide', onActivate: () => openGuideModal() },
+  ];
+
+  navConfig.forEach(({ id, section, onActivate }) => {
+    const button = document.getElementById(id);
+    if (!button) return;
+    button.addEventListener('click', () => {
+      vis(section);
+      if (section !== 'guide') {
+        closeGuideModal();
+      }
+      if (typeof onActivate === 'function') {
+        onActivate();
+      }
+    });
   });
+
+  const optaellingContainer = document.getElementById('optaellingContainer');
+  if (optaellingContainer) {
+    optaellingContainer.addEventListener('input', handleOptaellingInput);
+    optaellingContainer.addEventListener('change', handleOptaellingInput);
+  }
 
   hydrateMaterialListsFromJson();
   setupListSelectors();
-  render();
+  renderOptaelling();
   addWorker();
 
   setupCSVImport();
+
+  setupGuideModal();
 
   document.getElementById('btnBeregnLon')?.addEventListener('click', () => beregnLon());
   document.getElementById('btnPrint')?.addEventListener('click', () => {
