@@ -33,7 +33,7 @@ function toUiTimeRow(row) {
 
   return {
     employeeName: String(employeeName ?? '').trim(),
-    employeeId: employeeId === undefined || employeeId === null ? '' : String(employeeId).trim(),
+    employeeId: String(employeeId ?? '').trim(),
     date: String(date ?? '').trim(),
     hours,
     wageType: String(wageType ?? '').trim(),
