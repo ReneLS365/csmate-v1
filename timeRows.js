@@ -45,7 +45,7 @@ export function getTimeRows() {
   return timeRowsState;
 }
 
-export function saveTimeRows(rows = timeRowsState) {
+export function saveTimeRows(rows = getTimeRows()) {
   const sanitized = rows.map(row => ({
     employeeName: String(row.employeeName ?? '').trim(),
     employeeId: row.employeeId === undefined || row.employeeId === null ? '' : String(row.employeeId).trim(),
