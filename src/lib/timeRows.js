@@ -28,7 +28,7 @@ function normaliseKey (name) {
 export function toUiTimeRow (row = {}) {
   const normalized = {}
 
-  Object.entries(row ?? {}).forEach(([key, value]) => {
+  Object.entries(row).forEach(([key, value]) => {
     const normKey = normaliseKey(key)
     if (!normKey) return
 
