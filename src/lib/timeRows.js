@@ -1,22 +1,21 @@
-const NORMALIZED_KEYS = new Map([
-  ['employeeid', 'employeeId'],
-  ['medarbejderid', 'employeeId'],
-  ['id', 'employeeId'],
-  ['employeename', 'employeeName'],
-  ['medarbejder', 'employeeName'],
-  ['name', 'employeeName'],
-  ['dato', 'date'],
-  ['date', 'date'],
-  ['timer', 'hours'],
-  ['hours', 'hours'],
-  ['time', 'hours'],
-  ['wagetype', 'wageType'],
-  ['wage', 'wageType'],
-  ['type', 'wageType'],
-  ['notes', 'notes'],
-  ['bemærkning', 'notes'],
-  ['bemaerkning', 'notes']
-])
+const KEY_ALIASES = {
+  employeeid: 'employeeId',
+  medarbejderid: 'employeeId',
+  id: 'employeeId',
+  employeename: 'employeeName',
+  medarbejder: 'employeeName',
+  name: 'employeeName',
+  dato: 'date',
+  date: 'date',
+  timer: 'hours',
+  hours: 'hours',
+  time: 'hours',
+  wagetype: 'wageType',
+  wage: 'wageType',
+  type: 'wageType',
+  notes: 'notes',
+  bemaerkning: 'notes'
+}
 
 function normaliseKey (name) {
   return String(name || '')
@@ -29,27 +28,22 @@ function normaliseKey (name) {
 export function toUiTimeRow (row = {}) {
   const normalized = {}
 
-  Object.entries(row ?? {}).forEach(([key, value]) => {
+  Object.entries(row).forEach(([key, value]) => {
     const normKey = normaliseKey(key)
     if (!normKey) return
 
-    if (!Object.prototype.hasOwnProperty.call(normalized, normKey)) {
-      normalized[normKey] = value
+    const targetKey = KEY_ALIASES[normKey] || normKey
+    if (!Object.prototype.hasOwnProperty.call(normalized, targetKey)) {
+      normalized[targetKey] = value
     }
   })
 
-  const mapped = {}
-  Object.entries(normalized).forEach(([key, value]) => {
-    const targetKey = NORMALIZED_KEYS.get(key) || key
-    mapped[targetKey] = value
-  })
-
   return {
-    employeeId: mapped.employeeId ?? '',
-    employeeName: mapped.employeeName ?? '',
-    date: mapped.date ?? '',
-    hours: Number.parseFloat(mapped.hours ?? 0) || 0,
-    wageType: mapped.wageType && mapped.wageType !== '' ? mapped.wageType : 'Normal',
-    notes: mapped.notes ?? ''
+    employeeId: normalized.employeeId ?? '',
+    employeeName: normalized.employeeName ?? '',
+    date: normalized.date ?? '',
+    hours: Number.parseFloat(normalized.hours ?? 0) || 0,
+    wageType: normalized.wageType && normalized.wageType !== '' ? normalized.wageType : 'Normal',
+    notes: normalized.notes ?? ''
   }
 }
