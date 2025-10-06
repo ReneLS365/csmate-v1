@@ -19,7 +19,7 @@ function toUiTimeRow(row) {
   const normalized = {};
   Object.entries(row || {}).forEach(([key, value]) => {
     const normKey = normalizeKey(key);
-    if (!normalized.hasOwnProperty(normKey)) {
+    if (!Object.prototype.hasOwnProperty.call(normalized, normKey)) {
       normalized[normKey] = value;
     }
   });
