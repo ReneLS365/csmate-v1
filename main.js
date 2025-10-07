@@ -22,20 +22,38 @@ function forEachNode(nodeList, callback) {
 
 function vis(id) {
   const targetId = resolveSectionId(id);
+  const sections = document.querySelectorAll('.sektion');
 
-  forEachNode(document.querySelectorAll('.sektion'), section => {
-    const isActive = section.id === targetId;
-    section.toggleAttribute('hidden', !isActive);
-    if (isActive) {
-      section.style.removeProperty('display');
-    } else {
-      section.style.display = 'none';
+  if (!sections.length) return;
+
+  let activeId = targetId;
+  let hasMatch = false;
+  for (let index = 0; index < sections.length; index += 1) {
+    if (sections[index].id === activeId) {
+      hasMatch = true;
+      break;
     }
+  }
+
+  if (!hasMatch) {
+    const fallback = sections[0];
+    activeId = fallback ? fallback.id : '';
+  }
+
+  forEachNode(sections, section => {
+    const isActive = section.id === activeId;
+    section.classList.toggle('active', isActive);
+    section.style.display = isActive ? 'flex' : 'none';
+    section.toggleAttribute('hidden', !isActive);
+    section.setAttribute('aria-hidden', isActive ? 'false' : 'true');
   });
 
-  forEachNode(document.querySelectorAll('header nav button[data-section]'), btn => {
+  const navButtons = document.querySelectorAll('header nav button[data-section]');
+  forEachNode(navButtons, btn => {
     const buttonTarget = resolveSectionId(btn.dataset.section);
-    btn.classList.toggle('active', buttonTarget === targetId);
+    const isActive = buttonTarget === activeId;
+    btn.classList.toggle('active', isActive);
+    btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
   });
 }
 
