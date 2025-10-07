@@ -22,20 +22,33 @@ function forEachNode(nodeList, callback) {
 
 function vis(id) {
   const targetId = resolveSectionId(id);
+  const sections = document.querySelectorAll('.sektion');
 
-  forEachNode(document.querySelectorAll('.sektion'), section => {
-    const isActive = section.id === targetId;
-    section.toggleAttribute('hidden', !isActive);
+  if (!sections.length) return;
+
+  let activeId = targetId;
+  if (!activeId || !Array.from(sections).some(section => section.id === activeId)) {
+    const firstSection = sections[0];
+    activeId = firstSection ? firstSection.id : '';
+  }
+
+  sections.forEach(section => {
+    const isActive = section.id === activeId;
+    section.classList.toggle('active', isActive);
     if (isActive) {
-      section.style.removeProperty('display');
+      section.style.display = 'block';
+      section.removeAttribute('hidden');
     } else {
       section.style.display = 'none';
+      if (!section.hasAttribute('hidden')) {
+        section.setAttribute('hidden', '');
+      }
     }
   });
 
-  forEachNode(document.querySelectorAll('header nav button[data-section]'), btn => {
+  document.querySelectorAll('header nav button[data-section]').forEach(btn => {
     const buttonTarget = resolveSectionId(btn.dataset.section);
-    btn.classList.toggle('active', buttonTarget === targetId);
+    btn.classList.toggle('active', buttonTarget === activeId);
   });
 }
 
