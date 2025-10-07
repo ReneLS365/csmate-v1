@@ -30,6 +30,7 @@ input,select,textarea,button{background:var(--panel);color:var(--text);border:1p
 textarea{resize:vertical}
 button{cursor:pointer}
 .sektion{display:flex;flex-direction:column;gap:var(--gap)}
+.sektion.active{display:flex!important;}
 .row{display:flex;gap:8px;flex-wrap:wrap}
 .btn-group{display:flex;gap:8px;flex-wrap:wrap}
 .grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--gap)}
