@@ -1,3 +1,4 @@
+const CACHE_NAME = 'csmate-v1.3';
 const CACHE_NAME = 'csmate-v1.2';
 const ASSETS = [
   './',
@@ -29,6 +30,28 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('fetch', event => {
+  if (event.request.method !== 'GET') {
+    return;
+  }
+
+  const requestUrl = new URL(event.request.url);
+  if (requestUrl.origin !== self.location.origin) {
+    return;
+  }
+
+  event.respondWith(
+    caches.match(event.request).then(cached => {
+      if (cached) {
+        return cached;
+      }
+
+      return fetch(event.request);
+    }).catch(() => {
+      if (event.request.mode === 'navigate') {
+        return caches.match('./index.html');
+      }
+
+      return Response.error();
   event.respondWith(
     caches.match(event.request).then(response => {
       if (response) {

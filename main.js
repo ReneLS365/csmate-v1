@@ -27,6 +27,11 @@ function vis(id) {
   if (!sections.length) return;
 
   let activeId = targetId;
+  let hasMatch = false;
+  for (let index = 0; index < sections.length; index += 1) {
+    if (sections[index].id === activeId) {
+      hasMatch = true;
+      break;
   if (!activeId || !Array.from(sections).some(section => section.id === activeId)) {
     const firstSection = sections[0];
     activeId = firstSection ? firstSection.id : '';
@@ -44,8 +49,27 @@ function vis(id) {
         section.setAttribute('hidden', '');
       }
     }
+  }
+
+  if (!hasMatch) {
+    const fallback = sections[0];
+    activeId = fallback ? fallback.id : '';
+  }
+
+  forEachNode(sections, section => {
+    const isActive = section.id === activeId;
+    section.classList.toggle('active', isActive);
+    section.style.display = isActive ? 'flex' : 'none';
+    section.toggleAttribute('hidden', !isActive);
+    section.setAttribute('aria-hidden', isActive ? 'false' : 'true');
   });
 
+  const navButtons = document.querySelectorAll('header nav button[data-section]');
+  forEachNode(navButtons, btn => {
+    const buttonTarget = resolveSectionId(btn.dataset.section);
+    const isActive = buttonTarget === activeId;
+    btn.classList.toggle('active', isActive);
+    btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
   document.querySelectorAll('header nav button[data-section]').forEach(btn => {
     const buttonTarget = resolveSectionId(btn.dataset.section);
     btn.classList.toggle('active', buttonTarget === activeId);
@@ -101,7 +125,6 @@ function setupGuideModal() {
   });
 
   document.getElementById('btnOpenGuideModal')?.addEventListener('click', () => {
-    vis('guide');
     openGuideModal();
   });
 
@@ -143,7 +166,14 @@ let laborEntries = [];
 let lastLoensum = 0;
 let lastMaterialSum = 0;
 let lastEkompletData = null;
+let currentStatus = 'kladde';
+let recentCasesCache = [];
+let cachedDBPromise = null;
 const DEFAULT_ACTION_HINT = 'Udfyld Sagsinfo for at fortsætte.';
+const DB_NAME = 'csmate_projects';
+const DB_STORE = 'projects';
+const TRAELLE_RATE35 = 10.44;
+const TRAELLE_RATE50 = 14.62;
 
 // --- Scaffold Part Lists ---
 const dataBosta = [
@@ -920,23 +950,49 @@ function calcLoensum() {
 }
 
 function renderCurrency(target, value) {
-  const el = typeof target === 'string' ? document.querySelector(target) : target;
-  if (!el) return;
-  el.textContent = `${formatCurrency(value)} kr`;
+  let elements = [];
+  if (typeof target === 'string') {
+    elements = Array.from(document.querySelectorAll(target));
+  } else if (target instanceof Element) {
+    elements = [target];
+  } else if (target && typeof target.length === 'number') {
+    elements = Array.from(target);
+  }
+  if (elements.length === 0) return;
+  const text = `${formatCurrency(value)} kr`;
+  elements.forEach(el => {
+    el.textContent = text;
+  });
 }
 
 let totalsUpdateTimer = null;
 
+function updateTralleStateFromInputs() {
+  if (typeof window === 'undefined') return;
+  const n35 = toNumber(document.getElementById('traelleloeft35')?.value);
+  const n50 = toNumber(document.getElementById('traelleloeft50')?.value);
+  window.__traelleloeft = {
+    n35,
+    n50,
+    RATE35: TRAELLE_RATE35,
+    RATE50: TRAELLE_RATE50,
+    sum: (n35 * TRAELLE_RATE35) + (n50 * TRAELLE_RATE50),
+  };
+}
+
 function performTotalsUpdate() {
-  const materialSum = calcMaterialesum();
+  updateTralleStateFromInputs();
+  const tralleState = typeof window !== 'undefined' ? window.__traelleloeft : null;
+  const tralleSum = tralleState && Number.isFinite(tralleState.sum) ? tralleState.sum : 0;
+  const materialSum = calcMaterialesum() + tralleSum;
   lastMaterialSum = materialSum;
-  renderCurrency('#total-material', materialSum);
+  renderCurrency('[data-total="material"]', materialSum);
 
   const laborSum = calcLoensum();
   lastLoensum = laborSum;
-  renderCurrency('#total-labor', laborSum);
+  renderCurrency('[data-total="labor"]', laborSum);
 
-  renderCurrency('#total-project', materialSum + laborSum);
+  renderCurrency('[data-total="project"]', materialSum + laborSum);
 
   const montageField = document.getElementById('montagepris');
   if (montageField) {
@@ -982,6 +1038,7 @@ function collectSagsinfo() {
     kunde: document.getElementById('sagskunde')?.value.trim() || '',
     dato: document.getElementById('sagsdato')?.value || '',
     montoer: document.getElementById('sagsmontoer')?.value.trim() || '',
+    status: currentStatus,
   };
 }
 
@@ -1009,6 +1066,371 @@ function updateActionHint(message = '', variant = 'info') {
   hint.style.display = '';
 }
 
+function formatStatusLabel(status) {
+  const normalized = (status || '').toLowerCase();
+  const labels = {
+    kladde: 'Kladde',
+    afventer: 'Afventer',
+    godkendt: 'Godkendt',
+    afvist: 'Afvist',
+  };
+  if (labels[normalized]) return labels[normalized];
+  if (!normalized) return 'Kladde';
+  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+}
+
+function syncStatusUI(status) {
+  const indicator = document.getElementById('statusIndicator');
+  if (indicator) {
+    indicator.textContent = formatStatusLabel(status);
+    indicator.dataset.status = status || 'kladde';
+  }
+  const select = document.getElementById('sagStatus');
+  if (select && (status ?? '') !== select.value) {
+    select.value = status || 'kladde';
+  }
+}
+
+function updateStatus(value, options = {}) {
+  const next = (value || '').toLowerCase() || 'kladde';
+  if (!admin && (next === 'godkendt' || next === 'afvist')) {
+    if (options?.source === 'control') {
+      syncStatusUI(currentStatus);
+    }
+    updateActionHint('Kun kontor kan godkende/afvise.', 'error');
+    return;
+  }
+  currentStatus = next;
+  syncStatusUI(currentStatus);
+}
+
+function initStatusControls() {
+  syncStatusUI(currentStatus);
+  const select = document.getElementById('sagStatus');
+  if (select) {
+    select.addEventListener('change', event => {
+      updateStatus(event.target.value, { source: 'control' });
+    });
+  }
+}
+
+function promisifyRequest(request) {
+  if (!request) return Promise.resolve(undefined);
+  return new Promise((resolve, reject) => {
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+function openDB() {
+  if (cachedDBPromise) return cachedDBPromise;
+  if (typeof indexedDB === 'undefined') {
+    cachedDBPromise = Promise.reject(new Error('IndexedDB er ikke tilgængelig'));
+    cachedDBPromise.catch(() => {});
+    return cachedDBPromise;
+  }
+  cachedDBPromise = new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, 1);
+    request.onupgradeneeded = event => {
+      const db = event.target?.result;
+      if (db && !db.objectStoreNames.contains(DB_STORE)) {
+        db.createObjectStore(DB_STORE, { keyPath: 'id', autoIncrement: true });
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error || new Error('IndexedDB kunne ikke åbnes'));
+  });
+  cachedDBPromise.catch(() => {
+    cachedDBPromise = null;
+  });
+  return cachedDBPromise;
+}
+
+async function saveProject(data) {
+  if (!data) return;
+  try {
+    const db = await openDB();
+    if (!db) return;
+    const tx = db.transaction(DB_STORE, 'readwrite');
+    const completion = new Promise((resolve, reject) => {
+      tx.oncomplete = () => resolve();
+      tx.onabort = () => reject(tx.error || new Error('Transaktionen blev afbrudt'));
+      tx.onerror = () => reject(tx.error || new Error('Transaktionen fejlede'));
+    });
+    const store = tx.objectStore(DB_STORE);
+    await promisifyRequest(store.add({ data, ts: Date.now() }));
+    const all = await promisifyRequest(store.getAll());
+    if (Array.isArray(all) && all.length > 20) {
+      all.sort((a, b) => (a.ts || 0) - (b.ts || 0));
+      const excess = all.length - 20;
+      for (let index = 0; index < excess; index += 1) {
+        const item = all[index];
+        if (item && item.id != null) {
+          await promisifyRequest(store.delete(item.id));
+        }
+      }
+    }
+    await completion;
+  } catch (error) {
+    console.warn('Kunne ikke gemme sag lokalt', error);
+  }
+}
+
+async function getRecentProjects() {
+  try {
+    const db = await openDB();
+    if (!db) return [];
+    const tx = db.transaction(DB_STORE, 'readonly');
+    const completion = new Promise((resolve, reject) => {
+      tx.oncomplete = () => resolve();
+      tx.onabort = () => reject(tx.error || new Error('Transaktionen blev afbrudt'));
+      tx.onerror = () => reject(tx.error || new Error('Transaktionen fejlede'));
+    });
+    const store = tx.objectStore(DB_STORE);
+    const items = await promisifyRequest(store.getAll());
+    await completion;
+    if (!Array.isArray(items)) return [];
+    return items
+      .filter(entry => entry && entry.data)
+      .sort((a, b) => (b.ts || 0) - (a.ts || 0));
+  } catch (error) {
+    console.warn('Kunne ikke hente lokale sager', error);
+    return [];
+  }
+}
+
+async function populateRecentCases() {
+  const select = document.getElementById('recentCases');
+  if (!select) return;
+  const button = document.getElementById('btnLoadCase');
+  const cases = await getRecentProjects();
+  recentCasesCache = cases;
+  select.innerHTML = '';
+
+  if (!cases.length) {
+    const option = document.createElement('option');
+    option.value = '';
+    option.textContent = 'Ingen gemte sager endnu';
+    option.disabled = true;
+    option.selected = true;
+    select.appendChild(option);
+    if (button) button.disabled = true;
+    return;
+  }
+
+  const placeholder = document.createElement('option');
+  placeholder.value = '';
+  placeholder.textContent = 'Vælg gemt sag';
+  placeholder.disabled = true;
+  placeholder.selected = true;
+  select.appendChild(placeholder);
+
+  cases.forEach(entry => {
+    const option = document.createElement('option');
+    option.value = String(entry.id);
+    const info = entry.data?.sagsinfo || {};
+    const parts = [];
+    if (info.sagsnummer) parts.push(info.sagsnummer);
+    if (info.navn) parts.push(info.navn);
+    option.textContent = parts.length ? parts.join(' – ') : `Sag #${entry.id}`;
+    select.appendChild(option);
+  });
+
+  if (button) button.disabled = true;
+}
+
+function collectExtrasState() {
+  const getValue = id => document.getElementById(id)?.value ?? '';
+  return {
+    jobType: document.getElementById('jobType')?.value || 'montage',
+    montagepris: getValue('montagepris'),
+    demontagepris: getValue('demontagepris'),
+    slaebePct: getValue('slaebePct'),
+    antalBoringHuller: getValue('antalBoringHuller'),
+    antalLukHuller: getValue('antalLukHuller'),
+    antalBoringBeton: getValue('antalBoringBeton'),
+    km: getValue('km'),
+    traelle35: getValue('traelleloeft35'),
+    traelle50: getValue('traelleloeft50'),
+  };
+}
+
+function collectProjectSnapshot() {
+  const materials = getAllData().map(item => ({
+    id: item.id,
+    name: item.name,
+    price: toNumber(item.price),
+    quantity: toNumber(item.quantity),
+    manual: Boolean(item.manual),
+    varenr: item.varenr || null,
+  }));
+  const labor = Array.isArray(laborEntries)
+    ? laborEntries.map(entry => ({ ...entry }))
+    : [];
+  return {
+    timestamp: Date.now(),
+    status: currentStatus,
+    sagsinfo: collectSagsinfo(),
+    systems: Array.from(selectedSystemKeys),
+    materials,
+    labor,
+    extras: collectExtrasState(),
+    totals: {
+      materialSum: lastMaterialSum,
+      laborSum: lastLoensum,
+    },
+  };
+}
+
+async function persistProjectSnapshot() {
+  try {
+    const snapshot = collectProjectSnapshot();
+    await saveProject(snapshot);
+    await populateRecentCases();
+  } catch (error) {
+    console.warn('Kunne ikke gemme projekt snapshot', error);
+  }
+}
+
+function applyExtrasSnapshot(extras = {}) {
+  const assign = (id, value) => {
+    const el = document.getElementById(id);
+    if (el) el.value = value ?? '';
+  };
+  const jobType = document.getElementById('jobType');
+  if (jobType && extras.jobType) {
+    jobType.value = extras.jobType;
+  }
+  assign('montagepris', extras.montagepris);
+  assign('demontagepris', extras.demontagepris);
+  assign('slaebePct', extras.slaebePct);
+  assign('antalBoringHuller', extras.antalBoringHuller);
+  assign('antalLukHuller', extras.antalLukHuller);
+  assign('antalBoringBeton', extras.antalBoringBeton);
+  assign('km', extras.km);
+  assign('traelleloeft35', extras.traelle35);
+  assign('traelleloeft50', extras.traelle50);
+
+  if (typeof window !== 'undefined') {
+    const n35 = toNumber(extras.traelle35);
+    const n50 = toNumber(extras.traelle50);
+    const sum = (n35 * TRAELLE_RATE35) + (n50 * TRAELLE_RATE50);
+    window.__traelleloeft = {
+      n35,
+      n50,
+      RATE35: TRAELLE_RATE35,
+      RATE50: TRAELLE_RATE50,
+      sum,
+    };
+  }
+}
+
+function applyMaterialsSnapshot(materials = [], systems = []) {
+  resetMaterials();
+  if (Array.isArray(systems) && systems.length) {
+    selectedSystemKeys.clear();
+    systems.forEach(key => selectedSystemKeys.add(key));
+  }
+  if (Array.isArray(materials)) {
+    materials.forEach(item => {
+      const quantity = toNumber(item?.quantity);
+      const price = toNumber(item?.price);
+      let target = null;
+      if (item?.id) {
+        target = findMaterialById(item.id);
+      }
+      if (target && !target.manual) {
+        target.quantity = quantity;
+        if (Number.isFinite(price) && price > 0) {
+          target.price = price;
+        }
+        return;
+      }
+      if (item?.manual) {
+        const slot = manualMaterials.find(man => man.id === item.id)
+          || manualMaterials.find(man => !man.name && man.quantity === 0 && man.price === 0);
+        if (slot) {
+          slot.name = item.name || slot.name;
+          slot.price = Number.isFinite(price) ? price : slot.price;
+          slot.quantity = quantity;
+        }
+        return;
+      }
+      const fallback = manualMaterials.find(man => !man.name && man.quantity === 0 && man.price === 0);
+      if (fallback) {
+        fallback.name = item?.name || '';
+        fallback.price = Number.isFinite(price) ? price : 0;
+        fallback.quantity = quantity;
+      }
+    });
+  }
+  renderOptaelling();
+}
+
+function applyLaborSnapshot(labor = []) {
+  if (Array.isArray(labor)) {
+    laborEntries = labor.map(entry => ({ ...entry }));
+  } else {
+    laborEntries = [];
+  }
+  populateWorkersFromLabor(laborEntries);
+}
+
+function applyProjectSnapshot(snapshot, options = {}) {
+  if (!snapshot || typeof snapshot !== 'object') return;
+  const info = snapshot.sagsinfo || {};
+  setSagsinfoField('sagsnummer', info.sagsnummer || '');
+  setSagsinfoField('sagsnavn', info.navn || '');
+  setSagsinfoField('sagsadresse', info.adresse || '');
+  setSagsinfoField('sagskunde', info.kunde || '');
+  setSagsinfoField('sagsdato', info.dato || '');
+  setSagsinfoField('sagsmontoer', info.montoer || '');
+
+  if (info.status || snapshot.status) {
+    currentStatus = (info.status || snapshot.status || 'kladde').toLowerCase();
+    syncStatusUI(currentStatus);
+  } else {
+    syncStatusUI(currentStatus);
+  }
+
+  applyMaterialsSnapshot(snapshot.materials, snapshot.systems);
+  applyExtrasSnapshot(snapshot.extras);
+  applyLaborSnapshot(snapshot.labor);
+
+  if (snapshot.totals) {
+    if (Number.isFinite(snapshot.totals.materialSum)) {
+      lastMaterialSum = snapshot.totals.materialSum;
+    }
+    if (Number.isFinite(snapshot.totals.laborSum)) {
+      lastLoensum = snapshot.totals.laborSum;
+    }
+  }
+
+  updateTotals(true);
+  validateSagsinfo();
+  if (!options?.skipHint) {
+    updateActionHint('Sag er indlæst.', 'success');
+  }
+}
+
+async function handleLoadCase() {
+  const select = document.getElementById('recentCases');
+  if (!select) return;
+  const value = Number(select.value);
+  if (!Number.isFinite(value) || value <= 0) return;
+  let record = recentCasesCache.find(entry => Number(entry.id) === value);
+  if (!record) {
+    const cases = await getRecentProjects();
+    recentCasesCache = cases;
+    record = cases.find(entry => Number(entry.id) === value);
+  }
+  if (record && record.data) {
+    applyProjectSnapshot(record.data, { skipHint: false });
+  } else {
+    updateActionHint('Kunne ikke indlæse den valgte sag.', 'error');
+  }
+}
+
 function validateSagsinfo() {
   let isValid = true;
   sagsinfoFieldIds.forEach(id => {
@@ -1025,7 +1447,7 @@ function validateSagsinfo() {
     el.classList.toggle('invalid', !fieldValid);
   });
 
-  ['btnExportCSV', 'btnExportAll', 'btnPrint'].forEach(id => {
+  ['btnExportCSV', 'btnExportAll', 'btnExportZip', 'btnPrint'].forEach(id => {
     const btn = document.getElementById(id);
     if (btn) btn.disabled = !isValid;
   });
@@ -1358,7 +1780,7 @@ function setupCSVImport() {
     dropArea.classList.remove('dragover');
     const file = event.dataTransfer?.files?.[0];
     if (file) {
-      uploadCSV(file);
+      handleImportFile(file);
       fileInput.value = '';
     }
   });
@@ -1374,10 +1796,20 @@ function setupCSVImport() {
   fileInput.addEventListener('change', event => {
     const file = event.target.files?.[0];
     if (file) {
-      uploadCSV(file);
+      handleImportFile(file);
       fileInput.value = '';
     }
   });
+}
+
+function handleImportFile(file) {
+  if (!file) return;
+  const fileName = file.name || '';
+  if (/\.json$/i.test(fileName) || (file.type && file.type.includes('json'))) {
+    importJSONProject(file);
+    return;
+  }
+  uploadCSV(file);
 }
 
 // --- Authentication ---
@@ -1474,9 +1906,6 @@ function beregnLon() {
   const grundloen = 147;
   const tillægUdd1 = 42.98;
   const tillægUdd2 = 49.38;
-  const TRAELLE_RATE35 = 10.44;
-  const TRAELLE_RATE50 = 14.62;
-
   lastEkompletData = null;
 
   const antalBoringHuller = parseFloat(document.getElementById('antalBoringHuller')?.value) || 0;
@@ -1490,10 +1919,21 @@ function beregnLon() {
   const boringHullerTotal = antalBoringHuller * boringHullerPris;
   const lukHullerTotal = antalLukHuller * lukHullerPris;
   const boringBetonTotal = antalBoringBeton * boringBetonPris;
-  const ekstraarbejde = boringHullerTotal + lukHullerTotal + boringBetonTotal;
   const kilometerPris = antalKm * kmPris;
   const slaebebelob = montagepris * slaebePct; // Slæb beregnes altid ud fra montagepris
-  const traelleSum = (traelle35 * TRAELLE_RATE35) + (traelle50 * TRAELLE_RATE50);
+  const traelle35Total = traelle35 * TRAELLE_RATE35;
+  const traelle50Total = traelle50 * TRAELLE_RATE50;
+  const traelleSum = traelle35Total + traelle50Total;
+
+  if (typeof window !== 'undefined') {
+    window.__traelleloeft = {
+      n35: traelle35,
+      n50: traelle50,
+      RATE35: TRAELLE_RATE35,
+      RATE50: TRAELLE_RATE50,
+      sum: traelleSum,
+    };
+  }
 
   let materialeTotal = 0;
   const materialLines = [];
@@ -1527,6 +1967,7 @@ function beregnLon() {
     });
   }
 
+  const ekstraarbejde = boringHullerTotal + lukHullerTotal + boringBetonTotal + traelleSum;
   const samletAkkordSum = materialeTotal + ekstraarbejde + kilometerPris + slaebebelob;
 
   const workers = document.querySelectorAll('.worker-row');
@@ -1606,7 +2047,7 @@ function beregnLon() {
   });
 
   const resultatDiv = document.getElementById('lonResult');
-  const materialSum = calcMaterialesum();
+  const materialSum = calcMaterialesum() + traelleSum;
   const projektsum = materialSum + samletUdbetalt;
   const datoDisplay = formatDateForDisplay(info.dato);
   if (resultatDiv) {
@@ -1622,6 +2063,7 @@ function beregnLon() {
       { label: 'Navn', value: info.navn || '' },
       { label: 'Adresse', value: info.adresse || '' },
       { label: 'Dato', value: datoDisplay },
+      { label: 'Status', value: formatStatusLabel(info.status) },
     ];
 
     fields.forEach(({ label, value }) => {
@@ -1678,6 +2120,7 @@ function beregnLon() {
       ['Materialer (akkordberegnet)', `${materialeTotal.toFixed(2)} kr`],
       ['Materialesum', `${materialSum.toFixed(2)} kr`],
       ['Ekstraarbejde', `${ekstraarbejde.toFixed(2)} kr`],
+      ['Tralleløft', `${traelleSum.toFixed(2)} kr`],
       ['Kilometer', `${kilometerPris.toFixed(2)} kr`],
       ['Samlet akkordsum', `${samletAkkordSum.toFixed(2)} kr`],
       ['Timer', `${samletTimer.toFixed(1)} t`],
@@ -1730,6 +2173,15 @@ function beregnLon() {
       lukHuller: { antal: antalLukHuller, pris: lukHullerPris, total: lukHullerTotal },
       boringBeton: { antal: antalBoringBeton, pris: boringBetonPris, total: boringBetonTotal },
       kilometer: { antal: antalKm, pris: kmPris, total: kilometerPris },
+      traelleloeft: {
+        antal35: traelle35,
+        pris35: TRAELLE_RATE35,
+        total35: traelle35Total,
+        antal50: traelle50,
+        pris50: TRAELLE_RATE50,
+        total50: traelle50Total,
+        total: traelleSum,
+      },
     },
     materialer: materialerTilEkomplet,
     arbejdere: beregnedeArbejdere,
@@ -1767,6 +2219,8 @@ function beregnLon() {
       timestamp: Date.now(),
     };
   }
+
+  persistProjectSnapshot();
 
   return sagsnummer;
 }
@@ -1933,10 +2387,10 @@ function downloadEkompletCSV() {
 
 
 // --- CSV-eksport ---
-function downloadCSV(customSagsnummer, options = {}) {
+function buildCSVPayload(customSagsnummer, options = {}) {
   if (!options?.skipValidation && !validateSagsinfo()) {
     updateActionHint('Udfyld Sagsinfo for at eksportere.', 'error');
-    return false;
+    return null;
   }
   if (!options?.skipBeregn) {
     beregnLon();
@@ -1947,10 +2401,7 @@ function downloadCSV(customSagsnummer, options = {}) {
   }
   const cache = typeof window !== 'undefined' ? window.__beregnLonCache : null;
   const tralleState = typeof window !== 'undefined' ? window.__traelleloeft : null;
-  const materials = getAllData().filter(item => {
-    const qty = toNumber(item.quantity);
-    return qty > 0;
-  });
+  const materials = getAllData().filter(item => toNumber(item.quantity) > 0);
   const labor = Array.isArray(laborEntries) ? laborEntries : [];
   const tralleSum = tralleState && Number.isFinite(tralleState.sum) ? tralleState.sum : 0;
   const materialSum = cache && Number.isFinite(cache.materialSum)
@@ -1970,7 +2421,8 @@ function downloadCSV(customSagsnummer, options = {}) {
   lines.push(`Sagsinfo;Adresse;${escapeCSV(info.adresse)};;;`);
   lines.push(`Sagsinfo;Kunde;${escapeCSV(info.kunde)};;;`);
   lines.push(`Sagsinfo;Dato;${escapeCSV(info.dato)};;;`);
-  const montorText = info.montoer.replace(/\r?\n/g, ', ');
+  lines.push(`Sagsinfo;Status;${escapeCSV(formatStatusLabel(info.status))};;;`);
+  const montorText = (info.montoer || '').replace(/\r?\n/g, ', ');
   lines.push(`Sagsinfo;Montørnavne;${escapeCSV(montorText)};;;`);
 
   lines.push('');
@@ -2021,14 +2473,24 @@ function downloadCSV(customSagsnummer, options = {}) {
   lines.push(`Total;Lønsum;${escapeCSV(formatNumberForCSV(laborSum))}`);
   lines.push(`Total;Projektsum;${escapeCSV(formatNumberForCSV(projectSum))}`);
 
-  const csvContent = lines.join('\n');
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const fileName = sanitizeFilename(info.sagsnummer || 'akkordseddel');
+  const content = lines.join('\n');
+  const baseName = sanitizeFilename(info.sagsnummer || 'akkordseddel') || 'akkordseddel';
+  return {
+    content,
+    baseName,
+    fileName: `${baseName}.csv`,
+    originalName: info.sagsnummer,
+  };
+}
 
+function downloadCSV(customSagsnummer, options = {}) {
+  const payload = buildCSVPayload(customSagsnummer, options);
+  if (!payload) return false;
+  const blob = new Blob([payload.content], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = `${fileName}.csv`;
+  link.download = payload.fileName;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
@@ -2037,11 +2499,16 @@ function downloadCSV(customSagsnummer, options = {}) {
   return true;
 }
 
+function generateCSVString(options = {}) {
+  const payload = buildCSVPayload(options?.customSagsnummer, options);
+  return payload ? payload.content : '';
+}
+
 // --- PDF-eksport (html2canvas + jsPDF) ---
-async function exportPDF(customSagsnummer, options = {}) {
-  if (!validateSagsinfo()) {
+async function exportPDFBlob(customSagsnummer, options = {}) {
+  if (!options?.skipValidation && !validateSagsinfo()) {
     updateActionHint('Udfyld Sagsinfo for at eksportere.', 'error');
-    return;
+    return null;
   }
   if (!options?.skipBeregn) {
     beregnLon();
@@ -2052,10 +2519,7 @@ async function exportPDF(customSagsnummer, options = {}) {
   }
   const cache = typeof window !== 'undefined' ? window.__beregnLonCache : null;
   const tralleState = typeof window !== 'undefined' ? window.__traelleloeft : null;
-  const materials = getAllData().filter(item => {
-    const qty = toNumber(item.quantity);
-    return qty > 0;
-  });
+  const materials = getAllData().filter(item => toNumber(item.quantity) > 0);
   const labor = Array.isArray(laborEntries) ? laborEntries : [];
   const tralleSum = tralleState && Number.isFinite(tralleState.sum) ? tralleState.sum : 0;
   const materialSum = cache && Number.isFinite(cache.materialSum)
@@ -2100,6 +2564,7 @@ async function exportPDF(customSagsnummer, options = {}) {
         <li><strong>Adresse:</strong> ${escapeHtml(info.adresse)}</li>
         <li><strong>Kunde:</strong> ${escapeHtml(info.kunde)}</li>
         <li><strong>Dato:</strong> ${escapeHtml(info.dato)}</li>
+        <li><strong>Status:</strong> ${escapeHtml(formatStatusLabel(info.status))}</li>
         <li><strong>Montørnavne:</strong> ${escapeHtml(info.montoer).replace(/\n/g, '<br>')}</li>
       </ul>
     </section>
@@ -2162,14 +2627,66 @@ async function exportPDF(customSagsnummer, options = {}) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ unit: 'px', format: [canvas.width, canvas.height] });
     doc.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, canvas.width, canvas.height);
-    const fileName = sanitizeFilename(info.sagsnummer || 'akkordseddel');
-    doc.save(`${fileName}.pdf`);
-    updateActionHint('PDF er gemt til din enhed.', 'success');
+    const baseName = sanitizeFilename(info.sagsnummer || 'akkordseddel');
+    const blob = doc.output('blob');
+    return { blob, baseName, fileName: `${baseName}.pdf` };
   } catch (err) {
     console.error('PDF eksport fejlede:', err);
     updateActionHint('PDF eksport fejlede. Prøv igen.', 'error');
+    return null;
   } finally {
     document.body.removeChild(wrapper);
+  }
+}
+
+async function exportPDF(customSagsnummer, options = {}) {
+  const payload = await exportPDFBlob(customSagsnummer, options);
+  if (!payload) return;
+  const url = URL.createObjectURL(payload.blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = payload.fileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+  updateActionHint('PDF er gemt til din enhed.', 'success');
+}
+
+async function exportZip() {
+  if (!validateSagsinfo()) {
+    updateActionHint('Udfyld Sagsinfo for at eksportere.', 'error');
+    return;
+  }
+  if (typeof JSZip === 'undefined') {
+    updateActionHint('ZIP bibliotek er ikke indlæst.', 'error');
+    return;
+  }
+  try {
+    beregnLon();
+    const csvPayload = buildCSVPayload(null, { skipValidation: true, skipBeregn: true });
+    if (!csvPayload) return;
+    const pdfPayload = await exportPDFBlob(csvPayload.originalName || csvPayload.baseName, { skipValidation: true, skipBeregn: true });
+    if (!pdfPayload) return;
+
+    const zip = new JSZip();
+    zip.file(csvPayload.fileName, csvPayload.content);
+    zip.file(pdfPayload.fileName, pdfPayload.blob);
+
+    const zipBlob = await zip.generateAsync({ type: 'blob' });
+    const url = URL.createObjectURL(zipBlob);
+    const link = document.createElement('a');
+    const baseName = csvPayload.baseName || pdfPayload.baseName || 'akkordseddel';
+    link.href = url;
+    link.download = `${baseName}.zip`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    updateActionHint('ZIP med PDF og CSV er gemt.', 'success');
+  } catch (error) {
+    console.error('ZIP eksport fejlede', error);
+    updateActionHint('ZIP eksport fejlede. Prøv igen.', 'error');
   }
 }
 
@@ -2187,6 +2704,29 @@ async function exportAll(customSagsnummer) {
 }
 
 // --- CSV-import for optælling ---
+function importJSONProject(file) {
+  const reader = new FileReader();
+  reader.onload = event => {
+    try {
+      const text = event.target?.result;
+      const parsed = JSON.parse(text);
+      if (!parsed || typeof parsed !== 'object') {
+        throw new Error('Ugyldigt JSON format');
+      }
+      const snapshot = parsed.data && !parsed.sagsinfo ? parsed.data : parsed;
+      applyProjectSnapshot(snapshot, { skipHint: true });
+      updateActionHint('JSON sag er indlæst.', 'success');
+    } catch (error) {
+      console.error('Kunne ikke importere JSON', error);
+      updateActionHint('Kunne ikke importere JSON-filen.', 'error');
+    }
+  };
+  reader.onerror = () => {
+    updateActionHint('Kunne ikke læse filen.', 'error');
+  };
+  reader.readAsText(file, 'utf-8');
+}
+
 function uploadCSV(file) {
   if (!file) return;
   if (!/\.csv$/i.test(file.name) && !(file.type && file.type.includes('csv'))) {
@@ -2488,7 +3028,6 @@ function initApp() {
     { id: 'btnSagsinfo', section: 'sagsinfo' },
     { id: 'btnOptaelling', section: 'optaelling' },
     { id: 'btnLon', section: 'lon' },
-    { id: 'btnGuide', section: 'guide', onActivate: () => openGuideModal() },
   ];
 
   navConfig.forEach(({ id, section, onActivate }) => {
@@ -2496,9 +3035,6 @@ function initApp() {
     if (!button) return;
     button.addEventListener('click', () => {
       vis(section);
-      if (section !== 'guide') {
-        closeGuideModal();
-      }
       if (typeof onActivate === 'function') {
         onActivate();
       }
@@ -2518,6 +3054,9 @@ function initApp() {
 
   setupCSVImport();
 
+  initStatusControls();
+  populateRecentCases();
+
   setupGuideModal();
 
   document.getElementById('btnBeregnLon')?.addEventListener('click', () => beregnLon());
@@ -2535,7 +3074,30 @@ function initApp() {
     await exportAll();
   });
 
+  document.getElementById('btnExportZip')?.addEventListener('click', async () => {
+    await exportZip();
+  });
+
   document.getElementById('btnAddWorker')?.addEventListener('click', () => addWorker());
+
+  const recentSelect = document.getElementById('recentCases');
+  if (recentSelect) {
+    recentSelect.addEventListener('change', event => {
+      const loadBtn = document.getElementById('btnLoadCase');
+      if (loadBtn) {
+        loadBtn.disabled = !(event.target.value);
+      }
+    });
+  }
+  document.getElementById('btnLoadCase')?.addEventListener('click', () => handleLoadCase());
+
+  ['traelleloeft35', 'traelleloeft50'].forEach(id => {
+    const input = document.getElementById(id);
+    if (input) {
+      input.addEventListener('input', () => updateTotals());
+      input.addEventListener('change', () => updateTotals(true));
+    }
+  });
 
   sagsinfoFieldIds.forEach(id => {
     const el = document.getElementById(id);
@@ -2572,145 +3134,3 @@ if (document.readyState === 'loading') {
 } else {
   initApp();
 }
-
-
-// --- Tralleløft patch (0,35 & 0,50) ---
-(function(){
-  const RATE35 = 10.44;
-  const RATE50 = 14.62;
-
-  // Ensure inputs exist (if not, inject a small fieldset under Løn)
-  function ensureFields(){
-    if (!document.getElementById('traelleloeft35')) {
-      const lonSec = document.getElementById('lonSection') || document.querySelector('#lonSection, section[id*=lon]');
-      if (lonSec) {
-        const fs = document.createElement('fieldset');
-        fs.innerHTML = '<legend>Tralleløft</legend><div class="grid-2"><input id="traelleloeft35" placeholder="Tralleløft 0,35 (antal)" inputmode="numeric"><input id="traelleloeft50" placeholder="Tralleløft 0,50 (antal)" inputmode="numeric"></div>';
-        // insert before medarbejdere fieldset if possible
-        const med = lonSec.querySelector('legend, fieldset');
-        lonSec.appendChild(fs);
-      }
-    }
-  }
-
-  function getVals(){
-    const n35 = parseFloat(document.getElementById('traelleloeft35')?.value) || 0;
-    const n50 = parseFloat(document.getElementById('traelleloeft50')?.value) || 0;
-    return { n35, n50, sum: n35*RATE35 + n50*RATE50 };
-  }
-
-  ensureFields();
-
-  // Wrap beregnLon
-  try {
-    const _origBeregn = window.beregnLon || beregnLon;
-    window.beregnLon = function(){
-      const ret = _origBeregn();
-      const el = document.getElementById('lonResult');
-      if (!el) return ret;
-
-      const { n35, n50, sum } = getVals();
-      // store globally for exports
-      window.__traelleloeft = { n35, n50, RATE35, RATE50, sum };
-
-      // Only render section if any quantity > 0
-      if ((n35 + n50) > 0) {
-        const html = `
-          <div class="card">
-            <h4>Tralleløft</h4>
-            <div>0,35 m: ${n35} × ${RATE35.toFixed(2)} kr = ${(n35*RATE35).toFixed(2)} kr</div>
-            <div>0,50 m: ${n50} × ${RATE50.toFixed(2)} kr = ${(n50*RATE50).toFixed(2)} kr</div>
-            <div style="margin-top:6px;font-weight:600;">Tralleløft i alt: ${sum.toFixed(2)} kr</div>
-          </div>`;
-        el.insertAdjacentHTML('beforeend', html);
-      }
-      if (typeof window !== 'undefined') {
-        const cache = window.__beregnLonCache || {};
-        window.__beregnLonCache = {
-          ...cache,
-          traelleSum: sum,
-          timestamp: Date.now(),
-        };
-      }
-      return ret;
-    };
-  } catch(e){ console.warn('Tralleløft: kunne ikke wrappe beregnLon', e); }
-
-})();
-
-
-;(() => {
-  function parseFirstNumberIn(el, label){
-    if (!el) return null;
-    const txt = el.textContent || '';
-    const m = txt.match(/([0-9]+(?:\.[0-9]{3})*(?:\.[0-9]{2})?)/); // naive parse
-    return m ? parseFloat(m[1].replace(/\./g,'.')) : null;
-  }
-
-  function updateTotals(){
-    const lr = document.getElementById('lonResult');
-    if (!lr) return;
-    const { sum } = window.__traelleloeft || { sum:0 };
-
-    if (sum <= 0) return;
-
-    const divs = Array.from(lr.querySelectorAll('div'));
-    const akkEl = divs.find(d => d.textContent.trim().startsWith('Samlet akkordsum:'));
-    const tprEl = divs.find(d => d.textContent.trim().startsWith('Timepris (uden tillæg):'));
-    const projEl = divs.find(d => d.textContent.trim().startsWith('Samlet projektsum:'));
-
-    // Update akkordsum
-    if (akkEl){
-      const num = (akkEl.textContent.match(/([0-9]+(?:\.[0-9]{2}))/) || [,'0'])[1];
-      const oldVal = parseFloat(num);
-      if (!isNaN(oldVal)){
-        const newVal = oldVal + sum;
-        akkEl.innerHTML = `<strong>Samlet akkordsum:</strong> ${newVal.toFixed(2)} kr`;
-      }
-    }
-
-    // Update timepris (uden tillæg) using samletTimer from text
-    // Extract 'Timer:' line
-    const timerEl = divs.find(d => d.textContent.trim().startsWith('Timer:'));
-    if (tprEl && timerEl){
-      const numTimer = (timerEl.textContent.match(/([0-9]+(?:\.[0-9])?)/) || [,'0'])[1];
-      const hours = parseFloat(numTimer);
-      const akkEl2 = divs.find(d => d.textContent.trim().startsWith('Samlet akkordsum:'));
-      if (!isNaN(hours) && hours>0 && akkEl2){
-        const numAkk = (akkEl2.textContent.match(/([0-9]+(?:\.[0-9]{2}))/) || [,'0'])[1];
-        const akk = parseFloat(numAkk);
-        tprEl.innerHTML = `<strong>Timepris (uden tillæg):</strong> ${(akk / hours).toFixed(2)} kr/t`;
-      }
-    }
-
-    // Update projektsum by adding tralleløft sum (approx)
-    if (projEl){
-      const num = (projEl.textContent.match(/([0-9]+(?:\.[0-9]{2}))/) || [,'0'])[1];
-      const oldVal = parseFloat(num);
-      if (!isNaN(oldVal)){
-        const newVal = oldVal + sum;
-        projEl.innerHTML = `<strong>Samlet projektsum:</strong> ${newVal.toFixed(2)} kr`;
-      }
-    }
-
-    if (typeof window !== 'undefined') {
-      const baseMaterial = typeof lastMaterialSum === 'number' ? lastMaterialSum : 0;
-      const baseLabor = typeof lastLoensum === 'number' ? lastLoensum : 0;
-      window.__beregnLonCache = {
-        materialSum: baseMaterial + sum,
-        laborSum: baseLabor,
-        projectSum: baseMaterial + sum + baseLabor,
-        traelleSum: sum,
-        timestamp: Date.now(),
-      };
-    }
-  }
-
-  // Hook into beregnLon again to run adjustments after insertion
-  const _b = window.beregnLon;
-  window.beregnLon = function(){
-    const r = _b.apply(this, arguments);
-    try { updateTotals(); } catch(e){ console.warn('Tralleløft totals adjust failed', e); }
-    return r;
-  };
-})();
