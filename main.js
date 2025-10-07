@@ -32,6 +32,22 @@ function vis(id) {
     if (sections[index].id === activeId) {
       hasMatch = true;
       break;
+  if (!activeId || !Array.from(sections).some(section => section.id === activeId)) {
+    const firstSection = sections[0];
+    activeId = firstSection ? firstSection.id : '';
+  }
+
+  sections.forEach(section => {
+    const isActive = section.id === activeId;
+    section.classList.toggle('active', isActive);
+    if (isActive) {
+      section.style.display = 'block';
+      section.removeAttribute('hidden');
+    } else {
+      section.style.display = 'none';
+      if (!section.hasAttribute('hidden')) {
+        section.setAttribute('hidden', '');
+      }
     }
   }
 
@@ -54,6 +70,9 @@ function vis(id) {
     const isActive = buttonTarget === activeId;
     btn.classList.toggle('active', isActive);
     btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+  document.querySelectorAll('header nav button[data-section]').forEach(btn => {
+    const buttonTarget = resolveSectionId(btn.dataset.section);
+    btn.classList.toggle('active', buttonTarget === activeId);
   });
 }
 

@@ -1,4 +1,5 @@
 const CACHE_NAME = 'csmate-v1.3';
+const CACHE_NAME = 'csmate-v1.2';
 const ASSETS = [
   './',
   './index.html',
@@ -51,6 +52,12 @@ self.addEventListener('fetch', event => {
       }
 
       return Response.error();
+  event.respondWith(
+    caches.match(event.request).then(response => {
+      if (response) {
+        return response;
+      }
+      return fetch(event.request).catch(() => caches.match('./index.html'));
     }),
   );
 });
