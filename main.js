@@ -32,22 +32,6 @@ function vis(id) {
     if (sections[index].id === activeId) {
       hasMatch = true;
       break;
-  if (!activeId || !Array.from(sections).some(section => section.id === activeId)) {
-    const firstSection = sections[0];
-    activeId = firstSection ? firstSection.id : '';
-  }
-
-  sections.forEach(section => {
-    const isActive = section.id === activeId;
-    section.classList.toggle('active', isActive);
-    if (isActive) {
-      section.style.display = 'block';
-      section.removeAttribute('hidden');
-    } else {
-      section.style.display = 'none';
-      if (!section.hasAttribute('hidden')) {
-        section.setAttribute('hidden', '');
-      }
     }
   }
 
@@ -70,9 +54,6 @@ function vis(id) {
     const isActive = buttonTarget === activeId;
     btn.classList.toggle('active', isActive);
     btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
-  document.querySelectorAll('header nav button[data-section]').forEach(btn => {
-    const buttonTarget = resolveSectionId(btn.dataset.section);
-    btn.classList.toggle('active', buttonTarget === activeId);
   });
 }
 
@@ -147,6 +128,14 @@ function toNumber(value) {
   return Number.isFinite(num) ? num : 0;
 }
 
+function formatNumber(value) {
+  const num = Number.isFinite(value) ? value : (parseFloat(value) || 0);
+  return new Intl.NumberFormat('da-DK', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  }).format(num);
+}
+
 const DIACRITIC_REGEX = /[\u0300-\u036f]/g;
 const NON_ALPHANUMERIC_REGEX = /[^a-z0-9]/g;
 
@@ -158,6 +147,14 @@ function normalizeKey(value) {
   const stripped = canNormalize ? normalized.replace(DIACRITIC_REGEX, '') : normalized;
   return stripped.replace(NON_ALPHANUMERIC_REGEX, '');
 }
+
+// Materialer der kun bruges i Løn-fanen – må ikke vises i Optælling
+const EXCLUDED_MATERIAL_NAMES = [
+  'Luk af hul', 'Opskydeligt rækværk', 'Borring i beton', 'Huller',
+  'Km.', 'Udd. tillæg 1', 'Udd. tillæg 2', 'Mentortillæg'
+];
+
+const EXCLUDED_MATERIAL_KEYS = EXCLUDED_MATERIAL_NAMES.map(name => normalizeKey(name));
 
 // --- Global Variables ---
 let admin = false;
@@ -177,107 +174,108 @@ const TRAELLE_RATE50 = 14.62;
 
 // --- Scaffold Part Lists ---
 const dataBosta = [
-  { id: 1, name: "Spindelfod kort", price: 2.68, quantity: 0 },
-  { id: 2, name: "Spindelfod lang", price: 2.68, quantity: 0 },
-  { id: 3, name: "Vippefod", price: 4.43, quantity: 0 },
-  { id: 4, name: "Kirkefod", price: 6.63, quantity: 0 },
-  { id: 5, name: "Strø/trykudligner", price: 1.72, quantity: 0 },
-  { id: 6, name: "Ramme 200/70", price: 16.71, quantity: 0 },
-  { id: 7, name: "Ramme 150/70", price: 16.71, quantity: 0 },
-  { id: 8, name: "Ramme 100/70", price: 16.71, quantity: 0 },
-  { id: 9, name: "Ramme 80/70", price: 16.71, quantity: 0 },
-  { id: 10, name: "Ramme 66/70", price: 16.71, quantity: 0 },
-  { id: 11, name: "Gulvplade 300/70", price: 16.71, quantity: 0 },
-  { id: 12, name: "Gulvplade 250/70", price: 12.53, quantity: 0 },
-  { id: 13, name: "Gulvplade 200/70", price: 12.53, quantity: 0 },
-  { id: 14, name: "Gulvplade 150/70", price: 8.35, quantity: 0 },
-  { id: 15, name: "Gulvplade 125/70", price: 8.35, quantity: 0 },
-  { id: 16, name: "Gulvplade 70/70", price: 8.35, quantity: 0 },
-  { id: 17, name: "Gulvplade 300/35", price: 8.35, quantity: 0 },
-  { id: 18, name: "Gulvplade 250/35", price: 6.26, quantity: 0 },
-  { id: 19, name: "Gulvplade 200/35", price: 6.26, quantity: 0 },
-  { id: 20, name: "Gulvplade 150/35", price: 4.18, quantity: 0 },
-  { id: 21, name: "Gulvplade 125/35", price: 4.18, quantity: 0 },
-  { id: 22, name: "Stigedæk 300/70", price: 20.88, quantity: 0 },
-  { id: 23, name: "Stigedæk 250/70", price: 16.71, quantity: 0 },
-  { id: 24, name: "Stigedæk 200/70", price: 12.53, quantity: 0 },
-  { id: 25, name: "Ståldæk 300/35", price: 15.66, quantity: 0 },
-  { id: 26, name: "Ståldæk 250/35", price: 10.44, quantity: 0 },
-  { id: 27, name: "Ståldæk 200/35", price: 8.35, quantity: 0 },
-  { id: 28, name: "Stige 200", price: 4.51, quantity: 0 },
-  { id: 29, name: "Stige 300", price: 4.51, quantity: 0 },
-  { id: 30, name: "Stigestøtte", price: 2.86, quantity: 0 },
-  { id: 31, name: "Diagonal 3m", price: 9.12, quantity: 0 },
-  { id: 32, name: "Diagonal 2,5m", price: 9.12, quantity: 0 },
-  { id: 33, name: "Diagonal 100", price: 9.12, quantity: 0 },
-  { id: 34, name: "Gelænder 3m", price: 5.07, quantity: 0 },
-  { id: 35, name: "Gelænder 2,5m", price: 3.81, quantity: 0 },
-  { id: 36, name: "Gelænder 2m", price: 3.81, quantity: 0 },
-  { id: 37, name: "Gelænder 1,5m", price: 3.04, quantity: 0 },
-  { id: 38, name: "Gelænder 1,2m", price: 3.04, quantity: 0 },
-  { id: 39, name: "Gelænder 0,7m", price: 3.04, quantity: 0 },
-  { id: 40, name: "Dob. tværgelænder", price: 6.08, quantity: 0 },
-  { id: 41, name: "Ende Gelænder", price: 16.71, quantity: 0 },
-  { id: 42, name: "L. Rør", price: 16.71, quantity: 0 },
-  { id: 43, name: "B Rør", price: 8.37, quantity: 0 },
-  { id: 44, name: "Konsol 140", price: 27.56, quantity: 0 },
-  { id: 45, name: "Konsol 100", price: 19.28, quantity: 0 },
-  { id: 46, name: "Konsol 70", price: 15.15, quantity: 0 },
-  { id: 47, name: "Konsol 35", price: 11.03, quantity: 0 },
-  { id: 48, name: "Fodspark 3m", price: 9.12, quantity: 0 },
-  { id: 49, name: "Fodspark 2,5m", price: 8.11, quantity: 0 },
-  { id: 50, name: "Fodspark 2m", price: 8.11, quantity: 0 },
-  { id: 51, name: "Fodspark 1,5m", price: 6.08, quantity: 0 },
-  { id: 52, name: "Fodspark 1,25m", price: 6.08, quantity: 0 },
-  { id: 53, name: "Kanthæk 3m", price: 27.18, quantity: 0 },
-  { id: 54, name: "Kanthæk 2,5m", price: 27.18, quantity: 0 },
-  { id: 55, name: "Kanthæk 2m", price: 27.18, quantity: 0 },
-  { id: 56, name: "Kanthæk 0,7m", price: 27.18, quantity: 0 },
-  { id: 57, name: "Tværprofil aludr.", price: 15.15, quantity: 0 },
-  { id: 58, name: "Alu. Drager pr. m.", price: 17.12, quantity: 0 },
-  { id: 59, name: "Gelændertvinge", price: 3.99, quantity: 0 },
-  { id: 60, name: "Tværprofin ram.", price: 15.15, quantity: 0 },
-  { id: 61, name: "Dæklås", price: 3.99, quantity: 0 },
-  { id: 62, name: "Samlerør til aludr.", price: 14.26, quantity: 0 },
-  { id: 63, name: "Flapper/Singel", price: 3.99, quantity: 0 },
-  { id: 64, name: "Fastkobling", price: 3.99, quantity: 0 },
-  { id: 65, name: "Drejekobling", price: 3.99, quantity: 0 },
-  { id: 66, name: "Kipfingrekobling", price: 3.99, quantity: 0 },
-  { id: 67, name: "SK Kobling", price: 3.99, quantity: 0 },
-  { id: 68, name: "Rørsamler", price: 3.99, quantity: 0 },
-  { id: 69, name: "Stilladsrør 1M", price: 5.51, quantity: 0 },
-  { id: 70, name: "Stilladsrør 2M", price: 11.02, quantity: 0 },
-  { id: 71, name: "Stilladsrør 3M", price: 16.53, quantity: 0 },
-  { id: 72, name: "Stilladsrør 4M", price: 22.04, quantity: 0 },
-  { id: 73, name: "Stilladsrør 5M", price: 27.55, quantity: 0 },
-  { id: 74, name: "Stilladsrør 6M", price: 33.06, quantity: 0 },
-  { id: 75, name: "Stilladsrør 6M alu", price: 23.98, quantity: 0 },
-  { id: 76, name: "Bøjleanker", price: 14.19, quantity: 0 },
-  { id: 77, name: "Rør anker alu", price: 14.62, quantity: 0 },
-  { id: 78, name: "Rør anker stål", price: 18.79, quantity: 0 },
-  { id: 79, name: "Reklameskilt", price: 9.73, quantity: 0 },
-  { id: 80, name: "Grøn skilt", price: 5.15, quantity: 0 },
-  { id: 81, name: "Startprofil til trappe", price: 4.13, quantity: 0 },
-  { id: 82, name: "Alu trappeløb", price: 51.33, quantity: 0 },
-  { id: 83, name: "Gelænder trpl", price: 13.39, quantity: 0 },
-  { id: 84, name: "Dobb bundramme", price: 44.85, quantity: 0 },
-  { id: 85, name: "Tragt", price: 38.99, quantity: 0 },
-  { id: 86, name: "Skaktrør", price: 38.99, quantity: 0 },
-  { id: 87, name: "Alu.bro pr. m.", price: 15.12, quantity: 0 },
-  { id: 88, name: "Net pr kvm", price: 2.85, quantity: 0 },
-  { id: 89, name: "Plast pr. kvm", price: 6.64, quantity: 0 },
-  { id: 90, name: "Plader pr. kvm", price: 7.97, quantity: 0 },
-  { id: 91, name: "Planker M", price: 11.90, quantity: 0 },
-  { id: 92, name: "Geda hejs", price: 303.08, quantity: 0 },
-  { id: 93, name: "El hejs", price: 153.07, quantity: 0 },
-  { id: 94, name: "Kegle u.fod", price: 6.15, quantity: 0 },
-  { id: 95, name: "Kegle m.fod", price: 10.33, quantity: 0 },
-  { id: 96, name: "Bræt rød/hvid", price: 6.09, quantity: 0 },
-  { id: 97, name: "Hjulkonsoller", price: 20.80, quantity: 0 },
-  { id: 98, name: "", price: 0.00, quantity: 0 },
-  { id: 99, name: "", price: 0.00, quantity: 0 },
-  { id: 100, name: "", price: 0.00, quantity: 0 }
+  { id: 1, name: "Spindelfod kort", price: 2.675425, quantity: 0 },
+  { id: 2, name: "Spindelfod lang", price: 2.675425, quantity: 0 },
+  { id: 3, name: "Vippefod", price: 4.4305038, quantity: 0 },
+  { id: 4, name: "Strø / trykudligner", price: 1.77, quantity: 0 },
+  { id: 5, name: "Ramme 200/70", price: 16.7053537, quantity: 0 },
+  { id: 6, name: "Ramme 150/70", price: 16.7053537, quantity: 0 },
+  { id: 7, name: "Ramme 100/70", price: 16.7053537, quantity: 0 },
+  { id: 8, name: "Ramme 80/70", price: 16.7053537, quantity: 0 },
+  { id: 9, name: "Ramme 66/70", price: 16.7053537, quantity: 0 },
+  { id: 10, name: "Gulvplade 300/70", price: 16.7053537, quantity: 0 },
+  { id: 11, name: "Gulvplade 250/70", price: 12.5316907, quantity: 0 },
+  { id: 12, name: "Gulvplade 200/70", price: 12.5316907, quantity: 0 },
+  { id: 13, name: "Gulvplade 150/70", price: 8.35, quantity: 0 },
+  { id: 14, name: "Gulvplade 125/70", price: 8.35, quantity: 0 },
+  { id: 15, name: "Gulvplade 70/70", price: 8.35, quantity: 0 },
+  { id: 16, name: "Gulvplade 300/35", price: 8.35, quantity: 0 },
+  { id: 17, name: "Gulvplade 250/35", price: 6.2604945, quantity: 0 },
+  { id: 18, name: "Gulvplade 200/35", price: 6.2604945, quantity: 0 },
+  { id: 19, name: "Gulvplade 150/35", price: 4.18, quantity: 0 },
+  { id: 20, name: "Gulvplade 125/35", price: 4.18, quantity: 0 },
+  { id: 21, name: "Stigedæk 300/70", price: 20.8790167, quantity: 0 },
+  { id: 22, name: "Stigedæk 250/70", price: 16.7053537, quantity: 0 },
+  { id: 23, name: "Stigedæk 200/70", price: 12.5316907, quantity: 0 },
+  { id: 24, name: "Ståldæk 300/35", price: 15.66, quantity: 0 },
+  { id: 25, name: "Ståldæk 250/35", price: 10.4448592, quantity: 0 },
+  { id: 26, name: "Ståldæk 200/35", price: 8.35, quantity: 0 },
+  { id: 27, name: "Stige 200", price: 4.5054157, quantity: 0 },
+  { id: 28, name: "Stige 300", price: 4.5054157, quantity: 0 },
+  { id: 29, name: "Stigestøtte", price: 2.8634, quantity: 0 },
+  { id: 30, name: "Diagonaler 200", price: 9.3960926, quantity: 0 },
+  { id: 31, name: "Diagonaler 203", price: 9.3960926, quantity: 0 },
+  { id: 32, name: "Gelænder 125", price: 3.13, quantity: 0 },
+  { id: 33, name: "Gelænder 150", price: 3.13, quantity: 0 },
+  { id: 34, name: "Gelænder 200", price: 3.9243, quantity: 0 },
+  { id: 35, name: "Gelænder 250", price: 3.9243, quantity: 0 },
+  { id: 36, name: "Gelænder 300", price: 5.2224296, quantity: 0 },
+  { id: 37, name: "Tvær Gel. 70", price: 3.13, quantity: 0 },
+  { id: 38, name: "Dob. Tværgelænder", price: 6.2604945, quantity: 0 },
+  { id: 39, name: "Dob. G", price: 16.7053537, quantity: 0 },
+  { id: 40, name: "L Rør", price: 16.7053537, quantity: 0 },
+  { id: 41, name: "B Rør", price: 8.35, quantity: 0 },
+  { id: 42, name: "Konsol 140", price: 27.5568775, quantity: 0 },
+  { id: 43, name: "Konsol 100", price: 19.2844634, quantity: 0 },
+  { id: 44, name: "Konsol 70", price: 15.1536072, quantity: 0 },
+  { id: 45, name: "Konsol 35", price: 11.03, quantity: 0 },
+  { id: 46, name: "Fodspark 300", price: 9.3960926, quantity: 0 },
+  { id: 47, name: "Fodspark 250", price: 8.35, quantity: 0 },
+  { id: 48, name: "Fodspark 200", price: 8.35, quantity: 0 },
+  { id: 49, name: "Fodspark 150", price: 6.2604945, quantity: 0 },
+  { id: 50, name: "Fodspark 125", price: 6.2604945, quantity: 0 },
+  { id: 51, name: "Kanthæk 300", price: 27.99, quantity: 0 },
+  { id: 52, name: "Kanthæk 250", price: 27.99, quantity: 0 },
+  { id: 53, name: "Kanthæk 200", price: 27.99, quantity: 0 },
+  { id: 54, name: "Kanthæk 70", price: 27.99, quantity: 0 },
+  { id: 55, name: "Tværprofil aludr.", price: 15.1536072, quantity: 0 },
+  { id: 56, name: "Alu. Drager pr. m.", price: 17.12, quantity: 0 },
+  { id: 57, name: "Gelændertvinge", price: 3.9917341, quantity: 0 },
+  { id: 58, name: "Tværprofin ram.", price: 15.1536072, quantity: 0 },
+  { id: 59, name: "Dæklås", price: 3.9917341, quantity: 0 },
+  { id: 60, name: "Samlerør til aludr.", price: 14.26, quantity: 0 },
+  { id: 61, name: "Flapper/Singel", price: 3.9917341, quantity: 0 },
+  { id: 62, name: "Fastkobling", price: 3.9917341, quantity: 0 },
+  { id: 63, name: "Drejekobling", price: 3.9917341, quantity: 0 },
+  { id: 64, name: "Kipfingerkobling", price: 3.9917341, quantity: 0 },
+  { id: 65, name: "SK Kobling", price: 3.9917341, quantity: 0 },
+  { id: 66, name: "Rørsamler", price: 3.9917341, quantity: 0 },
+  { id: 67, name: "Stilladsrør 1M", price: 5.5113755, quantity: 0 },
+  { id: 68, name: "Stilladsrør 2M", price: 11.022751, quantity: 0 },
+  { id: 69, name: "Stilladsrør 3M", price: 16.5341265, quantity: 0 },
+  { id: 70, name: "Stilladsrør 4M", price: 22.04, quantity: 0 },
+  { id: 71, name: "Stilladsrør 5M", price: 27.55, quantity: 0 },
+  { id: 72, name: "Stilladsrør 6M", price: 33.063, quantity: 0 },
+  { id: 73, name: "Stilladsrør 6M alu", price: 23.94, quantity: 0 },
+  { id: 74, name: "Bøjleanker", price: 14.6185222, quantity: 0 },
+  { id: 75, name: "Rør anker alu", price: 14.6185222, quantity: 0 },
+  { id: 76, name: "Rør anker stål", price: 18.7921852, quantity: 0 },
+  { id: 77, name: "Reklameskilt", price: 9.7335, quantity: 0 },
+  { id: 78, name: "Grøn skilt", price: 5.15, quantity: 0 },
+  { id: 79, name: "Startprofil til trappe", price: 4.1308562, quantity: 0 },
+  { id: 80, name: "Alu trappeløb", price: 51.2219, quantity: 0 },
+  { id: 81, name: "Gelænder trpl", price: 13.3878267, quantity: 0 },
+  { id: 82, name: "Dobb bundramme", price: 44.8615264, quantity: 0 },
+  { id: 83, name: "Tragt", price: 38.9862931, quantity: 0 },
+  { id: 84, name: "Skaktrør", price: 38.9855, quantity: 0 },
+  { id: 85, name: "Alu.bro pr. m", price: 15.1204, quantity: 0 },
+  { id: 86, name: "Net pr kvm", price: 2.8466522, quantity: 0 },
+  { id: 87, name: "Plast pr kvm", price: 6.8383863, quantity: 0 },
+  { id: 88, name: "Geda hejs", price: 303.0828457, quantity: 0 },
+  { id: 89, name: "El hejs", price: 153.07, quantity: 0 },
+  { id: 90, name: "Kegle u.fod", price: 6.1491, quantity: 0 },
+  { id: 91, name: "Kirkefod", price: 6.8276846, quantity: 0 },
+  { id: 92, name: "Plader pr kvm", price: 8.2082039, quantity: 0 },
+  { id: 93, name: "Planker    M", price: 12.26, quantity: 0 },
+  { id: 94, name: "Hjulkonsoller", price: 21.424, quantity: 0 },
+  { id: 95, name: "Kegle m. fod", price: 10.33, quantity: 0 },
+  { id: 96, name: "Bræt rød/hvid", price: 6.28, quantity: 0 },
 ];
+
+// Trim statisk fallback-liste, hvis den stadig indeholder >96
+if (Array.isArray(dataBosta) && dataBosta.length > 96) {
+  dataBosta.splice(96, dataBosta.length - 96);
+}
 
 const dataHaki = [
   { id: 101, name: "Spindelfod kort", price: 2.68, quantity: 0 },
@@ -584,7 +582,13 @@ function hydrateMaterialListsFromJson() {
     const previous = new Map(
       target.map(item => [normalizeKey(item.name || ''), item.quantity || 0])
     );
-    const next = entries.map((entry, index) => {
+    const filteredEntries = entries.filter(entry => {
+      const rawName = entry?.beskrivelse ?? entry?.navn ?? entry?.name ?? '';
+      const key = normalizeKey(String(rawName).trim());
+      return !EXCLUDED_MATERIAL_KEYS.includes(key);
+    });
+
+    const next = filteredEntries.map((entry, index) => {
       const rawName = entry?.beskrivelse ?? entry?.navn ?? entry?.name ?? '';
       const baseName = String(rawName).trim();
       const name = baseName || `${prefix} materiale ${index + 1}`;
@@ -1002,6 +1006,69 @@ function performTotalsUpdate() {
   if (demontageField) {
     demontageField.value = (materialSum * 0.5).toFixed(2);
   }
+
+  if (typeof updateSelectedSummary === 'function') {
+    updateSelectedSummary();
+  }
+  if (typeof updateMaterialVisibility === 'function') {
+    updateMaterialVisibility();
+  }
+}
+
+function updateSelectedSummary() {
+  const summaryEl = document.getElementById('selectedItemsSummary');
+  const rows = document.querySelectorAll('#optaellingContainer .material-row');
+  const selected = [];
+
+  rows.forEach(row => {
+    const nameElement = row.querySelector('.item-name') || row.querySelector('.manual-name');
+    let name = '';
+    if (nameElement) {
+      if (nameElement instanceof HTMLInputElement || nameElement instanceof HTMLTextAreaElement) {
+        name = nameElement.value?.trim() || '';
+      } else {
+        name = nameElement.textContent?.trim() || '';
+      }
+    }
+    const qtyInput = row.querySelector('input.qty,input.quantity');
+    const qty = parseFloat(qtyInput?.value || '0') || 0;
+    if (qty > 0) {
+      selected.push({ name, qty });
+    }
+  });
+
+  if (!summaryEl) return;
+
+  if (!selected.length) {
+    summaryEl.style.display = 'none';
+    summaryEl.innerHTML = '';
+    return;
+  }
+
+  summaryEl.style.display = 'block';
+  summaryEl.innerHTML = `
+    <fieldset>
+      <legend>Valgte materialer</legend>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;">
+        ${selected.map(s => `
+          <span style="background:#2f3238;border:1px solid #3b3d45;border-radius:6px;padding:6px 10px;">
+            ${s.name} — ${formatNumber(s.qty)}
+          </span>
+        `).join('')}
+      </div>
+    </fieldset>
+  `;
+}
+
+function updateMaterialVisibility() {
+  const showSelectedOnly = document.getElementById('showSelectedOnly');
+  const only = !!showSelectedOnly?.checked;
+  const rows = document.querySelectorAll('#optaellingContainer .material-row');
+
+  rows.forEach(row => {
+    const qty = parseFloat(row.querySelector('input.qty,input.quantity')?.value || '0') || 0;
+    row.style.display = (!only || qty > 0) ? '' : 'none';
+  });
 }
 
 function updateTotals(options = {}) {
@@ -3047,9 +3114,19 @@ function initApp() {
     optaellingContainer.addEventListener('change', handleOptaellingInput);
   }
 
+  const showSelectedInput = document.getElementById('showSelectedOnly');
+  if (showSelectedInput) {
+    showSelectedInput.addEventListener('change', () => {
+      updateMaterialVisibility();
+    });
+  }
+
   hydrateMaterialListsFromJson();
   setupListSelectors();
   renderOptaelling();
+  if (typeof updateSelectedSummary === 'function') {
+    updateSelectedSummary();
+  }
   addWorker();
 
   setupCSVImport();

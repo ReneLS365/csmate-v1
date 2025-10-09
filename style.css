@@ -158,3 +158,62 @@ button{cursor:pointer}
   fieldset{border-color:#000;background:#fff}
   .materials{max-height:none}
 }
+
+:root{
+  --primary:var(--accent);
+  --fg:var(--panel);
+}
+
+/* Række for toggle/oversigt */
+.material-options{
+  display:flex;
+  align-items:center;
+  margin-bottom:var(--gap);
+  margin-left:28px; /* undgå overlap med fold-ikon */
+}
+
+.material-options .toggle-selected{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-size:0.9rem;
+}
+
+.material-options input{
+  width:18px;
+  height:18px;
+}
+
+/* Custom checkbox styling til mørkt tema */
+.material-options input[type="checkbox"]{
+  appearance:none;
+  display:inline-grid;
+  place-content:center;
+  width:18px;
+  height:18px;
+  border:2px solid var(--accent);
+  border-radius:4px;
+  background:#2f3238;
+  cursor:pointer;
+  transition:box-shadow .12s ease,background .12s ease,border-color .12s ease;
+}
+
+.material-options input[type="checkbox"]:checked{
+  background:var(--primary);
+  border-color:var(--primary);
+}
+
+.material-options input[type="checkbox"]::after{
+  content:"";
+  width:10px;
+  height:10px;
+  transform:scale(0);
+  transition:transform .1s ease;
+  background:var(--fg);
+  mask:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="12" height="10" viewBox="0 0 12 10"><path fill="%23000" d="M4.0 7.2L1.5 4.8 0.4 5.9 4.0 9.5 11.6 1.9 10.5 0.8z"/></svg>') no-repeat center/contain;
+}
+
+.material-options input[type="checkbox"]:checked::after{
+  transform:scale(1);
+}
+
