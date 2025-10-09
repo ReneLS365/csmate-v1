@@ -1928,7 +1928,7 @@ function addWorker() {
         </select>
       </label>
       <label>
-        <span>Mentortillæg (kr/t)</span>
+        <span>Mentortillæg (22,26 kr/t)</span>
         <input type="number" class="worker-tillaeg" value="0" min="0" step="0.01" inputmode="decimal">
       </label>
     </div>
