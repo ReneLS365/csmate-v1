@@ -1046,18 +1046,30 @@ function updateSelectedSummary() {
   }
 
   summaryEl.style.display = 'block';
-  summaryEl.innerHTML = `
-    <fieldset>
-      <legend>Valgte materialer</legend>
-      <div style="display:flex;flex-wrap:wrap;gap:8px;">
-        ${selected.map(s => `
-          <span style="background:#2f3238;border:1px solid #3b3d45;border-radius:6px;padding:6px 10px;">
-            ${s.name} — ${formatNumber(s.qty)}
-          </span>
-        `).join('')}
-      </div>
-    </fieldset>
-  `;
+  summaryEl.innerHTML = '';
+
+  const fieldset = document.createElement('fieldset');
+  const legend = document.createElement('legend');
+  legend.textContent = 'Valgte materialer';
+  fieldset.appendChild(legend);
+
+  const container = document.createElement('div');
+  container.style.display = 'flex';
+  container.style.flexWrap = 'wrap';
+  container.style.gap = '8px';
+
+  selected.forEach(s => {
+    const pill = document.createElement('span');
+    pill.style.background = '#2f3238';
+    pill.style.border = '1px solid #3b3d45';
+    pill.style.borderRadius = '6px';
+    pill.style.padding = '6px 10px';
+    pill.textContent = `${s.name} — ${formatNumber(s.qty)}`;
+    container.appendChild(pill);
+  });
+
+  fieldset.appendChild(container);
+  summaryEl.appendChild(fieldset);
 }
 
 function updateMaterialVisibility() {
