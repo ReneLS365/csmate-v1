@@ -1,6 +1,8 @@
-const CACHE_NAME = 'csmate-v1.3';
-const CACHE_NAME = 'csmate-v1.2';
-const ASSETS = [
+const CACHE_PREFIX = 'csmate-v1';
+const CACHE_VERSION = '20241007';
+const CACHE_NAME = `${CACHE_PREFIX}-${CACHE_VERSION}`;
+
+const PRECACHE_URLS = [
   './',
   './index.html',
   './style.css',
@@ -15,7 +17,7 @@ const ASSETS = [
 self.addEventListener('install', event => {
   self.skipWaiting();
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(ASSETS)),
+    caches.open(CACHE_NAME).then(cache => cache.addAll(PRECACHE_URLS))
   );
 });
 
@@ -23,41 +25,51 @@ self.addEventListener('activate', event => {
   event.waitUntil(
     caches
       .keys()
-      .then(keys => keys.filter(key => key !== CACHE_NAME))
-      .then(oldKeys => Promise.all(oldKeys.map(key => caches.delete(key))))
-      .then(() => self.clients.claim()),
+      .then(keys =>
+        Promise.all(
+          keys
+            .filter(key => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME)
+            .map(key => caches.delete(key))
+        )
+      )
+      .then(() => self.clients.claim())
   );
 });
 
 self.addEventListener('fetch', event => {
-  if (event.request.method !== 'GET') {
+  const { request } = event;
+  if (request.method !== 'GET') {
     return;
   }
 
-  const requestUrl = new URL(event.request.url);
-  if (requestUrl.origin !== self.location.origin) {
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin) {
     return;
   }
 
   event.respondWith(
-    caches.match(event.request).then(cached => {
+    caches.match(request).then(cached => {
       if (cached) {
         return cached;
       }
 
-      return fetch(event.request);
-    }).catch(() => {
-      if (event.request.mode === 'navigate') {
-        return caches.match('./index.html');
-      }
+      return fetch(request)
+        .then(response => {
+          if (!response || response.status !== 200 || response.type !== 'basic') {
+            return response;
+          }
 
-      return Response.error();
-  event.respondWith(
-    caches.match(event.request).then(response => {
-      if (response) {
-        return response;
-      }
-      return fetch(event.request).catch(() => caches.match('./index.html'));
-    }),
+          const responseClone = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(request, responseClone));
+          return response;
+        })
+        .catch(() => {
+          if (request.mode === 'navigate') {
+            return caches.match('./index.html');
+          }
+
+          return caches.match(request);
+        });
+    })
   );
 });
