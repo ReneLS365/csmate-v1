@@ -253,6 +253,223 @@
 <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
 <script src="main.js"></script>
 <script>
+  (function initMaterialsUI() {
+    const materialsContainer = document.getElementById('optaellingContainer');
+    if (!materialsContainer) {
+      return;
+    }
+
+    const qtyFormatter = new Intl.NumberFormat('da-DK', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
+    });
+    const priceFormatter = new Intl.NumberFormat('da-DK', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+    const currencyFormatter = new Intl.NumberFormat('da-DK', {
+      style: 'currency',
+      currency: 'DKK',
+    });
+    const boundRows = new WeakSet();
+
+    function parseQty(value) {
+      if (typeof value === 'number') {
+        return Number.isFinite(value) ? value : 0;
+      }
+      if (value == null) {
+        return 0;
+      }
+      const trimmed = String(value).trim();
+      if (!trimmed) {
+        return 0;
+      }
+      const compact = trimmed.replace(/\s+/g, '').replace(/'/g, '');
+      const separators = compact.match(/[.,]/g) || [];
+      let normalized = compact.replace(/[^0-9.,-]/g, '');
+
+      if (separators.length > 1) {
+        const lastSeparator = separators[separators.length - 1];
+        const decimalIndex = normalized.lastIndexOf(lastSeparator);
+        const integerPart = normalized.slice(0, decimalIndex).replace(/[.,]/g, '').replace(/(?!^)-/g, '');
+        const fractionalPart = normalized.slice(decimalIndex + 1).replace(/[^0-9]/g, '');
+        normalized = `${integerPart || '0'}.${fractionalPart}`;
+      } else if (separators.length === 1) {
+        if (/^-?\d{1,3}(?:[.,]\d{3})+$/.test(normalized)) {
+          normalized = normalized.replace(/[.,]/g, '').replace(/(?!^)-/g, '');
+        } else {
+          const separator = separators[0];
+          const decimalIndex = normalized.lastIndexOf(separator);
+          const integerPart = normalized.slice(0, decimalIndex).replace(/[.,]/g, '').replace(/(?!^)-/g, '');
+          const fractionalPart = normalized.slice(decimalIndex + 1).replace(/[^0-9]/g, '');
+          normalized = `${integerPart || '0'}.${fractionalPart}`;
+        }
+      } else {
+        normalized = normalized.replace(/(?!^)-/g, '');
+      }
+
+      const parsed = Number.parseFloat(normalized);
+      return Number.isFinite(parsed) ? parsed : 0;
+    }
+
+    function formatQtyDK(value) {
+      const numericValue = Number.isFinite(value) ? value : parseQty(value);
+      return Number.isFinite(numericValue) ? qtyFormatter.format(numericValue) : '';
+    }
+
+    function round2(value) {
+      const numericValue = parseQty(value);
+      return Math.round(numericValue * 100) / 100;
+    }
+
+    function updateLine(row, options = {}) {
+      const { formatPrice = false, shouldUpdateTotals = true } = options;
+      if (!row) {
+        return;
+      }
+
+      const qtyInput = row.querySelector('.mat-qty');
+      const priceInput = row.querySelector('.mat-price');
+      const lineInput = row.querySelector('.mat-line');
+
+      if (!qtyInput || !priceInput || !lineInput) {
+        return;
+      }
+
+      const qty = parseQty(qtyInput.value);
+      const dataPrice = priceInput.dataset ? priceInput.dataset.price : '';
+      const hasDatasetPrice = dataPrice != null && dataPrice !== '';
+      const unitPrice = hasDatasetPrice ? parseQty(dataPrice) : parseQty(priceInput.value);
+
+      if (hasDatasetPrice || formatPrice) {
+        priceInput.value = priceFormatter.format(unitPrice);
+      }
+
+      const lineValue = round2(qty * unitPrice);
+      lineInput.value = currencyFormatter.format(lineValue);
+
+      if (shouldUpdateTotals && typeof updateTotals === 'function') {
+        updateTotals();
+      }
+    }
+
+    function handleQtyInput(event) {
+      const row = event.currentTarget.closest('.material-row');
+      updateLine(row);
+    }
+
+    function handleQtyCommit(event) {
+      const input = event.currentTarget;
+      if (input.value.trim() === '') {
+        input.value = '';
+      } else {
+        const qty = parseQty(input.value);
+        input.value = formatQtyDK(qty);
+      }
+      const row = input.closest('.material-row');
+      updateLine(row);
+    }
+
+    function handlePriceInput(event) {
+      const row = event.currentTarget.closest('.material-row');
+      updateLine(row);
+    }
+
+    function handlePriceCommit(event) {
+      const input = event.currentTarget;
+      if (input.value.trim() === '') {
+        input.value = '';
+      } else {
+        const price = parseQty(input.dataset && input.dataset.price ? input.dataset.price : input.value);
+        input.value = priceFormatter.format(price);
+      }
+      const row = input.closest('.material-row');
+      updateLine(row, { formatPrice: true });
+    }
+
+    function bindRow(row) {
+      if (!row || boundRows.has(row)) {
+        return;
+      }
+      boundRows.add(row);
+
+      const qtyInput = row.querySelector('.mat-qty');
+      if (qtyInput) {
+        qtyInput.addEventListener('input', handleQtyInput);
+        qtyInput.addEventListener('change', handleQtyCommit);
+        qtyInput.addEventListener('blur', handleQtyCommit);
+        if (qtyInput.value.trim() !== '') {
+          const qty = parseQty(qtyInput.value);
+          qtyInput.value = formatQtyDK(qty);
+        }
+      }
+
+      const priceInput = row.querySelector('.mat-price');
+      if (priceInput) {
+        priceInput.addEventListener('input', handlePriceInput);
+        priceInput.addEventListener('change', handlePriceCommit);
+        priceInput.addEventListener('blur', handlePriceCommit);
+      }
+
+      updateLine(row, { formatPrice: true, shouldUpdateTotals: false });
+    }
+
+    function bindExistingRows() {
+      document.querySelectorAll('.material-row').forEach(row => bindRow(row));
+    }
+
+    bindExistingRows();
+
+    const observer = new MutationObserver(mutations => {
+      let totalsDirty = false;
+      mutations.forEach(mutation => {
+        if (mutation.type === 'childList') {
+          mutation.addedNodes.forEach(node => {
+            if (!(node instanceof Element)) {
+              return;
+            }
+            if (node.classList.contains('material-row')) {
+              bindRow(node);
+              totalsDirty = true;
+            } else {
+              node.querySelectorAll && node.querySelectorAll('.material-row').forEach(child => {
+                bindRow(child);
+                totalsDirty = true;
+              });
+            }
+          });
+        } else if (mutation.type === 'attributes' && mutation.attributeName === 'data-price') {
+          const row = mutation.target.closest('.material-row');
+          if (row) {
+            updateLine(row, { formatPrice: true, shouldUpdateTotals: false });
+            totalsDirty = true;
+          }
+        }
+      });
+
+      if (totalsDirty && typeof updateTotals === 'function') {
+        updateTotals();
+      }
+    });
+
+    observer.observe(materialsContainer, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['data-price'],
+    });
+
+    if (typeof updateTotals === 'function') {
+      updateTotals();
+    }
+
+    window.parseQty = parseQty;
+    window.formatQtyDK = formatQtyDK;
+    window.round2 = round2;
+    window.updateMaterialLine = (row, options = {}) => updateLine(row, options);
+  })();
+</script>
+<script>
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./service-worker.js').then(reg => {
       reg.onupdatefound = () => {

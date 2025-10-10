@@ -124,7 +124,44 @@ function formatCurrency(value) {
 }
 
 function toNumber(value) {
-  const num = parseFloat(String(value).replace(',', '.'));
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  if (value == null) {
+    return 0;
+  }
+
+  const stringValue = String(value).trim();
+  if (!stringValue) {
+    return 0;
+  }
+
+  const compactValue = stringValue.replace(/\s+/g, '').replace(/'/g, '');
+  const separators = compactValue.match(/[.,]/g) || [];
+  let normalized = compactValue.replace(/[^0-9.,-]/g, '');
+
+  if (separators.length > 1) {
+    const lastSeparator = separators[separators.length - 1];
+    const decimalIndex = normalized.lastIndexOf(lastSeparator);
+    const integerPart = normalized.slice(0, decimalIndex).replace(/[.,]/g, '').replace(/(?!^)-/g, '');
+    const fractionalPart = normalized.slice(decimalIndex + 1).replace(/[^0-9]/g, '');
+    normalized = `${integerPart || '0'}.${fractionalPart}`;
+  } else if (separators.length === 1) {
+    if (/^-?\d{1,3}(?:[.,]\d{3})+$/.test(normalized)) {
+      normalized = normalized.replace(/[.,]/g, '').replace(/(?!^)-/g, '');
+    } else {
+      const separator = separators[0];
+      const decimalIndex = normalized.lastIndexOf(separator);
+      const integerPart = normalized.slice(0, decimalIndex).replace(/[.,]/g, '').replace(/(?!^)-/g, '');
+      const fractionalPart = normalized.slice(decimalIndex + 1).replace(/[^0-9]/g, '');
+      normalized = `${integerPart || '0'}.${fractionalPart}`;
+    }
+  } else {
+    normalized = normalized.replace(/(?!^)-/g, '');
+  }
+
+  const num = Number.parseFloat(normalized);
   return Number.isFinite(num) ? num : 0;
 }
 
@@ -996,7 +1033,11 @@ function refreshMaterialRowDisplay(id) {
 
   const lineInput = row.querySelector('.mat-line');
   if (lineInput) {
-    lineInput.value = `${formatCurrency(toNumber(item.price) * toNumber(item.quantity))} kr`;
+    if (typeof window !== 'undefined' && typeof window.updateMaterialLine === 'function') {
+      window.updateMaterialLine(row, { formatPrice: true, shouldUpdateTotals: false });
+    } else {
+      lineInput.value = `${formatCurrency(toNumber(item.price) * toNumber(item.quantity))} kr`;
+    }
   }
 }
 
