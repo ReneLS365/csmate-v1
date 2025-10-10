@@ -217,3 +217,15 @@ button{cursor:pointer}
   transform:scale(1);
 }
 
+.materials-list{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;align-items:flex-start}
+.materials-list label{display:flex;flex-direction:column;gap:6px;font-size:0.95rem}
+.materials-list label span{color:var(--muted);font-size:0.85rem}
+.materials-list input[type="text"],
+.materials-list input[type="number"],
+.materials-list select{width:100%;min-height:44px;padding:10px;border-radius:10px;border:1px solid var(--border);background:var(--panel);color:var(--text);transition:border-color .2s ease,box-shadow .2s ease}
+.materials-list input[type="text"]:focus-visible,
+.materials-list input[type="number"]:focus-visible,
+.materials-list select:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-color:var(--accent);box-shadow:0 0 0 4px rgba(142,160,181,0.2)}
+@media (max-width:480px){
+  .materials-list{grid-template-columns:1fr}
+}
