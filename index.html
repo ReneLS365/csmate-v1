@@ -365,12 +365,23 @@
       }
       const line  = round2(qty * (Number.isFinite(price) ? price : 0));
 
-      qtyEl.value   = formatQtyDK(qty);
+      const qtyFormatted = formatQtyDK(qty);
+      qtyEl.value = qtyEl.type === 'number'
+        ? qtyFormatted.replace(',', '.')
+        : qtyFormatted;
 
       if (Number.isFinite(price)) {
-        priceEl.value = price.toFixed(2).replace('.', ',');
+        const priceFormatted = price.toFixed(2);
+        priceEl.value = priceEl.type === 'number'
+          ? priceFormatted
+          : priceFormatted.replace('.', ',');
       } else if (priceEl.value) {
-        priceEl.value = String(priceEl.value).replace('.', ',');
+        if (priceEl.type === 'number') {
+          const fallbackPrice = parseQty(priceEl.value);
+          priceEl.value = Number.isFinite(fallbackPrice) ? String(fallbackPrice) : '';
+        } else {
+          priceEl.value = String(priceEl.value).replace('.', ',');
+        }
       } else {
         priceEl.value = '';
       }
