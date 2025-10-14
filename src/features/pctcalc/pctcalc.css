@@ -1,0 +1,11 @@
+/* Namespacet: pctcalc-  — påvirker ikke eksisterende styles */
+.pctcalc-btn{border:1px solid #ddd;background:#fff;padding:.35rem;border-radius:.5rem;cursor:pointer;display:inline-flex;align-items:center;gap:.35rem}
+.pctcalc-btn:hover{background:#f5f5f5}
+.pctcalc-btn svg{display:block}
+
+.pctcalc-modal[hidden]{display:none}
+.pctcalc-modal{position:fixed;inset:0;z-index:9999}
+.pctcalc-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.35)}
+.pctcalc-body{position:relative;width:min(900px,95vw);height:min(700px,90vh);margin:4vh auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+.pctcalc-close{position:absolute;top:.5rem;right:.5rem;z-index:1;background:#fff;border:1px solid #ddd;border-radius:.5rem;padding:.25rem .5rem;cursor:pointer}
+.pctcalc-frame{width:100%;height:100%;border:0}
