@@ -1,4 +1,6 @@
 import './src/features/pctcalc/pctcalc.js'
+import { normalizeKey } from './src/lib/string-utils.js'
+import { EXCLUDED_MATERIAL_KEYS, shouldExcludeMaterialEntry } from './src/lib/materials/exclusions.js'
 
 // --- Utility Functions ---
 function resolveSectionId(id) {
@@ -174,26 +176,6 @@ function formatNumber(value) {
     maximumFractionDigits: 2,
   }).format(num);
 }
-
-const DIACRITIC_REGEX = /[\u0300-\u036f]/g;
-const NON_ALPHANUMERIC_REGEX = /[^a-z0-9]/g;
-
-function normalizeKey(value) {
-  if (value == null) return '';
-  const lower = String(value).toLowerCase();
-  const canNormalize = typeof String.prototype.normalize === 'function';
-  const normalized = canNormalize ? lower.normalize('NFD') : lower;
-  const stripped = canNormalize ? normalized.replace(DIACRITIC_REGEX, '') : normalized;
-  return stripped.replace(NON_ALPHANUMERIC_REGEX, '');
-}
-
-// Materialer der kun bruges i Løn-fanen – må ikke vises i Optælling
-const EXCLUDED_MATERIAL_NAMES = [
-  'Luk af hul', 'Opskydeligt rækværk', 'Borring i beton', 'Huller',
-  'Km.', 'Udd. tillæg 1', 'Udd. tillæg 2', 'Mentortillæg'
-];
-
-const EXCLUDED_MATERIAL_KEYS = EXCLUDED_MATERIAL_NAMES.map(name => normalizeKey(name));
 
 // --- Global Variables ---
 let admin = false;
@@ -1521,6 +1503,9 @@ function applyMaterialsSnapshot(materials = [], systems = []) {
   }
   if (Array.isArray(materials)) {
     materials.forEach(item => {
+      if (shouldExcludeMaterialEntry(item)) {
+        return;
+      }
       const quantity = toNumber(item?.quantity);
       const price = toNumber(item?.price);
       let target = null;
@@ -1829,6 +1814,10 @@ function assignMaterialRow(row) {
   const qty = toNumber(row.quantity);
   const price = toNumber(row.price);
   if (!nameValue && !idValue && qty === 0 && price === 0) return;
+
+  if (shouldExcludeMaterialEntry({ id: idValue, name: nameValue })) {
+    return;
+  }
 
   let target = null;
   if (idValue) {
