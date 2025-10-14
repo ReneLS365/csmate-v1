@@ -75,9 +75,7 @@ button{cursor:pointer}
 .material-row .cell-label{color:var(--muted);font-size:0.8rem}
 .material-row .item-name{font-weight:600}
 .material-row .item-name-wrapper{display:flex;flex-direction:column;gap:4px}
-.material-row .item-id{color:var(--muted);font-size:0.7rem;letter-spacing:0.01em}
 .manual-name-cell{display:flex;flex-direction:column;gap:6px}
-.manual-name-cell .item-id{font-size:0.75rem;color:var(--muted)}
 .material-row .item-total{justify-self:end}
 .material-row .system-badge{display:inline-flex;align-items:center;justify-content:center;margin-left:8px;padding:2px 8px;border-radius:999px;border:1px solid var(--border);background:rgba(142,160,181,0.15);color:var(--accent);font-size:0.7rem;letter-spacing:0.02em;text-transform:uppercase}
 .empty-state{margin:0;padding:16px;border:1px dashed var(--border);border-radius:12px;text-align:center;color:var(--muted);background:rgba(255,255,255,0.03)}
