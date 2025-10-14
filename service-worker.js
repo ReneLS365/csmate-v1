@@ -1,39 +1,40 @@
-const CACHE_PREFIX = 'csmate-v1';
-const CACHE_VERSION = '20241008';
-const CACHE_NAME = `${CACHE_PREFIX}-${CACHE_VERSION}`;
+// public/service-worker.js
+// BUMP VERSION VED HVERT PRODUCTION DEPLOY
+const APP_VERSION = 'v2025-10-15-1';
+const CACHE_NAME = `csmate-${APP_VERSION}`;
 
+// Kritiske ruter der skal fungere offline (hold listen kort og stabil)
 const PRECACHE_URLS = [
-  './',
-  './index.html',
-  './style.css',
-  './print.css',
-  './main.js',
-  './dataset.js',
-  './complete_lists.json',
-  './manifest.json',
-  './placeholder_light_gray_block.png',
+  '/',
+  '/index.html',
+  '/style.css',
+  '/print.css',
+  '/main.js',
+  '/dataset.js',
+  '/complete_lists.json',
+  '/manifest.json',
+  '/placeholder_light_gray_block.png',
 ];
 
 self.addEventListener('install', event => {
   self.skipWaiting();
-  event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(PRECACHE_URLS))
-  );
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE_NAME);
+    await cache.addAll(PRECACHE_URLS);
+  })());
 });
 
 self.addEventListener('activate', event => {
-  event.waitUntil(
-    caches
-      .keys()
-      .then(keys =>
-        Promise.all(
-          keys
-            .filter(key => key.startsWith(CACHE_PREFIX) && key !== CACHE_NAME)
-            .map(key => caches.delete(key))
-        )
-      )
-      .then(() => self.clients.claim())
-  );
+  event.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys.map(key => {
+      if (key !== CACHE_NAME && key.startsWith('csmate-')) {
+        return caches.delete(key);
+      }
+      return undefined;
+    }));
+    await self.clients.claim();
+  })());
 });
 
 self.addEventListener('fetch', event => {
@@ -47,29 +48,50 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  event.respondWith(
-    caches.match(request).then(cached => {
+  // HTML: network-first (så vi ikke sidder fast i gammelt index.html)
+  if (request.mode === 'navigate' || request.destination === 'document') {
+    event.respondWith((async () => {
+      try {
+        const fresh = await fetch(request, { cache: 'no-store' });
+        return fresh;
+      } catch (error) {
+        const cache = await caches.open(CACHE_NAME);
+        const cached = await cache.match('/index.html');
+        if (cached) {
+          return cached;
+        }
+        return new Response('Offline', { status: 503, statusText: 'Offline' });
+      }
+    })());
+    return;
+  }
+
+  // Assets under /assets/: cache-first
+  if (url.pathname.startsWith('/assets/')) {
+    event.respondWith((async () => {
+      const cache = await caches.open(CACHE_NAME);
+      const cached = await cache.match(request);
       if (cached) {
         return cached;
       }
+      const fresh = await fetch(request);
+      cache.put(request, fresh.clone());
+      return fresh;
+    })());
+    return;
+  }
 
-      return fetch(request)
-        .then(response => {
-          if (!response || response.status !== 200 || response.type !== 'basic') {
-            return response;
-          }
-
-          const responseClone = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(request, responseClone));
-          return response;
-        })
-        .catch(() => {
-          if (request.mode === 'navigate') {
-            return caches.match('./index.html');
-          }
-
-          return caches.match(request);
-        });
-    })
-  );
+  // Default: network with cache fallback
+  event.respondWith((async () => {
+    try {
+      return await fetch(request);
+    } catch (error) {
+      const cache = await caches.open(CACHE_NAME);
+      const cached = await cache.match(request);
+      if (cached) {
+        return cached;
+      }
+      throw error;
+    }
+  })());
 });
