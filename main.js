@@ -1,3 +1,5 @@
+import './src/features/pctcalc/pctcalc.js'
+
 // --- Utility Functions ---
 function resolveSectionId(id) {
   if (!id) return '';
