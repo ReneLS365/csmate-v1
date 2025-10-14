@@ -1,4 +1,4 @@
-import './src/features/pctcalc/pctcalc.js';
+import './src/features/pctcalc/pctcalc.js'
 
 // --- Utility Functions ---
 function resolveSectionId(id) {
