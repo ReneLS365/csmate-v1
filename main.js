@@ -2028,6 +2028,8 @@ function login() {
   }
 }
 
+document.getElementById('btnAdminLogin')?.addEventListener('click', login);
+
 // --- Worker Functions ---
 function addWorker() {
   workerCount++;
