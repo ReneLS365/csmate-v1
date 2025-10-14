@@ -1419,6 +1419,7 @@ function collectExtrasState() {
     antalBoringHuller: getValue('antalBoringHuller'),
     antalLukHuller: getValue('antalLukHuller'),
     antalBoringBeton: getValue('antalBoringBeton'),
+    opskydeligtRaekvaerk: getValue('antalOpskydeligt'),
     km: getValue('km'),
     traelle35: getValue('traelleloeft35'),
     traelle50: getValue('traelleloeft50'),
@@ -1477,6 +1478,7 @@ function applyExtrasSnapshot(extras = {}) {
   assign('antalBoringHuller', extras.antalBoringHuller);
   assign('antalLukHuller', extras.antalLukHuller);
   assign('antalBoringBeton', extras.antalBoringBeton);
+  assign('antalOpskydeligt', extras.opskydeligtRaekvaerk);
   assign('km', extras.km);
   assign('traelleloeft35', extras.traelle35);
   assign('traelleloeft50', extras.traelle50);
@@ -2081,6 +2083,7 @@ function beregnLon() {
   const boringHullerPris = 4.70;
   const lukHullerPris = 3.45;
   const boringBetonPris = 11.49;
+  const opskydeligtPris = 9.67;
   const kmPris = 2.12;
   const grundloen = 147;
   const tillægUdd1 = 42.98;
@@ -2090,6 +2093,7 @@ function beregnLon() {
   const antalBoringHuller = parseFloat(document.getElementById('antalBoringHuller')?.value) || 0;
   const antalLukHuller = parseFloat(document.getElementById('antalLukHuller')?.value) || 0;
   const antalBoringBeton = parseFloat(document.getElementById('antalBoringBeton')?.value) || 0;
+  const antalOpskydeligt = parseFloat(document.getElementById('antalOpskydeligt')?.value) || 0;
   const antalKm = parseFloat(document.getElementById('km')?.value) || 0;
 
   const traelle35 = parseFloat(document.getElementById('traelleloeft35')?.value) || 0;
@@ -2098,6 +2102,7 @@ function beregnLon() {
   const boringHullerTotal = antalBoringHuller * boringHullerPris;
   const lukHullerTotal = antalLukHuller * lukHullerPris;
   const boringBetonTotal = antalBoringBeton * boringBetonPris;
+  const opskydeligtTotal = antalOpskydeligt * opskydeligtPris;
   const kilometerPris = antalKm * kmPris;
   const slaebebelob = montagepris * slaebePct; // Slæb beregnes altid ud fra montagepris
   const traelle35Total = traelle35 * TRAELLE_RATE35;
@@ -2146,7 +2151,7 @@ function beregnLon() {
     });
   }
 
-  const ekstraarbejde = boringHullerTotal + lukHullerTotal + boringBetonTotal + traelleSum;
+  const ekstraarbejde = boringHullerTotal + lukHullerTotal + boringBetonTotal + opskydeligtTotal + traelleSum;
   const samletAkkordSum = materialeTotal + ekstraarbejde + kilometerPris + slaebebelob;
 
   const workers = document.querySelectorAll('.worker-row');
@@ -2299,6 +2304,7 @@ function beregnLon() {
       ['Materialer (akkordberegnet)', `${materialeTotal.toFixed(2)} kr`],
       ['Materialesum', `${materialSum.toFixed(2)} kr`],
       ['Ekstraarbejde', `${ekstraarbejde.toFixed(2)} kr`],
+      ['Opskydeligt rækværk', `${opskydeligtTotal.toFixed(2)} kr`],
       ['Tralleløft', `${traelleSum.toFixed(2)} kr`],
       ['Kilometer', `${kilometerPris.toFixed(2)} kr`],
       ['Samlet akkordsum', `${samletAkkordSum.toFixed(2)} kr`],
@@ -2351,6 +2357,7 @@ function beregnLon() {
       boringHuller: { antal: antalBoringHuller, pris: boringHullerPris, total: boringHullerTotal },
       lukHuller: { antal: antalLukHuller, pris: lukHullerPris, total: lukHullerTotal },
       boringBeton: { antal: antalBoringBeton, pris: boringBetonPris, total: boringBetonTotal },
+      opskydeligtRaekvaerk: { antal: antalOpskydeligt, pris: opskydeligtPris, total: opskydeligtTotal },
       kilometer: { antal: antalKm, pris: kmPris, total: kilometerPris },
       traelleloeft: {
         antal35: traelle35,
@@ -2503,6 +2510,14 @@ function downloadEkompletCSV() {
     formatNumberForCSV(boringBeton.antal || 0),
     formatNumberForCSV(boringBeton.pris || 0),
     formatNumberForCSV(boringBeton.total || 0),
+  ]);
+  const opskydeligt = extras.opskydeligtRaekvaerk || {};
+  rows.push([
+    'Tillæg',
+    'Opskydeligt rækværk',
+    formatNumberForCSV(opskydeligt.antal || 0),
+    formatNumberForCSV(opskydeligt.pris || 0),
+    formatNumberForCSV(opskydeligt.total || 0),
   ]);
   const kilometer = extras.kilometer || {};
   rows.push([
