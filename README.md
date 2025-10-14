@@ -19,7 +19,7 @@ Service worker registreres automatisk i produktion; ved lokale tests kan den cac
 ## Nye hovedfunktioner
 - **Sagsinfo-fane** med krævede felter (Sagsnummer, Navn/opgave, Adresse, Kunde, Dato, Montørnavne). Eksport, print og E-komplet-knappen er låst indtil disse felter er udfyldt.
 - **Responsivt layout**: Grid-sektioner klapper ned på én kolonne <600px, større touchmål og fast viewport for mobil.
-- **Globalt numerisk tastatur** til alle inputs med `type="number"` eller `inputmode="numeric|decimal"`. Tastaturet åbner ved fokus og kan betjenes med tastatur (Tab, Enter, Esc) og mus/touch.
+- **CSMate-lommeregner** til alle inputs med `type="number"` eller `inputmode="numeric|decimal"`. Den understøtter procent, kvadratrødder, pi og de fire regnearter, åbner ved fokus og kan betjenes med tastatur (Tab, Enter, Esc) og mus/touch.
 - **Drag & drop CSV-import**: Træk en fil ind på importzonen eller klik for at vælge. Importen accepterer variationer af disse overskrifter (case-insensitive, diakritiske tegn fjernes):
   - `Sagsnummer`, `Navn/opgave`, `Adresse`, `Kunde`, `Dato`, `Montørnavne`
   - Materialer: `Materialenavn`/`Materiale`/`Varenavn`, `Antal`, `Pris`, `Id`

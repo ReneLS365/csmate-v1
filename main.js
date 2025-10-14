@@ -1,4 +1,5 @@
 import './src/features/pctcalc/pctcalc.js'
+import { Numpad } from './src/ui/numpad.js'
 import { normalizeKey } from './src/lib/string-utils.js'
 import { EXCLUDED_MATERIAL_KEYS, shouldExcludeMaterialEntry } from './src/lib/materials/exclusions.js'
 
@@ -2965,245 +2966,135 @@ function uploadCSV(file) {
 }
 
 
-// --- Global Numeric Keyboard ---
-const numericKeyboard = (() => {
-  let overlay;
-  let display;
-  let currentInput = null;
-  let buffer = '';
-  let previousFocus = null;
-  let initialized = false;
+// --- CSMate Numpad Integration ---
+function setupGlobalNumpad() {
+  const numpad = new Numpad({ root: document.body });
+  let activeInput = null;
 
-  function ensureOverlay() {
-    if (initialized) return;
-    initialized = true;
-    overlay = document.createElement('div');
-    overlay.className = 'keypad-overlay';
-    overlay.setAttribute('aria-hidden', 'true');
-    overlay.innerHTML = `
-      <div class="keypad" role="dialog" aria-modal="true" aria-label="Numerisk tastatur">
-        <div class="keypad-display" aria-live="polite">0</div>
-        <div class="keypad-grid">
-          <button type="button" data-key="7">7</button>
-          <button type="button" data-key="8">8</button>
-          <button type="button" data-key="9">9</button>
-          <button type="button" data-key="4">4</button>
-          <button type="button" data-key="5">5</button>
-          <button type="button" data-key="6">6</button>
-          <button type="button" data-key="1">1</button>
-          <button type="button" data-key="2">2</button>
-          <button type="button" data-key="3">3</button>
-          <button type="button" data-key="0">0</button>
-          <button type="button" data-key=".">,</button>
-          <button type="button" data-action="backspace" aria-label="Slet">⌫</button>
-        </div>
-        <div class="keypad-quick" role="group" aria-label="Hurtig justering">
-          <button type="button" data-delta="-10">-10</button>
-          <button type="button" data-delta="-5">-5</button>
-          <button type="button" data-delta="-1">-1</button>
-          <button type="button" data-delta="1">+1</button>
-          <button type="button" data-delta="5">+5</button>
-          <button type="button" data-delta="10">+10</button>
-        </div>
-        <div class="keypad-actions">
-          <button type="button" data-action="clear">C</button>
-          <button type="button" data-action="ok">OK</button>
-        </div>
-        <button type="button" class="keypad-close">Luk</button>
-      </div>
-    `;
-    document.body.appendChild(overlay);
-    display = overlay.querySelector('.keypad-display');
-
-    overlay.addEventListener('click', event => {
-      if (event.target === overlay) hide();
-    });
-
-    const closeButton = overlay.querySelector('.keypad-close');
-    if (closeButton) {
-      closeButton.addEventListener('click', () => hide());
+  const originalExit = numpad.exitAugmentMode.bind(numpad);
+  numpad.exitAugmentMode = (commit, overrideValue) => {
+    const result = originalExit(commit, overrideValue);
+    if (!commit) {
+      activeInput = null;
     }
-    overlay.addEventListener('keydown', handleOverlayKeydown);
+    return result;
+  };
 
-    overlay.querySelectorAll('[data-key]').forEach(btn => {
-      btn.addEventListener('click', () => appendValue(btn.dataset.key));
-    });
-    overlay.querySelector('[data-action="backspace"]').addEventListener('click', backspace);
-    overlay.querySelector('[data-action="clear"]').addEventListener('click', clearBuffer);
-    overlay.querySelector('[data-action="ok"]').addEventListener('click', applyValue);
-    overlay.querySelectorAll('[data-delta]').forEach(btn => {
-      const delta = Number(btn.dataset.delta);
-      btn.addEventListener('click', () => adjustValue(delta));
+  function openForInput(input) {
+    const baseValue = parseNumpadBaseValue(input);
+    const operator = input.dataset.numpadOperator || '+';
+    const decimalsAttr = input.dataset.numpadDecimals;
+    const decimals = decimalsAttr != null ? Number.parseInt(decimalsAttr, 10) : null;
+    const preferComma = shouldPreferCommaFormatting(input);
+
+    activeInput = input;
+
+    numpad.enterAugmentMode({
+      base: baseValue,
+      operator,
+      targetEl: input,
+      onCommit: value => {
+        const formatted = formatNumpadCommitValue(value, {
+          decimals: Number.isFinite(decimals) ? decimals : null,
+          preferComma,
+          inputType: (input.getAttribute('type') || '').toLowerCase(),
+        });
+        input.value = formatted;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+        activeInput = null;
+      },
     });
 
-    document.addEventListener('focusin', handleFocusIn, { capture: true });
-    document.addEventListener('keydown', event => {
-      if (event.key === 'Escape' && overlay.classList.contains('show')) {
-        event.preventDefault();
-        hide();
+    requestAnimationFrame(() => {
+      if (typeof input.blur === 'function') {
+        input.blur();
       }
     });
-  }
-
-  function isNumericCandidate(el) {
-    if (!el || el.tagName !== 'INPUT') return false;
-    if (el.disabled || el.readOnly) return false;
-    const type = (el.getAttribute('type') || '').toLowerCase();
-    const inputmode = (el.getAttribute('inputmode') || '').toLowerCase();
-    if (type === 'number') return true;
-    if (inputmode === 'numeric' || inputmode === 'decimal') return true;
-    if (el.dataset.numpad === 'true') return true;
-    return false;
   }
 
   function handleFocusIn(event) {
-    if (!initialized) return;
     const target = event.target;
-    if (overlay.contains(target)) return;
-    if (isNumericCandidate(target)) {
-      show(target);
-    } else if (currentInput && target !== currentInput) {
-      hide();
-    }
-  }
+    if (numpad.container?.contains(target)) return;
 
-  function isZeroLike(value) {
-    if (value === null || value === undefined) return false;
-    const raw = String(value).trim();
-    if (!raw) return false;
-    if (/[1-9]/.test(raw)) return false;
-    const normalized = parseFloat(raw.replace(',', '.'));
-    return Number.isFinite(normalized) && normalized === 0;
-  }
-
-  function show(input) {
-    ensureOverlay();
-    currentInput = input;
-    const rawValue = input.value ?? '';
-    if (isZeroLike(rawValue)) {
-      buffer = '';
-      input.value = '';
-    } else {
-      buffer = rawValue ? String(rawValue).replace(',', '.') : '';
-    }
-    previousFocus = document.activeElement;
-    updateDisplay();
-    overlay.classList.add('show');
-    overlay.setAttribute('aria-hidden', 'false');
-    requestAnimationFrame(() => {
-      const firstButton = overlay.querySelector('[data-key="7"]') || overlay.querySelector('[data-key]');
-      firstButton?.focus();
-    });
-  }
-
-  function hide(options = {}) {
-    const restoreFocus = options?.restoreFocus !== false;
-    if (!overlay) return;
-    overlay.classList.remove('show');
-    overlay.setAttribute('aria-hidden', 'true');
-    const target = currentInput;
-    currentInput = null;
-    buffer = '';
-    const lastFocus = previousFocus;
-    previousFocus = null;
-    if (target && typeof target.blur === 'function') {
-      target.blur();
-    }
-    if (restoreFocus && lastFocus && lastFocus !== target && typeof lastFocus.focus === 'function') {
-      requestAnimationFrame(() => {
-        lastFocus.focus();
-      });
-    }
-  }
-
-  function updateDisplay() {
-    if (!display) return;
-    const value = buffer !== '' ? buffer : '0';
-    display.textContent = value.replace('.', ',');
-  }
-
-  function appendValue(key) {
-    if (!currentInput) return;
-    if (key === '.' || key === ',') {
-      if (buffer.includes('.')) return;
-      buffer = buffer || currentInput.value?.replace(',', '.') || '';
-      if (!buffer) buffer = '0';
-      buffer += '.';
-    } else {
-      if (buffer === '0') {
-        buffer = key;
-      } else {
-        buffer += key;
+    if (target instanceof HTMLInputElement) {
+      if (!shouldAttachNumpad(target)) {
+        if (activeInput && target !== activeInput) {
+          numpad.exitAugmentMode(false);
+        }
+        return;
       }
-    }
-    updateDisplay();
-  }
 
-  function backspace() {
-    if (!currentInput) return;
-    buffer = buffer.slice(0, -1);
-    updateDisplay();
-  }
-
-  function clearBuffer() {
-    buffer = '';
-    updateDisplay();
-  }
-
-  function normalizeNumber(value) {
-    if (!Number.isFinite(value)) return '';
-    const rounded = Math.round(value * 100000) / 100000;
-    return String(rounded);
-  }
-
-  function adjustValue(delta) {
-    if (!currentInput || !Number.isFinite(delta)) return;
-    const baseBuffer = buffer !== '' ? parseFloat(buffer) : parseFloat((currentInput.value || '').replace(',', '.'));
-    const base = Number.isFinite(baseBuffer) ? baseBuffer : 0;
-    let next = base + delta;
-    if (next < 0) next = 0;
-    buffer = normalizeNumber(next);
-    updateDisplay();
-  }
-
-  function applyValue() {
-    if (!currentInput) {
-      hide();
+      if (target === activeInput) return;
+      openForInput(target);
       return;
     }
-    const finalValue = buffer || currentInput.value || '';
-    let normalized = finalValue.replace(',', '.');
-    if (normalized.endsWith('.')) {
-      normalized = normalized.slice(0, -1);
-    }
-    currentInput.value = normalized;
-    currentInput.dispatchEvent(new Event('input', { bubbles: true }));
-    currentInput.dispatchEvent(new Event('change', { bubbles: true }));
-    hide({ restoreFocus: false });
-  }
 
-  function handleOverlayKeydown(event) {
-    if (event.key === 'Tab') {
-      event.preventDefault();
-      const elements = Array.from(overlay.querySelectorAll('button')).filter(btn => !btn.disabled);
-      if (elements.length === 0) return;
-      const index = elements.indexOf(document.activeElement);
-      const nextIndex = event.shiftKey
-        ? (index <= 0 ? elements.length - 1 : index - 1)
-        : (index === elements.length - 1 ? 0 : index + 1);
-      elements[nextIndex].focus();
-    } else if (event.key === 'Enter') {
-      event.preventDefault();
-      applyValue();
+    if (activeInput) {
+      numpad.exitAugmentMode(false);
     }
   }
 
-  return {
-    init: ensureOverlay,
-    show,
-    hide,
-  };
-})();
+  document.addEventListener('focusin', handleFocusIn, true);
+}
+
+function shouldAttachNumpad(input) {
+  if (!(input instanceof HTMLInputElement)) return false;
+  if (input.disabled || input.readOnly) return false;
+  if (input.dataset.numpad === 'false') return false;
+
+  const type = (input.getAttribute('type') || '').toLowerCase();
+  if (['date', 'datetime-local', 'month', 'time', 'week'].includes(type)) {
+    return false;
+  }
+
+  if (input.dataset.numpad === 'true') return true;
+  if (type === 'number') return true;
+
+  const inputmode = (input.getAttribute('inputmode') || '').toLowerCase();
+  return inputmode === 'numeric' || inputmode === 'decimal';
+}
+
+function parseNumpadBaseValue(input) {
+  if (!input) return 0;
+  return toNumber(input.value ?? 0);
+}
+
+function shouldPreferCommaFormatting(input) {
+  if (!input) return false;
+  const locale = input.dataset.numpadLocale;
+  if (locale === 'da' || locale === 'comma') return true;
+  if (locale === 'en' || locale === 'dot') return false;
+
+  const raw = input.value || '';
+  if (raw.includes(',') && !raw.includes('.')) return true;
+
+  const placeholder = input.getAttribute('placeholder') || '';
+  if (placeholder.includes(',') && !placeholder.includes('.')) return true;
+
+  return false;
+}
+
+function formatNumpadCommitValue(value, { decimals = null, preferComma = false, inputType = '' } = {}) {
+  if (!Number.isFinite(value)) return '';
+
+  let numeric = Number(value);
+  if (Object.is(numeric, -0)) numeric = 0;
+
+  let text;
+  if (Number.isInteger(decimals) && decimals >= 0) {
+    text = numeric.toFixed(decimals);
+  } else {
+    const rounded = Number.parseFloat(numeric.toFixed(12));
+    text = String(rounded);
+  }
+
+  if (preferComma && inputType !== 'number') {
+    text = text.replace('.', ',');
+  }
+
+  return text;
+}
 
 function setupMobileKeyboardDismissal() {
   document.addEventListener('keydown', event => {
@@ -3336,7 +3227,7 @@ function initApp() {
 
   validateSagsinfo();
   updateTotals(true);
-  numericKeyboard.init();
+  setupGlobalNumpad();
   setupMobileKeyboardDismissal();
 
   const calendarIcon = document.getElementById('calendarIcon');
