@@ -4,6 +4,17 @@ import './pctcalc.css'
 (() => {
   const CALC_URL = 'https://gleeful-faun-12d319.netlify.app/'
 
+  function hasSlaebKeyword (input) {
+    const text = (input || '').trim().toLowerCase()
+    if (!text) return false
+    if (text.includes('slæbeprocent') || text.includes('slæbeprocenter') || text.includes('slæb i %') || text.includes('slæb i%')) {
+      return true
+    }
+
+    const normalized = text.normalize('NFD').replace(/\p{Diacritic}/gu, '')
+    return normalized.includes('slaebeprocent') || normalized.includes('slaebeprocenter') || normalized.includes('slaeb i %') || normalized.includes('slaeb i%') || normalized.includes('slaeb i pct')
+  }
+
   // Undgå dobbel-mount
   if (window.__pctcalcMounted) return
   window.__pctcalcMounted = true
@@ -17,7 +28,7 @@ import './pctcalc.css'
     if (el) return el
 
     // 2) Kendte id/navne
-    el = document.querySelector('#slaebPct, [name="slaebPct"], [data-field="slaebPct"]')
+    el = document.querySelector('#slaebePct, #slaebPct, [name="slaebePct"], [name="slaebPct"], [data-field="slaebePct"], [data-field="slaebPct"]')
     if (el) {
       // lav en lille inline container ved siden af feltet/label
       const wrapper = document.createElement('span')
@@ -28,7 +39,7 @@ import './pctcalc.css'
 
     // 3) Fuzzy: find header/label med teksten "Slæbeprocenter"
     const candidates = Array.from(document.querySelectorAll('h1,h2,h3,h4,label,legend,span,div'))
-    const head = candidates.find(n => (n.textContent || '').trim().toLowerCase().includes('slæbeprocenter'))
+    const head = candidates.find(n => hasSlaebKeyword(n.textContent || ''))
     if (head) {
       const wrapper = document.createElement('span')
       wrapper.className = 'pctcalc-inline-tools'
