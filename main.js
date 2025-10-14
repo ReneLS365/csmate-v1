@@ -874,6 +874,7 @@ function renderOptaelling() {
     if (item.manual) {
       const manualWrapper = document.createElement('div');
       manualWrapper.className = 'manual-name-wrapper';
+      manualWrapper.title = `ID: ${item.id}`;
 
       const nameInput = document.createElement('input');
       nameInput.type = 'text';
@@ -882,11 +883,6 @@ function renderOptaelling() {
       nameInput.placeholder = 'Materiale';
       nameInput.value = item.name || '';
       manualWrapper.appendChild(nameInput);
-
-      const manualId = document.createElement('span');
-      manualId.className = 'item-id muted';
-      manualId.textContent = `ID: ${item.id}`;
-      manualWrapper.appendChild(manualId);
 
       nameLabel.appendChild(manualWrapper);
       nameLabel.classList.add('manual-name-cell');
@@ -897,8 +893,8 @@ function renderOptaelling() {
       nameWrapper.className = 'item-name-wrapper';
       nameWrapper.innerHTML = `
         <div class="item-name">${item.name}${badge}</div>
-        <span class="item-id muted">Varenr. ${item.id}</span>
       `;
+      nameWrapper.title = `Varenr. ${item.id}`;
       nameLabel.appendChild(nameWrapper);
     }
 
