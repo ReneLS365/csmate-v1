@@ -48,7 +48,11 @@ button{cursor:pointer}
 .form-grid{padding:var(--pad);background:var(--panel);border-radius:12px}
 .col-span-3{grid-column:1/-1}
 .materials{
-  --materials-grid: 1fr 80px 80px 100px;
+  --name-col: minmax(0, 1.8fr);
+  --qty-col: clamp(52px, 14vw, 100px);
+  --price-col: clamp(60px, 16vw, 110px);
+  --total-col: clamp(64px, 20vw, 128px);
+  --materials-grid: var(--name-col) var(--qty-col) var(--price-col) var(--total-col);
   max-height: clamp(520px, 78vh, 640px);
   overflow-y: auto;
   display: flex;
@@ -240,12 +244,15 @@ button{cursor:pointer}
   letter-spacing:0.08em;
   color:var(--muted);
   font-weight:600;
+  min-width:0;
 }
 
+.materials-header .header-material{justify-self:start;text-align:left}
 .materials-header .header-qty,
 .materials-header .header-price,
 .materials-header .header-total{
   justify-self:end;
+  text-align:right;
 }
 
 .materials-list .mat-row{
@@ -272,6 +279,7 @@ button{cursor:pointer}
   padding:6px 8px;
   min-height:36px;
   font-variant-numeric:tabular-nums;
+  min-width:0;
 }
 
 .materials-list .mat-qty{justify-self:end;text-align:right}
@@ -288,7 +296,11 @@ button{cursor:pointer}
 
 @media (max-width:480px){
   .materials{
-    --materials-grid: 1fr 72px 72px 92px;
+    --name-col: minmax(clamp(150px, 56vw, 360px), 1.75fr);
+    --qty-col: clamp(60px, 16vw, 88px);
+    --price-col: clamp(64px, 18vw, 96px);
+    --total-col: clamp(80px, 22vw, 112px);
+    --materials-grid: var(--name-col) var(--qty-col) var(--price-col) var(--total-col);
   }
   .materials-header{padding:8px 0}
   .materials-list .mat-row{column-gap:10px}
@@ -297,13 +309,21 @@ button{cursor:pointer}
 
 @media (min-width:720px){
   .materials{
-    --materials-grid: 1.2fr 110px 110px 140px;
+    --name-col: minmax(clamp(200px, 38vw, 520px), 2.4fr);
+    --qty-col: clamp(72px, 10vw, 116px);
+    --price-col: clamp(84px, 11vw, 128px);
+    --total-col: clamp(100px, 12vw, 160px);
+    --materials-grid: var(--name-col) var(--qty-col) var(--price-col) var(--total-col);
   }
 }
 
 @media (min-width:1024px){
   .materials{
-    --materials-grid: 1.4fr 120px 120px 160px;
+    --name-col: minmax(clamp(240px, 34vw, 560px), 2.6fr);
+    --qty-col: clamp(80px, 9vw, 124px);
+    --price-col: clamp(92px, 10vw, 140px);
+    --total-col: clamp(120px, 12vw, 180px);
+    --materials-grid: var(--name-col) var(--qty-col) var(--price-col) var(--total-col);
     max-height: min(72vh, 620px);
   }
 }
