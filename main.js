@@ -833,8 +833,27 @@ function renderOptaelling() {
     list.className = 'materials-list';
     container.appendChild(list);
   } else {
-    list.innerHTML = '';
+    container.querySelectorAll('.empty-state').forEach(node => node.remove());
   }
+
+  let header = list.querySelector('.materials-header');
+  if (!header) {
+    header = document.createElement('div');
+    header.className = 'materials-header';
+    header.innerHTML = `
+      <span class="header-material">Materiale</span>
+      <span class="header-qty">Antal</span>
+      <span class="header-price">Pris</span>
+      <span class="header-total">Linjetotal</span>
+    `;
+    list.prepend(header);
+  }
+
+  if (list.firstElementChild !== header) {
+    list.insertBefore(header, list.firstElementChild);
+  }
+
+  Array.from(list.querySelectorAll('.material-row')).forEach(row => row.remove());
 
   items.forEach(item => {
     const row = document.createElement('div');
@@ -883,13 +902,15 @@ function renderOptaelling() {
     }
 
     const qtyInput = document.createElement('input');
-    qtyInput.type = 'text';
+    qtyInput.type = 'number';
     qtyInput.className = 'qty mat-qty';
     qtyInput.dataset.id = item.id;
     qtyInput.id = qtyInputId;
     qtyInput.name = `qty[${item.id}]`;
     qtyInput.inputMode = 'decimal';
     qtyInput.autocomplete = 'off';
+    qtyInput.step = '0.01';
+    qtyInput.dataset.numpad = 'true';
     qtyInput.setAttribute('aria-label', 'Antal');
     if (item.manual) {
       qtyInput.placeholder = 'Antal';
@@ -901,13 +922,15 @@ function renderOptaelling() {
     }
 
     const priceInput = document.createElement('input');
-    priceInput.type = 'text';
+    priceInput.type = 'number';
     priceInput.className = 'price mat-price';
     priceInput.dataset.id = item.id;
     priceInput.id = `price-${sanitizedId}`;
     priceInput.name = `price[${item.id}]`;
     priceInput.inputMode = 'decimal';
     priceInput.autocomplete = 'off';
+    priceInput.step = '0.01';
+    priceInput.dataset.numpad = 'true';
     priceInput.setAttribute('aria-label', 'Enhedspris');
     const hasPrice = item.price !== null && item.price !== undefined && item.price !== '';
     const priceValue = hasPrice ? toNumber(item.price) : 0;
@@ -915,11 +938,11 @@ function renderOptaelling() {
     if (item.manual) {
       priceInput.placeholder = 'Enhedspris';
       priceInput.readOnly = false;
-      priceInput.value = hasPrice ? String(item.price).replace('.', ',') : '';
+      priceInput.value = hasPrice ? String(priceValue) : '';
     } else {
       const displayPrice = Number.isFinite(priceValue) ? priceValue.toFixed(2) : '0.00';
       priceInput.readOnly = !admin;
-      priceInput.value = displayPrice.replace('.', ',');
+      priceInput.value = displayPrice;
     }
 
     const lineInput = document.createElement('input');
@@ -1015,16 +1038,16 @@ function refreshMaterialRowDisplay(id) {
 
   const priceInput = row.querySelector('input.price');
   if (priceInput && document.activeElement !== priceInput) {
-    if (item.manual) {
-      priceInput.value = item.price ? item.price : '';
-      priceInput.readOnly = false;
-    } else {
-      const priceValue = toNumber(item.price);
-      priceInput.value = Number.isFinite(priceValue) ? priceValue.toFixed(2) : '0.00';
-      priceInput.readOnly = !admin;
-    }
     const hasPrice = item.price !== null && item.price !== undefined && item.price !== '';
     const priceValue = hasPrice ? toNumber(item.price) : '';
+    if (item.manual) {
+      priceInput.value = hasPrice ? String(priceValue) : '';
+      priceInput.readOnly = false;
+    } else {
+      const normalizedPrice = toNumber(item.price);
+      priceInput.value = Number.isFinite(normalizedPrice) ? normalizedPrice.toFixed(2) : '0.00';
+      priceInput.readOnly = !admin;
+    }
     priceInput.dataset.price = hasPrice ? String(priceValue) : '';
   }
 
