@@ -2,6 +2,7 @@
 .pctcalc-btn{border:1px solid #ddd;background:#fff;padding:.35rem;border-radius:.5rem;cursor:pointer;display:inline-flex;align-items:center;gap:.35rem}
 .pctcalc-btn:hover{background:#f5f5f5}
 .pctcalc-btn svg{display:block}
+.pctcalc-inline-tools{display:inline-flex;align-items:center;margin-left:.35rem}
 
 .pctcalc-modal[hidden]{display:none}
 .pctcalc-modal{position:fixed;inset:0;z-index:9999}

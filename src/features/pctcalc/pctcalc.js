@@ -7,12 +7,24 @@ import './pctcalc.css'
   function hasSlaebKeyword (input) {
     const text = (input || '').trim().toLowerCase()
     if (!text) return false
-    if (text.includes('slæbeprocent') || text.includes('slæbeprocenter') || text.includes('slæb i %') || text.includes('slæb i%')) {
+
+    if (
+      text.includes('slæbeprocent') ||
+      text.includes('slæbeprocenter') ||
+      text.includes('slæb i %') ||
+      text.includes('slæb i%')
+    ) {
       return true
     }
 
     const normalized = text.normalize('NFD').replace(/\p{Diacritic}/gu, '')
-    return normalized.includes('slaebeprocent') || normalized.includes('slaebeprocenter') || normalized.includes('slaeb i %') || normalized.includes('slaeb i%') || normalized.includes('slaeb i pct')
+    return (
+      normalized.includes('slaebeprocent') ||
+      normalized.includes('slaebeprocenter') ||
+      normalized.includes('slaeb i %') ||
+      normalized.includes('slaeb i%') ||
+      normalized.includes('slaeb i pct')
+    )
   }
 
   // Undgå dobbel-mount
@@ -28,7 +40,9 @@ import './pctcalc.css'
     if (el) return el
 
     // 2) Kendte id/navne
-    el = document.querySelector('#slaebePct, #slaebPct, [name="slaebePct"], [name="slaebPct"], [data-field="slaebePct"], [data-field="slaebPct"]')
+    el = document.querySelector(
+      '#slaebePct, #slaebPct, [name="slaebePct"], [name="slaebPct"], [data-field="slaebePct"], [data-field="slaebPct"]'
+    )
     if (el) {
       // lav en lille inline container ved siden af feltet/label
       const wrapper = document.createElement('span')
