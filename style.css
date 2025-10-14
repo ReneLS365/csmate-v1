@@ -48,10 +48,10 @@ button{cursor:pointer}
 .form-grid{padding:var(--pad);background:var(--panel);border-radius:12px}
 .col-span-3{grid-column:1/-1}
 .materials{
-  --name-col: minmax(clamp(140px, 48vw, 420px), 2.25fr);
-  --qty-col: clamp(64px, 14vw, 108px);
-  --price-col: clamp(70px, 16vw, 118px);
-  --total-col: clamp(86px, 20vw, 140px);
+  --name-col: minmax(0, 1.8fr);
+  --qty-col: clamp(52px, 14vw, 100px);
+  --price-col: clamp(60px, 16vw, 110px);
+  --total-col: clamp(64px, 20vw, 128px);
   --materials-grid: var(--name-col) var(--qty-col) var(--price-col) var(--total-col);
   max-height: clamp(520px, 78vh, 640px);
   overflow-y: auto;
