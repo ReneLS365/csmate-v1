@@ -12,6 +12,8 @@ export const CSV_HEADERS = [
   'Notes'
 ]
 
+export const CSV_DELIMITER = ';'
+
 export const TYPE_VALUES = new Set(['TIME', 'AKKORD'])
 export const WAGE_TYPES = new Set(['Normal', 'OT50', 'OT100'])
 

@@ -1,4 +1,4 @@
-import { CSV_HEADERS } from './schema.js'
+import { CSV_HEADERS, CSV_DELIMITER } from './schema.js'
 import { loadMapping, saveMapping } from './storage.js'
 
 const HEADER_ALIASES = new Map([
@@ -50,34 +50,18 @@ export async function parseCsv (input) {
     } else if (char === '\n' && !inQuotes) {
       lines.push(current)
       current = ''
+    } else if (char === '\r') {
+      continue
     } else {
       current += char
     }
   }
   if (current) lines.push(current)
   if (!lines.length) return { headers: [], rows: [] }
-  const headers = lines[0].split(',').map(cell => cell.trim())
+  const delimiter = detectDelimiter(lines[0])
+  const headers = splitLine(lines[0], delimiter).map(cell => cell.trim())
   const rows = lines.slice(1).filter(Boolean).map(line => {
-    const values = []
-    let value = ''
-    let quote = false
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i]
-      if (char === '"') {
-        if (quote && line[i + 1] === '"') {
-          value += '"'
-          i++
-        } else {
-          quote = !quote
-        }
-      } else if (char === ',' && !quote) {
-        values.push(value)
-        value = ''
-      } else {
-        value += char
-      }
-    }
-    values.push(value)
+    const values = splitLine(line, delimiter)
     const row = {}
     headers.forEach((header, idx) => {
       row[header] = values[idx] ?? ''
@@ -85,6 +69,52 @@ export async function parseCsv (input) {
     return row
   })
   return { headers, rows }
+}
+
+function detectDelimiter (line) {
+  let inQuotes = false
+  let commaCount = 0
+  let semicolonCount = 0
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i]
+    if (char === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        i++
+      } else {
+        inQuotes = !inQuotes
+      }
+    } else if (!inQuotes) {
+      if (char === ',') commaCount++
+      if (char === ';') semicolonCount++
+    }
+  }
+  if (semicolonCount === 0 && commaCount === 0) return CSV_DELIMITER
+  if (semicolonCount >= commaCount && semicolonCount > 0) return ';'
+  return ','
+}
+
+function splitLine (line, delimiter) {
+  const values = []
+  let value = ''
+  let inQuotes = false
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i]
+    if (char === '"') {
+      if (inQuotes && line[i + 1] === '"') {
+        value += '"'
+        i++
+      } else {
+        inQuotes = !inQuotes
+      }
+    } else if (char === delimiter && !inQuotes) {
+      values.push(value)
+      value = ''
+    } else {
+      value += char
+    }
+  }
+  values.push(value)
+  return values
 }
 
 export function inferMapping (headers) {

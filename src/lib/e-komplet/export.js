@@ -1,4 +1,4 @@
-import { CSV_HEADERS, normaliseDate, toNumber } from './schema.js'
+import { CSV_HEADERS, CSV_DELIMITER, normaliseDate, toNumber } from './schema.js'
 
 function baseRowFromSag (sag = {}) {
   return {
@@ -56,8 +56,8 @@ function escapeValue (value) {
 }
 
 export function rowsToCsv (rows) {
-  const head = CSV_HEADERS.join(',')
-  const body = rows.map(row => CSV_HEADERS.map(h => escapeValue(row[h])).join(',')).join('\n')
+  const head = CSV_HEADERS.join(CSV_DELIMITER)
+  const body = rows.map(row => CSV_HEADERS.map(h => escapeValue(row[h])).join(CSV_DELIMITER)).join('\n')
   return `\ufeff${head}\n${body}\n`
 }
 

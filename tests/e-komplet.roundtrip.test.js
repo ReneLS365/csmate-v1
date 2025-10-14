@@ -20,6 +20,7 @@ describe('E-Komplet export/import roundtrip', () => {
 
     const rows = buildEKompletRows(sag, price, timeRows)
     const csv = rowsToCsv(rows)
+    expect(csv.split('\n')[0]).toContain(';')
     const { rows: parsed } = await parseCsv(csv)
     const identity = {}
     CSV_HEADERS.forEach(header => { identity[header] = header })
@@ -33,5 +34,14 @@ describe('E-Komplet export/import roundtrip', () => {
     const names = mapped.filter(row => row.Type === 'TIME').map(row => row.EmployeeName)
     expect(names).toContain('Anna')
     expect(names).toContain('Bo')
+  })
+
+  it('parses semicolon separated CSV content', async () => {
+    const csv = '\ufeffType;ProjectId;ProjectName\nTIME;S1;Stillads\n'
+    const { headers, rows } = await parseCsv(csv)
+    expect(headers).toEqual(['Type', 'ProjectId', 'ProjectName'])
+    expect(rows).toHaveLength(1)
+    expect(rows[0].ProjectId).toBe('S1')
+    expect(rows[0].ProjectName).toBe('Stillads')
   })
 })
