@@ -1,7 +1,22 @@
 // /src/features/pctcalc/pctcalc.js
-import './pctcalc.css'
-
 (() => {
+  const STYLE_ID = 'pctcalc-style'
+  const STYLE_HREF = 'src/features/pctcalc/pctcalc.css'
+
+  function ensureStylesheet () {
+    const existing = document.getElementById(STYLE_ID)
+    if (existing) return existing
+
+    const link = document.createElement('link')
+    link.id = STYLE_ID
+    link.rel = 'stylesheet'
+    link.href = STYLE_HREF
+    document.head.appendChild(link)
+    return link
+  }
+
+  ensureStylesheet()
+
   const CALC_URL = 'https://gleeful-faun-12d319.netlify.app/'
 
   function hasSlaebKeyword (input) {
