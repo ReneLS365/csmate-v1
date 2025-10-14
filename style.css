@@ -124,22 +124,6 @@ button{cursor:pointer}
 .modal-content ol{padding-left:22px;line-height:1.6}
 .modal-content p{line-height:1.6}
 .modal-close{position:absolute;top:16px;right:16px;width:36px;height:36px;border-radius:50%;border:1px solid var(--border);background:#3a3c43;color:var(--text);font-size:1.5rem;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer}
-.keypad-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:flex-end;justify-content:center;z-index:9999;padding:0 12px 12px;padding:0 12px calc(12px + env(safe-area-inset-bottom))}
-.keypad-overlay.show{display:flex}
-.keypad{width:min(100%,440px);background:var(--panel);border:1px solid var(--border);border-radius:20px 20px 0 0;padding:18px 18px 14px;display:flex;flex-direction:column;gap:14px;box-shadow:0 -8px 28px rgba(0,0,0,0.35)}
-.keypad[aria-hidden="true"]{display:none}
-.keypad-display{font-size:clamp(1.45rem,4vw,1.8rem);text-align:right;padding:14px;border:1px dashed var(--border);border-radius:14px;min-height:54px;letter-spacing:1px}
-.keypad-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
-.keypad-grid button{min-height:64px;border-radius:16px;background:#3a3c43;border:1px solid var(--border);font-size:clamp(1.3rem,5vw,1.6rem);font-weight:600;touch-action:manipulation}
-.keypad-grid button[data-action="backspace"]{font-size:clamp(1.4rem,5.5vw,1.8rem)}
-.keypad-quick{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
-.keypad-quick button{min-height:46px;border-radius:14px;background:#393b43;border:1px solid var(--border);font-size:1.05rem;font-weight:600;touch-action:manipulation}
-.keypad-quick button[data-delta^="-"]{background:#3a2f34}
-.keypad-quick button[data-delta^="+"]{background:#32423a}
-.keypad-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.keypad-actions button{min-height:56px;border-radius:14px;background:#3a3c43;border:1px solid var(--border);font-size:1.1rem;font-weight:700;touch-action:manipulation}
-.keypad-actions button[data-action="ok"]{background:var(--accent);color:#111}
-.keypad-close{min-height:48px;border-radius:14px;border:1px solid var(--border);background:#3a3c43;font-size:1rem;font-weight:600;touch-action:manipulation}
 @media (max-width:600px){
   header .bar{flex-direction:column;align-items:flex-start}
   .grid-3{grid-template-columns:1fr}
@@ -165,7 +149,7 @@ button{cursor:pointer}
   .worker-output{font-size:0.9rem}
 }
 @media print{
-  header,nav,.no-print,.keypad-overlay{display:none!important}
+  header,nav,.no-print,.csmate-numpad{display:none!important}
   body{background:#fff;color:#000}
   fieldset{border-color:#000;background:#fff}
   .materials{max-height:none}

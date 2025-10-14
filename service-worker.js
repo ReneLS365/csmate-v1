@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'csmate-v1';
-const CACHE_VERSION = '20241007';
+const CACHE_VERSION = '20241008';
 const CACHE_NAME = `${CACHE_PREFIX}-${CACHE_VERSION}`;
 
 const PRECACHE_URLS = [
