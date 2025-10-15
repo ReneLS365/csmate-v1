@@ -150,6 +150,23 @@ button{cursor:pointer}
   header .bar{gap:12px}
   .worker-output{font-size:0.9rem}
 }
+
+@media (max-width:420px){
+  #app,
+  .app-root{
+    transform:scale(0.92);
+    transform-origin:top center;
+    width:calc(100%/0.92);
+    max-width:calc(100%/0.92);
+    margin:0 auto;
+  }
+
+  .card,
+  .panel{
+    padding:calc(var(--pad) * 0.75);
+  }
+}
+
 @media print{
   header,nav,.no-print,.csmate-numpad{display:none!important}
   body{background:#fff;color:#000}
@@ -223,21 +240,24 @@ button{cursor:pointer}
   row-gap:0;
 }
 
+
+.materials-list .mat-head,
 .materials-header{
   display:grid;
-  grid-template-columns:var(--materials-grid);
-  column-gap:12px;
+  grid-template-columns:minmax(0,1fr);
+  gap:8px;
   align-items:center;
-  min-height:48px;
+  min-height:44px;
   position:sticky;
   top:0;
   z-index:2;
-  padding:8px 0;
+  padding:10px 0 8px;
   background:linear-gradient(180deg,rgba(45,47,52,0.95),rgba(38,39,43,0.95));
   border-bottom:1px solid rgba(255,255,255,0.08);
   backdrop-filter:blur(8px);
 }
 
+.materials-list .mat-head span,
 .materials-header span{
   font-size:0.75rem;
   text-transform:uppercase;
@@ -245,20 +265,19 @@ button{cursor:pointer}
   color:var(--muted);
   font-weight:600;
   min-width:0;
-}
-
-.materials-header .header-material{justify-self:start;text-align:left}
-.materials-header .header-qty,
-.materials-header .header-price,
-.materials-header .header-total{
-  justify-self:end;
   text-align:right;
 }
 
+.materials-list .mat-head .header-material,
+.materials-header .header-material{justify-self:start;text-align:left}
+
+.materials-list .mat-head .header-total,
+.materials-header .header-total{grid-column:1/-1}
+
 .materials-list .mat-row{
   display:grid;
-  grid-template-columns:var(--materials-grid);
-  column-gap:12px;
+  grid-template-columns:minmax(0,1fr);
+  gap:8px;
   align-items:center;
   padding:6px 0;
   min-height:48px;
@@ -269,22 +288,38 @@ button{cursor:pointer}
 
 .materials-list .mat-row:last-of-type{border-bottom:none}
 
-.materials-list .mat-name{font-weight:600;line-height:1.1;font-size:14px;color:#e8eaf0;min-width:0}
+.materials-list .mat-name{
+  grid-column:1/-1;
+  font-weight:600;
+  line-height:1.1;
+  font-size:14px;
+  color:#e8eaf0;
+  min-width:0;
+  word-break:break-word;
+}
+
 .materials-list .mat-name .muted{font-weight:500;opacity:.7;font-size:0.7rem}
 
 .materials-list .mat-qty,
 .materials-list .mat-price,
-.materials-list .mat-line{
+.materials-list .mat-line,
+.materials-list .mat-line-total{
   font-size:0.9rem;
   padding:6px 8px;
   min-height:36px;
   font-variant-numeric:tabular-nums;
   min-width:0;
+  justify-self:end;
+  text-align:right;
 }
 
-.materials-list .mat-qty{justify-self:end;text-align:right}
-.materials-list .mat-price{justify-self:end;text-align:right;opacity:.95}
-.materials-list .mat-line{justify-self:end;text-align:right}
+.materials-list .mat-qty,
+.materials-list .mat-qty input{width:100%;text-align:right}
+
+.materials-list .mat-price{opacity:.95}
+
+.materials-list .mat-line-total,
+.materials-list .mat-line{grid-column:1/-1}
 
 .materials-list input{
   min-height:36px;
@@ -294,36 +329,28 @@ button{cursor:pointer}
 
 .materials-list input:focus{outline:2px solid #3b82f6;outline-offset:0}
 
-@media (max-width:480px){
-  .materials{
-    --name-col: minmax(clamp(150px, 56vw, 360px), 1.75fr);
-    --qty-col: clamp(60px, 16vw, 88px);
-    --price-col: clamp(64px, 18vw, 96px);
-    --total-col: clamp(80px, 22vw, 112px);
-    --materials-grid: var(--name-col) var(--qty-col) var(--price-col) var(--total-col);
+@media (min-width:420px){
+  .materials-list .mat-head,
+  .materials-header,
+  .materials-list .mat-row{
+    grid-template-columns:minmax(0,1fr) minmax(68px,0.65fr) minmax(92px,0.7fr);
   }
-  .materials-header{padding:8px 0}
-  .materials-list .mat-row{column-gap:10px}
-  .materials-list .mat-name{font-size:14.5px}
+
+  .materials-list .mat-line,
+  .materials-list .mat-line-total,
+  .materials-list .mat-head .header-total,
+  .materials-header .header-total{grid-column:1/-1}
 }
 
-@media (min-width:720px){
-  .materials{
-    --name-col: minmax(clamp(200px, 38vw, 520px), 2.4fr);
-    --qty-col: clamp(72px, 10vw, 116px);
-    --price-col: clamp(84px, 11vw, 128px);
-    --total-col: clamp(100px, 12vw, 160px);
-    --materials-grid: var(--name-col) var(--qty-col) var(--price-col) var(--total-col);
+@media (min-width:640px){
+  .materials-list .mat-head,
+  .materials-header,
+  .materials-list .mat-row{
+    grid-template-columns:minmax(0,1.6fr) minmax(72px,0.55fr) minmax(100px,0.65fr) minmax(120px,0.75fr);
   }
-}
 
-@media (min-width:1024px){
-  .materials{
-    --name-col: minmax(clamp(240px, 34vw, 560px), 2.6fr);
-    --qty-col: clamp(80px, 9vw, 124px);
-    --price-col: clamp(92px, 10vw, 140px);
-    --total-col: clamp(120px, 12vw, 180px);
-    --materials-grid: var(--name-col) var(--qty-col) var(--price-col) var(--total-col);
-    max-height: min(72vh, 620px);
-  }
+  .materials-list .mat-line,
+  .materials-list .mat-line-total,
+  .materials-list .mat-head .header-total,
+  .materials-header .header-total{grid-column:auto}
 }
