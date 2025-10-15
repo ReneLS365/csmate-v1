@@ -1,5 +1,5 @@
 /* CSMate Service Worker – cache busting hard mode */
-const VERSION = "v2025-10-15-01"; // bump on every deploy
+const VERSION = 'v-dev'; // replaced automatically during build
 const CACHE_NAME = `csmate-${VERSION}`;
 const PRECACHE = [
   "/",
@@ -10,31 +10,28 @@ const PRECACHE = [
   "/manifest.json",
 ];
 
-self.addEventListener("install", (event) => {
+self.addEventListener('install', (event) => {
   self.skipWaiting();
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((c) => c.addAll(PRECACHE)).catch(() => {})
-  );
 });
 
-self.addEventListener("activate", (event) => {
+self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
-    const names = await caches.keys();
-    await Promise.all(names.filter(n => n.startsWith("csmate-") && n !== CACHE_NAME)
-      .map(n => caches.delete(n)));
+    const keys = await caches.keys();
+    await Promise.all(keys.map((key) => caches.delete(key)));
+    await caches.open(CACHE_NAME).then((cache) => cache.addAll(PRECACHE)).catch(() => {});
     await self.clients.claim();
     // Notify clients to reload
-    const clients = await self.clients.matchAll({ type: "window" });
-    clients.forEach(c => c.postMessage({ type: "CSMATE_UPDATED", version: VERSION }));
+    const clients = await self.clients.matchAll({ type: 'window' });
+    clients.forEach((client) => client.postMessage({ type: 'CSMATE_UPDATED', version: VERSION }));
   })());
 });
 
-self.addEventListener("fetch", (event) => {
+self.addEventListener('fetch', (event) => {
   const req = event.request;
-  if (req.method !== "GET") return;
+  if (req.method !== 'GET') return;
   // Network-first for HTML to avoid stuck old versions
-  if (req.mode === "navigate" || (req.headers.get("accept") || "").includes("text/html")) {
-    event.respondWith(fetch(req).catch(() => caches.match("/index.html")));
+  if (req.mode === 'navigate' || (req.headers.get('accept') || '').includes('text/html')) {
+    event.respondWith(fetch(req).catch(() => caches.match('/index.html')));
     return;
   }
   // Cache-first then network for static assets

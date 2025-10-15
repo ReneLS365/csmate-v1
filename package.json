@@ -3,8 +3,10 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
+    "build": "node scripts/bump-sw-version.js",
     "test": "vitest run",
-    "lint": "eslint \"src/**/*.js\""
+    "lint": "eslint \"src/**/*.js\"",
+    "bump-sw": "node scripts/bump-sw-version.js"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^1.6.1",
