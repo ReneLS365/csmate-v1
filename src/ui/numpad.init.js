@@ -27,9 +27,10 @@ function applyBinding (input) {
   input.readOnly = true
 
   const open = () => {
-    const baseValue = parseNumericValue(input.value)
+    const currentValue = input.value
+    const baseValue = parseNumericValue(currentValue)
     openNumpad({
-      initial: '',
+      initial: currentValue,
       baseValue,
       onConfirm: value => {
         const useComma = input.dataset.decimal === 'comma'
