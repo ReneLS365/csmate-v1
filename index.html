@@ -263,12 +263,12 @@
     const container = document.getElementById('optaellingContainer');
     if (!container) return;
 
-    const fmtDK = new Intl.NumberFormat('da-DK', { style: 'currency', currency: 'DKK' });
+    const fmtDK = new Intl.NumberFormat('da-DK', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
     container.querySelectorAll('.mat-row').forEach(updateLine);
 
     container.addEventListener('input', (e) => {
-      if (!e.target.classList.contains('mat-qty')) return;
+      if (!e.target.matches('.mat-qty input')) return;
       const row = e.target.closest('.mat-row');
       updateLine(row);
 
@@ -355,10 +355,14 @@
     function updateLine(row){
       if (!row) return;
 
-      const qtyEl   = row.querySelector('.mat-qty');
-      const priceEl = row.querySelector('.mat-price');
-      const lineEl  = row.querySelector('.mat-line');
-      if (!qtyEl || !priceEl || !lineEl) return;
+      const qtyWrapper   = row.querySelector('.mat-qty');
+      const priceWrapper = row.querySelector('.mat-price');
+      const lineEl       = row.querySelector('.mat-line-total');
+      if (!qtyWrapper || !priceWrapper || !lineEl) return;
+
+      const qtyEl = qtyWrapper.querySelector('input');
+      const priceEl = priceWrapper.querySelector('input');
+      if (!qtyEl || !priceEl) return;
 
       const qty   = parseQty(qtyEl.value);
       let price   = parseFloat(priceEl.dataset.price || '');
@@ -388,7 +392,7 @@
         priceEl.value = '';
       }
 
-      lineEl.value  = fmtDK.format(line);
+      lineEl.textContent  = `${fmtDK.format(line)} kr`;
     }
 
     window.parseQty = parseQty;

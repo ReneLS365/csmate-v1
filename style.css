@@ -223,7 +223,7 @@ button{cursor:pointer}
   row-gap:0;
 }
 
-.materials-header{
+.mat-head{
   display:grid;
   grid-template-columns:var(--materials-grid);
   column-gap:12px;
@@ -238,7 +238,7 @@ button{cursor:pointer}
   backdrop-filter:blur(8px);
 }
 
-.materials-header span{
+.mat-head > div{
   font-size:0.75rem;
   text-transform:uppercase;
   letter-spacing:0.08em;
@@ -247,10 +247,10 @@ button{cursor:pointer}
   min-width:0;
 }
 
-.materials-header .header-material{justify-self:start;text-align:left}
-.materials-header .header-qty,
-.materials-header .header-price,
-.materials-header .header-total{
+.mat-head .mat-head-material{justify-self:start;text-align:left}
+.mat-head .mat-head-qty,
+.mat-head .mat-head-price,
+.mat-head .mat-head-total{
   justify-self:end;
   text-align:right;
 }
@@ -274,17 +274,30 @@ button{cursor:pointer}
 
 .materials-list .mat-qty,
 .materials-list .mat-price,
-.materials-list .mat-line{
+.materials-list .mat-line-total{
   font-size:0.9rem;
   padding:6px 8px;
   min-height:36px;
   font-variant-numeric:tabular-nums;
   min-width:0;
+  display:flex;
+  align-items:center;
+  justify-content:flex-end;
 }
 
 .materials-list .mat-qty{justify-self:end;text-align:right}
 .materials-list .mat-price{justify-self:end;text-align:right;opacity:.95}
-.materials-list .mat-line{justify-self:end;text-align:right}
+.materials-list .mat-line-total{justify-self:end;text-align:right}
+
+.materials-list .mat-qty input,
+.materials-list .mat-price input{
+  width:100%;
+  min-height:36px;
+  padding:6px 8px;
+  font-size:0.9rem;
+  font-variant-numeric:tabular-nums;
+  text-align:right;
+}
 
 .materials-list input{
   min-height:36px;
@@ -302,7 +315,7 @@ button{cursor:pointer}
     --total-col: clamp(80px, 22vw, 112px);
     --materials-grid: var(--name-col) var(--qty-col) var(--price-col) var(--total-col);
   }
-  .materials-header{padding:8px 0}
+  .mat-head{padding:8px 0}
   .materials-list .mat-row{column-gap:10px}
   .materials-list .mat-name{font-size:14.5px}
 }

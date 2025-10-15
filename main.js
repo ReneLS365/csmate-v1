@@ -837,15 +837,15 @@ function renderOptaelling() {
     container.querySelectorAll('.empty-state').forEach(node => node.remove());
   }
 
-  let header = list.querySelector('.materials-header');
+  let header = list.querySelector('.mat-head');
   if (!header) {
-    header = document.createElement('div');
-    header.className = 'materials-header';
+    header = document.createElement('header');
+    header.className = 'mat-head';
     header.innerHTML = `
-      <span class="header-material">Materiale</span>
-      <span class="header-qty">Antal</span>
-      <span class="header-price">Pris</span>
-      <span class="header-total">Linjetotal</span>
+      <div class="mat-head-material">Materiale</div>
+      <div class="mat-head-qty">Antal</div>
+      <div class="mat-head-price">Pris</div>
+      <div class="mat-head-total">Linjetotal</div>
     `;
     list.prepend(header);
   }
@@ -900,7 +900,7 @@ function renderOptaelling() {
 
     const qtyInput = document.createElement('input');
     qtyInput.type = 'number';
-    qtyInput.className = 'qty mat-qty';
+    qtyInput.className = 'qty';
     qtyInput.dataset.id = item.id;
     qtyInput.id = qtyInputId;
     qtyInput.name = `qty[${item.id}]`;
@@ -920,7 +920,7 @@ function renderOptaelling() {
 
     const priceInput = document.createElement('input');
     priceInput.type = 'number';
-    priceInput.className = 'price mat-price';
+    priceInput.className = 'price';
     priceInput.dataset.id = item.id;
     priceInput.id = `price-${sanitizedId}`;
     priceInput.name = `price[${item.id}]`;
@@ -942,18 +942,24 @@ function renderOptaelling() {
       priceInput.value = displayPrice;
     }
 
-    const lineInput = document.createElement('input');
-    lineInput.type = 'text';
-    lineInput.className = 'mat-line item-total';
-    lineInput.readOnly = true;
-    lineInput.setAttribute('aria-label', 'Linjetotal');
+    const qtyWrapper = document.createElement('div');
+    qtyWrapper.className = 'mat-qty';
+    qtyWrapper.appendChild(qtyInput);
+
+    const priceWrapper = document.createElement('div');
+    priceWrapper.className = 'mat-price';
+    priceWrapper.appendChild(priceInput);
+
+    const lineDisplay = document.createElement('div');
+    lineDisplay.className = 'mat-line-total item-total';
+    lineDisplay.setAttribute('aria-label', 'Linjetotal');
     const lineValue = formatCurrency(toNumber(item.price) * toNumber(item.quantity));
-    lineInput.value = `${lineValue} kr`;
+    lineDisplay.textContent = `${lineValue} kr`;
 
     row.appendChild(nameLabel);
-    row.appendChild(qtyInput);
-    row.appendChild(priceInput);
-    row.appendChild(lineInput);
+    row.appendChild(qtyWrapper);
+    row.appendChild(priceWrapper);
+    row.appendChild(lineDisplay);
 
     list.appendChild(row);
   });
@@ -1048,12 +1054,12 @@ function refreshMaterialRowDisplay(id) {
     priceInput.dataset.price = hasPrice ? String(priceValue) : '';
   }
 
-  const lineInput = row.querySelector('.mat-line');
-  if (lineInput) {
+  const lineDisplay = row.querySelector('.mat-line-total');
+  if (lineDisplay) {
     if (typeof window !== 'undefined' && typeof window.updateMaterialLine === 'function') {
       window.updateMaterialLine(row, { formatPrice: true, shouldUpdateTotals: false });
     } else {
-      lineInput.value = `${formatCurrency(toNumber(item.price) * toNumber(item.quantity))} kr`;
+      lineDisplay.textContent = `${formatCurrency(toNumber(item.price) * toNumber(item.quantity))} kr`;
     }
   }
 }
