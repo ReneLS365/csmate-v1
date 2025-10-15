@@ -171,7 +171,7 @@ function toNumber(value) {
 }
 
 function formatNumber(value) {
-  const num = Number.isFinite(value) ? value : (parseFloat(value) || 0);
+  const num = Number.isFinite(value) ? value : toNumber(value);
   return new Intl.NumberFormat('da-DK', {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
