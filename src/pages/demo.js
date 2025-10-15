@@ -80,6 +80,14 @@ function formatNumber (value) {
   return String(Math.round(num * 100) / 100)
 }
 
+function parseInputNumber (value) {
+  if (typeof value !== 'string') return 0
+  const normalized = value.replace(/,/g, '.').trim()
+  if (normalized === '') return 0
+  const parsed = Number.parseFloat(normalized)
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
 function renderTimeRows () {
   timeTableBody.innerHTML = ''
   timeRows.forEach((row, index) => {
@@ -117,6 +125,7 @@ function renderTimeRows () {
     const openHoursPad = () => {
       openNumpad({
         initial: hoursInput.value,
+        baseValue: parseInputNumber(hoursInput.value),
         onConfirm: value => {
           hoursInput.value = formatNumber(value)
           hoursInput.dispatchEvent(new Event('input', { bubbles: true }))
@@ -183,6 +192,7 @@ akkordInput.readOnly = true
 const openAkkordPad = () => {
   openNumpad({
     initial: akkordInput.value,
+    baseValue: parseInputNumber(akkordInput.value),
     onConfirm: value => {
       priceBreakdown.akkordAmount = Number(value)
       akkordInput.value = formatNumber(priceBreakdown.akkordAmount)
