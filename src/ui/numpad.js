@@ -1,18 +1,41 @@
 // Lightweight expression evaluator (+ - * /) with locale-safe decimals
-function evalExpr (expr) {
-  const cleaned = expr
+function toNumber (value, fallback = 0) {
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  if (typeof value === 'string') {
+    const normalized = value.replace(/,/g, '.').trim()
+    if (normalized === '') return fallback
+    const parsed = Number.parseFloat(normalized)
+    if (Number.isFinite(parsed)) return parsed
+  }
+  return fallback
+}
+
+export function evalExpr (expr, baseValue = 0) {
+  const base = toNumber(baseValue, 0)
+  const raw = typeof expr === 'string' ? expr.trim() : ''
+  if (!raw) return base
+
+  const normalized = raw
     .replace(/,/g, '.')
     .replace(/×/g, '*')
     .replace(/÷/g, '/')
     .replace(/\s+/g, '')
-  if (!/^[0-9.+\-*/]*$/.test(cleaned)) throw new Error('Invalid')
+
+  const expression = /^[+\-*/]/.test(normalized) ? `${base}${normalized}` : normalized
+  if (!/^[0-9.+\-*/]*$/.test(expression)) throw new Error('Invalid')
+
   // eslint-disable-next-line no-new-func
-  const val = Function(`"use strict";return (${cleaned || 0});`)()
-  if (!Number.isFinite(val)) throw new Error('NaN')
-  return val
+  const value = Function(`"use strict";return (${expression || base});`)()
+  if (!Number.isFinite(value)) throw new Error('NaN')
+  return value
 }
 
-export function openNumpad ({ initial = '', onConfirm } = {}) {
+function formatDisplayValue (value) {
+  const number = toNumber(value, 0)
+  return String(number).replace('.', ',')
+}
+
+export function openNumpad ({ initial = '', baseValue = 0, onConfirm } = {}) {
   const overlay = document.createElement('div')
   overlay.className = 'csm-np-overlay'
   overlay.innerHTML = `
@@ -23,19 +46,23 @@ export function openNumpad ({ initial = '', onConfirm } = {}) {
         <button class="csm-np-btn">4</button><button class="csm-np-btn">5</button><button class="csm-np-btn">6</button><button class="csm-np-btn csm-np-op">÷</button>
         <button class="csm-np-btn">1</button><button class="csm-np-btn">2</button><button class="csm-np-btn">3</button><button class="csm-np-btn csm-np-op">-</button>
         <button class="csm-np-btn">0</button><button class="csm-np-btn">,</button><button class="csm-np-btn" data-act="clear">C</button><button class="csm-np-btn csm-np-op">+</button>
-        <button class="csm-np-btn csm-np-ok" data-act="ok">OK</button>
       </div>
       <div class="csm-np-foot">
         <button class="csm-np-close" data-act="close">✕</button>
+        <button class="csm-np-ok" data-act="ok">OK</button>
       </div>
     </div>
   `
   document.body.appendChild(overlay)
-  const display = overlay.querySelector('#csm-np-display')
 
-  let buffer = String(initial || '').trim()
+  const display = overlay.querySelector('#csm-np-display')
+  const base = toNumber(baseValue, 0)
+  const initialDisplay = typeof initial === 'string' ? initial.trim() : ''
+  const fallbackDisplay = (initialDisplay !== '' ? initialDisplay : formatDisplayValue(base)) || '0'
+
+  let buffer = ''
   const render = () => {
-    if (display) display.textContent = buffer || '0'
+    if (display) display.textContent = buffer || fallbackDisplay || '0'
   }
 
   const prevOverflow = document.documentElement.style.overflow
@@ -49,9 +76,9 @@ export function openNumpad ({ initial = '', onConfirm } = {}) {
 
   const confirmValue = () => {
     try {
-      const out = evalExpr(buffer || '0')
+      const result = evalExpr(buffer, base)
       if (typeof onConfirm === 'function') {
-        onConfirm(out)
+        onConfirm(result)
       }
       closeOverlay()
     } catch (error) {
@@ -66,20 +93,27 @@ export function openNumpad ({ initial = '', onConfirm } = {}) {
     event => {
       const target = event.target
       if (!(target instanceof HTMLElement)) return
-      if (target.dataset.act === 'close' || target === overlay) {
+
+      if (target === overlay) {
         closeOverlay()
         return
       }
-      if (target.dataset.act === 'clear') {
+
+      const action = target.dataset.act
+      if (action === 'close') {
+        closeOverlay()
+        return
+      }
+      if (action === 'clear') {
         buffer = ''
         render()
         return
       }
-      if (target.dataset.act === 'ok') {
+      if (action === 'ok') {
         confirmValue()
         return
       }
-      if (target.classList.contains('csm-np-btn') && !target.dataset.act) {
+      if (target.classList.contains('csm-np-btn') && !action) {
         buffer += target.textContent.trim()
         render()
       }
@@ -111,5 +145,3 @@ export function openNumpad ({ initial = '', onConfirm } = {}) {
 
   render()
 }
-
-export { evalExpr }

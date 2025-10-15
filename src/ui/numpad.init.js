@@ -1,5 +1,19 @@
 import { openNumpad } from './numpad.js'
 
+function parseNumericValue (value) {
+  if (typeof value !== 'string') return 0
+  const normalized = value.replace(/,/g, '.').trim()
+  if (normalized === '') return 0
+  const parsed = Number.parseFloat(normalized)
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+function formatResult (value, useComma) {
+  const numeric = Number(value)
+  const stringValue = Number.isFinite(numeric) ? String(numeric) : '0'
+  return useComma ? stringValue.replace('.', ',') : stringValue
+}
+
 function applyBinding (input) {
   if (!(input instanceof HTMLInputElement)) return
   if (input.dataset.npBound === 'true') return
@@ -13,12 +27,13 @@ function applyBinding (input) {
   input.readOnly = true
 
   const open = () => {
+    const baseValue = parseNumericValue(input.value)
     openNumpad({
-      initial: input.value,
+      initial: '',
+      baseValue,
       onConfirm: value => {
         const useComma = input.dataset.decimal === 'comma'
-        const stringValue = useComma ? String(value).replace('.', ',') : String(value)
-        input.value = stringValue
+        input.value = formatResult(value, useComma)
         input.dispatchEvent(new Event('input', { bubbles: true }))
         input.dispatchEvent(new Event('change', { bubbles: true }))
       }
