@@ -1154,7 +1154,7 @@ function updateSelectedSummary() {
       }
     }
     const qtyInput = row.querySelector('input.qty,input.quantity');
-    const qty = parseFloat(qtyInput?.value || '0') || 0;
+    const qty = toNumber(qtyInput?.value);
     if (qty > 0) {
       selected.push({ name, qty });
     }
@@ -1189,7 +1189,7 @@ function updateMaterialVisibility() {
   const rows = document.querySelectorAll('#optaellingContainer .material-row');
 
   rows.forEach(row => {
-    const qty = parseFloat(row.querySelector('input.qty,input.quantity')?.value || '0') || 0;
+    const qty = toNumber(row.querySelector('input.qty,input.quantity')?.value);
     row.style.display = (!only || qty > 0) ? '' : 'none';
   });
 }
@@ -2094,9 +2094,9 @@ async function loadLocalData(key) {
 function beregnLon() {
   const info = collectSagsinfo();
   const sagsnummer = info.sagsnummer?.trim() || 'uspecified';
-  const montagepris = parseFloat(document.getElementById('montagepris')?.value) || 0;
-  const demontagepris = parseFloat(document.getElementById('demontagepris')?.value) || 0;
-  const slaebePctInput = parseFloat(document.getElementById('slaebePct')?.value) || 0;
+  const montagepris = toNumber(document.getElementById('montagepris')?.value);
+  const demontagepris = toNumber(document.getElementById('demontagepris')?.value);
+  const slaebePctInput = toNumber(document.getElementById('slaebePct')?.value);
   const slaebePct = slaebePctInput / 100;
   const jobType = document.getElementById('jobType')?.value || 'montage';
 
@@ -2110,14 +2110,14 @@ function beregnLon() {
   const tillægUdd2 = 49.38;
   lastEkompletData = null;
 
-  const antalBoringHuller = parseFloat(document.getElementById('antalBoringHuller')?.value) || 0;
-  const antalLukHuller = parseFloat(document.getElementById('antalLukHuller')?.value) || 0;
-  const antalBoringBeton = parseFloat(document.getElementById('antalBoringBeton')?.value) || 0;
-  const antalOpskydeligt = parseFloat(document.getElementById('antalOpskydeligt')?.value) || 0;
-  const antalKm = parseFloat(document.getElementById('km')?.value) || 0;
+  const antalBoringHuller = toNumber(document.getElementById('antalBoringHuller')?.value);
+  const antalLukHuller = toNumber(document.getElementById('antalLukHuller')?.value);
+  const antalBoringBeton = toNumber(document.getElementById('antalBoringBeton')?.value);
+  const antalOpskydeligt = toNumber(document.getElementById('antalOpskydeligt')?.value);
+  const antalKm = toNumber(document.getElementById('km')?.value);
 
-  const traelle35 = parseFloat(document.getElementById('traelleloeft35')?.value) || 0;
-  const traelle50 = parseFloat(document.getElementById('traelleloeft50')?.value) || 0;
+  const traelle35 = toNumber(document.getElementById('traelleloeft35')?.value);
+  const traelle50 = toNumber(document.getElementById('traelleloeft50')?.value);
 
   const boringHullerTotal = antalBoringHuller * boringHullerPris;
   const lukHullerTotal = antalLukHuller * lukHullerPris;
@@ -2182,7 +2182,7 @@ function beregnLon() {
 
   workers.forEach(worker => {
     const hoursEl = worker.querySelector('.worker-hours');
-    const hours = parseFloat(hoursEl?.value) || 0;
+    const hours = toNumber(hoursEl?.value);
     if (hours === 0) return;
     samletTimer += hours;
   });
@@ -2203,9 +2203,9 @@ function beregnLon() {
   const akkordTimeLøn = samletAkkordSum / samletTimer;
 
   workers.forEach((worker, index) => {
-    const hours = parseFloat(worker.querySelector('.worker-hours')?.value) || 0;
+    const hours = toNumber(worker.querySelector('.worker-hours')?.value);
     if (hours === 0) return;
-    const tillaeg = parseFloat(worker.querySelector('.worker-tillaeg')?.value) || 0;
+    const tillaeg = toNumber(worker.querySelector('.worker-tillaeg')?.value);
     const uddSelect = worker.querySelector('.worker-udd');
     const udd = uddSelect?.value || '';
     const outputEl = worker.querySelector('.worker-output');

@@ -2,8 +2,12 @@
 const VERSION = "v2025-10-15-01"; // bump on every deploy
 const CACHE_NAME = `csmate-${VERSION}`;
 const PRECACHE = [
-  "/", "/index.html",
-  // tilføj kritiske bundles (fx /assets/main.[hash].js) eller brug workbox-manifest hvis I genererer det
+  "/",
+  "/index.html",
+  "/main.js",
+  "/style.css",
+  "/print.css",
+  "/manifest.json",
 ];
 
 self.addEventListener("install", (event) => {
