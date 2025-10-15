@@ -1,5 +1,5 @@
 /* CSMate Service Worker – cache busting hard mode */
-const VERSION = "v2025-10-15-01"; // bump on every deploy
+const VERSION = "v2025-10-15-02"; // bump on every deploy
 const CACHE_NAME = `csmate-${VERSION}`;
 const PRECACHE = [
   "/",
@@ -8,6 +8,14 @@ const PRECACHE = [
   "/style.css",
   "/print.css",
   "/manifest.json",
+  "/dataset.js",
+  "/complete_lists.json",
+  "/src/ui/numpad.js",
+  "/src/ui/numpad.init.js",
+  "/src/lib/string-utils.js",
+  "/src/lib/materials/exclusions.js",
+  "/src/features/pctcalc/pctcalc.js",
+  "/src/features/pctcalc/pctcalc.css",
 ];
 
 self.addEventListener("install", (event) => {
