@@ -263,7 +263,7 @@
     const container = document.getElementById('optaellingContainer');
     if (!container) return;
 
-    const fmtDK = new Intl.NumberFormat('da-DK', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    // Use the shared formatCurrency function instead of duplicating formatter configuration
 
     container.querySelectorAll('.mat-row').forEach(updateLine);
 
