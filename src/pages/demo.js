@@ -1,4 +1,4 @@
-import { Numpad } from '../ui/numpad.js'
+import { openNumpad } from '../ui/numpad.js'
 import { EKompletPanel } from '../ui/e-komplet-panel.js'
 import { initialiseDiagnostics } from '../ui/diagnostics.js'
 import { loadSagsinfo, saveSagsinfo, loadTimeRows, saveTimeRows, loadPriceBreakdown, savePriceBreakdown } from '../lib/e-komplet/storage.js'
@@ -23,8 +23,6 @@ const timeTableBody = document.querySelector('#timeTable tbody')
 const addTimeBtn = document.getElementById('addTimeRow')
 const akkordInput = document.getElementById('akkordAmount')
 
-const numpad = new Numpad({ root: document.body })
-const calc = numpad.calc
 let panel = null
 
 let timeRows = loadTimeRows() || []
@@ -113,19 +111,25 @@ function renderTimeRows () {
     const hoursInput = document.createElement('input')
     hoursInput.type = 'text'
     hoursInput.inputMode = 'decimal'
+    hoursInput.readOnly = true
     hoursInput.className = 'qty-input'
     hoursInput.value = row.hours != null ? formatNumber(row.hours) : '0'
-    hoursInput.addEventListener('focus', () => {
-      numpad.enterAugmentMode({
-        base: Number(hoursInput.value) || 0,
-        targetEl: hoursInput,
-        onCommit: value => {
-          row.hours = Number(value)
-          hoursInput.value = formatNumber(row.hours)
-          saveTimeRows(timeRows)
-          refreshPanel()
+    const openHoursPad = () => {
+      openNumpad({
+        initial: hoursInput.value,
+        onConfirm: value => {
+          hoursInput.value = formatNumber(value)
+          hoursInput.dispatchEvent(new Event('input', { bubbles: true }))
+          hoursInput.dispatchEvent(new Event('change', { bubbles: true }))
         }
       })
+    }
+    hoursInput.addEventListener('click', openHoursPad)
+    hoursInput.addEventListener('keydown', event => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault()
+        openHoursPad()
+      }
     })
     hoursInput.addEventListener('input', () => {
       row.hours = Number(hoursInput.value)
@@ -175,17 +179,26 @@ addTimeBtn.addEventListener('click', () => {
   refreshPanel()
 })
 
-akkordInput.addEventListener('focus', () => {
-  numpad.enterAugmentMode({
-    base: Number(akkordInput.value) || 0,
-    targetEl: akkordInput,
-    onCommit: value => {
+akkordInput.readOnly = true
+const openAkkordPad = () => {
+  openNumpad({
+    initial: akkordInput.value,
+    onConfirm: value => {
       priceBreakdown.akkordAmount = Number(value)
       akkordInput.value = formatNumber(priceBreakdown.akkordAmount)
       savePriceBreakdown(priceBreakdown)
       refreshPanel()
+      akkordInput.dispatchEvent(new Event('input', { bubbles: true }))
+      akkordInput.dispatchEvent(new Event('change', { bubbles: true }))
     }
   })
+}
+akkordInput.addEventListener('click', openAkkordPad)
+akkordInput.addEventListener('keydown', event => {
+  if (event.key === 'Enter' || event.key === ' ') {
+    event.preventDefault()
+    openAkkordPad()
+  }
 })
 
 akkordInput.addEventListener('input', () => {
@@ -234,4 +247,4 @@ panel = new EKompletPanel({
 })
 
 persistSagsinfo()
-initialiseDiagnostics({ calc, panel, numpad, root: document.body }).catch(() => {})
+initialiseDiagnostics({ panel, root: document.body }).catch(() => {})

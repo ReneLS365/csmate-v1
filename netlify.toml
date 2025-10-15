@@ -24,7 +24,8 @@
   # Service worker should never be cached by the edge
   for = "/service-worker.js"
   [headers.values]
-  Cache-Control = "no-store"
+  Cache-Control = "no-cache, no-store, must-revalidate"
+  Service-Worker-Allowed = "/"
 
 [[headers]]
   for = "/manifest.json"

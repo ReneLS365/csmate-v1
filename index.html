@@ -139,6 +139,7 @@
         <button id="btnAdminLogin" type="button">Log ind</button>
       </div>
       <p id="adminFeedback" class="status-message" hidden aria-live="polite"></p>
+      <button id="btnHardResetApp" type="button" hidden>Nulstil app-data</button>
     </fieldset>
   </section>
 
@@ -153,10 +154,10 @@
           </select>
         </label>
         <label for="montagepris"><span>Montagepris (auto)</span>
-          <input id="montagepris" placeholder="Montagepris (auto)" inputmode="decimal">
+          <input id="montagepris" placeholder="Montagepris (auto)" inputmode="decimal" data-numpad="true" data-decimal="comma">
         </label>
         <label for="demontagepris"><span>Demontagepris (auto)</span>
-          <input id="demontagepris" placeholder="Demontagepris (auto)" inputmode="decimal">
+          <input id="demontagepris" placeholder="Demontagepris (auto)" inputmode="decimal" data-numpad="true" data-decimal="comma">
         </label>
       </div>
     </fieldset>
@@ -164,10 +165,10 @@
       <legend>Tillæg & km</legend>
       <div class="grid-2">
         <label for="slaebePct"><span>Slæb i %</span>
-          <input id="slaebePct" placeholder="Slæb i %" inputmode="decimal">
+          <input id="slaebePct" placeholder="Slæb i %" inputmode="decimal" data-numpad="true" data-decimal="comma">
         </label>
         <label for="km"><span>Km</span>
-          <input id="km" placeholder="Km" inputmode="decimal">
+          <input id="km" placeholder="Km" inputmode="decimal" data-numpad="true" data-decimal="comma">
         </label>
       </div>
     </fieldset>
@@ -176,22 +177,22 @@
       <legend>Ekstra arbejde</legend>
       <div class="grid-3 extra-work-grid">
         <label for="antalBoringHuller"><span>Huller (antal)</span>
-          <input id="antalBoringHuller" placeholder="Huller (antal)" inputmode="numeric">
+          <input id="antalBoringHuller" placeholder="Huller (antal)" inputmode="numeric" data-numpad="true" data-decimal="comma">
         </label>
         <label for="antalLukHuller"><span>Luk af hul (antal)</span>
-          <input id="antalLukHuller" placeholder="Luk af hul (antal)" inputmode="numeric">
+          <input id="antalLukHuller" placeholder="Luk af hul (antal)" inputmode="numeric" data-numpad="true" data-decimal="comma">
         </label>
         <label for="antalBoringBeton"><span>Boring i beton (antal)</span>
-          <input id="antalBoringBeton" placeholder="Boring i beton (antal)" inputmode="numeric">
+          <input id="antalBoringBeton" placeholder="Boring i beton (antal)" inputmode="numeric" data-numpad="true" data-decimal="comma">
         </label>
         <label for="antalOpskydeligt"><span>Opskydeligt rækværk (antal)</span>
-          <input id="antalOpskydeligt" placeholder="Opskydeligt rækværk (antal)" inputmode="numeric">
+          <input id="antalOpskydeligt" placeholder="Opskydeligt rækværk (antal)" inputmode="numeric" data-numpad="true" data-decimal="comma">
         </label>
         <label for="traelleloeft35"><span>Tralleløft 0,35 (antal)</span>
-          <input id="traelleloeft35" placeholder="Tralleløft 0,35 (antal)" inputmode="numeric">
+          <input id="traelleloeft35" placeholder="Tralleløft 0,35 (antal)" inputmode="numeric" data-numpad="true" data-decimal="comma">
         </label>
         <label for="traelleloeft50"><span>Tralleløft 0,50 (antal)</span>
-          <input id="traelleloeft50" placeholder="Tralleløft 0,50 (antal)" inputmode="numeric">
+          <input id="traelleloeft50" placeholder="Tralleløft 0,50 (antal)" inputmode="numeric" data-numpad="true" data-decimal="comma">
         </label>
       </div>
     </fieldset>
@@ -398,41 +399,29 @@
 </script>
 <script>
   if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/service-worker.js')
-        .then(reg => {
-        reg.onupdatefound = () => {
-          const newWorker = reg.installing;
-          if (!newWorker) return;
-          newWorker.onstatechange = () => {
-            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-              window.location.reload();
-            }
-          };
-        };
-      })
-        .catch(async error => {
-          const offline = navigator.onLine === false;
-          const networkErrorNames = new Set(['AbortError', 'NetworkError']);
-          const message = typeof error?.message === 'string' ? error.message : '';
-          const isNetworkFailure =
-            offline ||
-            (typeof error === 'object' && error !== null && networkErrorNames.has(error.name)) ||
-            /(?:offline|network)/i.test(message);
+    navigator.serviceWorker.register('/service-worker.js').catch(async error => {
+      const offline = navigator.onLine === false;
+      const networkErrorNames = new Set(['AbortError', 'NetworkError']);
+      const message = typeof error?.message === 'string' ? error.message : '';
+      const isNetworkFailure =
+        offline ||
+        (typeof error === 'object' && error !== null && networkErrorNames.has(error.name)) ||
+        /(?:offline|network)/i.test(message);
 
-          if (isNetworkFailure) {
-            console.warn('Service worker registration failed due to network issues; keeping existing worker', error);
-            return;
-          }
+      if (isNetworkFailure) {
+        console.warn('Service worker registration failed due to network issues; keeping existing worker', error);
+        return;
+      }
 
-          try {
-            const regs = await navigator.serviceWorker.getRegistrations();
-            await Promise.all(regs.map(r => r.unregister()));
-          } finally {
-            const url = new URL(window.location.href);
-            url.searchParams.set('no-sw', Date.now().toString());
-            window.location.replace(url.toString());
-          }
-        });
+      try {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map(r => r.unregister()));
+      } finally {
+        const url = new URL(window.location.href);
+        url.searchParams.set('no-sw', Date.now().toString());
+        window.location.replace(url.toString());
+      }
+    });
   }
 </script>
 </body>
