@@ -1,225 +1,115 @@
-import { CalcCore } from '../lib/calc-core.js'
-
-const BUTTON_LAYOUT = [
-  ['√', 'π', '%', '÷'],
-  ['7', '8', '9', '×'],
-  ['4', '5', '6', '−'],
-  ['1', '2', '3', '+'],
-  ['0', '.', '⌫', 'Enter']
-]
-
-const OPERATOR_MAP = new Map([
-  ['−', '-']
-])
-
-function prefersReducedMotion () {
-  if (typeof window === 'undefined') return false
-  return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+// Lightweight expression evaluator (+ - * /) with locale-safe decimals
+function evalExpr (expr) {
+  const cleaned = expr
+    .replace(/,/g, '.')
+    .replace(/×/g, '*')
+    .replace(/÷/g, '/')
+    .replace(/\s+/g, '')
+  if (!/^[0-9.+\-*/]*$/.test(cleaned)) throw new Error('Invalid')
+  // eslint-disable-next-line no-new-func
+  const val = Function(`"use strict";return (${cleaned || 0});`)()
+  if (!Number.isFinite(val)) throw new Error('NaN')
+  return val
 }
 
-export class Numpad {
-  constructor ({ root = document.body, calc } = {}) {
-    this.root = root
-    this.calc = calc || new CalcCore({ onChange: state => this._render(state) })
-    this.calc.setOnChange(state => this._render(state))
-    this.container = this._build()
-    this.expressionEl = this.container.querySelector('.csmate-expression')
-    this.displayEl = this.container.querySelector('.csmate-display')
-    this._visible = false
-    this._backspaceTimer = null
-    this._outsideHandler = event => {
-      if (!this._visible) return
-      if (!this.container.contains(event.target)) {
-        this.exitAugmentMode(false)
+export function openNumpad ({ initial = '', onConfirm } = {}) {
+  const overlay = document.createElement('div')
+  overlay.className = 'csm-np-overlay'
+  overlay.innerHTML = `
+    <div class="csm-np" role="dialog" aria-modal="true">
+      <div class="csm-np-display" id="csm-np-display" aria-live="polite">0</div>
+      <div class="csm-np-grid">
+        <button class="csm-np-btn">7</button><button class="csm-np-btn">8</button><button class="csm-np-btn">9</button><button class="csm-np-btn csm-np-op">×</button>
+        <button class="csm-np-btn">4</button><button class="csm-np-btn">5</button><button class="csm-np-btn">6</button><button class="csm-np-btn csm-np-op">÷</button>
+        <button class="csm-np-btn">1</button><button class="csm-np-btn">2</button><button class="csm-np-btn">3</button><button class="csm-np-btn csm-np-op">-</button>
+        <button class="csm-np-btn">0</button><button class="csm-np-btn">,</button><button class="csm-np-btn" data-act="clear">C</button><button class="csm-np-btn csm-np-op">+</button>
+        <button class="csm-np-btn csm-np-ok" data-act="ok">OK</button>
+      </div>
+      <div class="csm-np-foot">
+        <button class="csm-np-close" data-act="close">✕</button>
+      </div>
+    </div>
+  `
+  document.body.appendChild(overlay)
+  const display = overlay.querySelector('#csm-np-display')
+
+  let buffer = String(initial || '').trim()
+  const render = () => {
+    if (display) display.textContent = buffer || '0'
+  }
+
+  const prevOverflow = document.documentElement.style.overflow
+  document.documentElement.style.overflow = 'hidden'
+
+  const closeOverlay = () => {
+    window.removeEventListener('keydown', keyHandler)
+    document.documentElement.style.overflow = prevOverflow || ''
+    overlay.remove()
+  }
+
+  const confirmValue = () => {
+    try {
+      const out = evalExpr(buffer || '0')
+      if (typeof onConfirm === 'function') {
+        onConfirm(out)
+      }
+      closeOverlay()
+    } catch (error) {
+      if (display) {
+        display.animate([{ opacity: 1 }, { opacity: 0.2 }, { opacity: 1 }], { duration: 160 })
       }
     }
-    this._keyHandler = event => {
-      if (!this._visible) return
-      if (event.key === 'Escape') {
-        event.preventDefault()
-        this.exitAugmentMode(false)
+  }
+
+  overlay.addEventListener(
+    'click',
+    event => {
+      const target = event.target
+      if (!(target instanceof HTMLElement)) return
+      if (target.dataset.act === 'close' || target === overlay) {
+        closeOverlay()
         return
       }
-      if (this.calc.handleKey(event.key)) {
-        event.preventDefault()
-        this._vibrate()
+      if (target.dataset.act === 'clear') {
+        buffer = ''
+        render()
+        return
       }
-    }
-    document.addEventListener('keydown', this._keyHandler)
-    document.addEventListener('pointerdown', this._outsideHandler)
-    this._render(this.calc.state)
-  }
-
-  _build () {
-    const container = document.createElement('div')
-    container.className = 'csmate-numpad'
-    container.dataset.hidden = 'true'
-    container.setAttribute('role', 'dialog')
-    container.setAttribute('aria-modal', 'true')
-    container.tabIndex = -1
-
-    const handle = document.createElement('div')
-    handle.className = 'csmate-handle'
-    container.append(handle)
-
-    const header = document.createElement('div')
-    header.className = 'csmate-numpad-header'
-    header.innerHTML = '<span>CSMate</span><button type="button" class="csmate-close" aria-label="Luk">×</button>'
-    container.append(header)
-
-    const expression = document.createElement('div')
-    expression.className = 'csmate-expression'
-    container.append(expression)
-
-    const display = document.createElement('div')
-    display.className = 'csmate-display'
-    display.setAttribute('aria-live', 'polite')
-    container.append(display)
-
-    const grid = document.createElement('div')
-    grid.className = 'csmate-numpad-grid'
-    BUTTON_LAYOUT.flat().forEach(symbol => {
-      const button = document.createElement('button')
-      button.type = 'button'
-      button.dataset.key = symbol
-      button.textContent = symbol
-      button.setAttribute('aria-label', labelForKey(symbol))
-      button.addEventListener('click', () => this._handlePress(symbol))
-      if (symbol === '⌫') {
-        button.addEventListener('pointerdown', () => this._startBackspaceHold())
-        button.addEventListener('pointerup', () => this._stopBackspaceHold())
-        button.addEventListener('pointerleave', () => this._stopBackspaceHold())
+      if (target.dataset.act === 'ok') {
+        confirmValue()
+        return
       }
-      grid.append(button)
-    })
-    container.append(grid)
-
-    header.querySelector('.csmate-close').addEventListener('click', () => this.exitAugmentMode(false))
-
-    this.root.append(container)
-    return container
-  }
-
-  _handlePress (symbol) {
-    if (symbol === 'Enter') {
-      this.calc.inputEquals()
-      this._vibrate()
-      this.hide()
-      return
-    }
-    if (symbol === '⌫') {
-      this.calc.inputBackspace()
-      this._vibrate()
-      return
-    }
-    if (symbol === '√') {
-      this.calc.inputSqrt()
-      this._vibrate()
-      return
-    }
-    if (symbol === 'π') {
-      this.calc.inputPi()
-      this._vibrate()
-      return
-    }
-    if (symbol === '%') {
-      this.calc.inputPercent()
-      this._vibrate()
-      return
-    }
-    if (symbol === '.') {
-      this.calc.inputDecimal()
-      this._vibrate()
-      return
-    }
-    if (/^[0-9]$/.test(symbol)) {
-      this.calc.inputDigit(symbol)
-      this._vibrate()
-      return
-    }
-    const normalised = OPERATOR_MAP.get(symbol) || symbol
-    this.calc.inputOperator(normalised)
-    this._vibrate()
-  }
-
-  _startBackspaceHold () {
-    this._stopBackspaceHold()
-    this._backspaceTimer = window.setTimeout(() => {
-      this.calc.inputBackspace({ clearAll: true })
-      this._vibrate()
-    }, 600)
-  }
-
-  _stopBackspaceHold () {
-    if (this._backspaceTimer) {
-      window.clearTimeout(this._backspaceTimer)
-      this._backspaceTimer = null
-    }
-  }
-
-  _render (state) {
-    if (!this.expressionEl || !this.displayEl) return
-    this.expressionEl.textContent = state.expression || ''
-    const value = state.augment && state.preview != null ? state.preview : state.display
-    this.displayEl.textContent = value
-  }
-
-  enterAugmentMode (config) {
-    this.calc.enterAugmentMode(config)
-    this.show()
-  }
-
-  exitAugmentMode (commit) {
-    const augment = this.calc.exitAugmentMode(commit)
-    if (augment && augment.targetEl && commit) {
-      const value = this.calc.getDisplay()
-      augment.targetEl.value = value
-      if (typeof augment.onCommit === 'function') {
-        augment.onCommit(Number(value))
+      if (target.classList.contains('csm-np-btn') && !target.dataset.act) {
+        buffer += target.textContent.trim()
+        render()
       }
+    },
+    { passive: true }
+  )
+
+  const keyHandler = event => {
+    if (event.key === 'Escape') {
+      closeOverlay()
+      return
     }
-    this.hide()
-  }
-
-  show () {
-    this._visible = true
-    this.container.dataset.hidden = 'false'
-    this.container.focus()
-  }
-
-  hide () {
-    this._visible = false
-    this.container.dataset.hidden = 'true'
-  }
-
-  destroy () {
-    document.removeEventListener('keydown', this._keyHandler)
-    document.removeEventListener('pointerdown', this._outsideHandler)
-    this.container.remove()
-  }
-
-  _vibrate () {
-    if (prefersReducedMotion()) return
-    try {
-      if (navigator?.vibrate) {
-        navigator.vibrate(10)
-      }
-    } catch (err) {
-      // ignore vibration errors
+    if (event.key === 'Enter') {
+      confirmValue()
+      return
+    }
+    if (event.key === 'Backspace') {
+      buffer = buffer.slice(0, -1)
+      render()
+      return
+    }
+    if ('0123456789+-*/.,xX'.includes(event.key)) {
+      const key = event.key.replace('x', '×').replace('X', '×').replace('.', ',')
+      buffer += key
+      render()
     }
   }
+  window.addEventListener('keydown', keyHandler)
+
+  render()
 }
 
-function labelForKey (symbol) {
-  switch (symbol) {
-    case '√': return 'Kvadratrod'
-    case 'π': return 'Pi'
-    case '%': return 'Procent'
-    case '÷': return 'Divider'
-    case '×': return 'Gange'
-    case '−': return 'Minus'
-    case '⌫': return 'Slet'
-    case 'Enter': return 'Beregn'
-    default: return symbol
-  }
-}
+export { evalExpr }

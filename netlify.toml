@@ -2,25 +2,38 @@
   command = ""
   publish = "."
 
-# SPA redirect - route everything to index.html
+# Ensure the SPA always resolves to the latest HTML shell
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
 
-# Service worker should never be aggressively cached
 [[headers]]
+  for = "/index.html"
+  [headers.values]
+  Cache-Control = "no-cache, no-store, must-revalidate"
+  Pragma = "no-cache"
+  Expires = "0"
+
+[[headers]]
+  for = "/"
+  [headers.values]
+  Cache-Control = "no-cache, no-store, must-revalidate"
+
+[[headers]]
+  # Service worker should never be cached by the edge
   for = "/service-worker.js"
   [headers.values]
-  Cache-Control = "no-store"
+  Cache-Control = "no-cache, no-store, must-revalidate"
+  Service-Worker-Allowed = "/"
 
 [[headers]]
   for = "/manifest.json"
   [headers.values]
   Cache-Control = "max-age=300"
 
-# Cache the rest for 1 week (tune to taste)
 [[headers]]
-  for = "/*"
+  # Long-term cache for hashed asset bundles
+  for = "/assets/*"
   [headers.values]
-  Cache-Control = "public, max-age=604800"
+  Cache-Control = "public, max-age=31536000, immutable"
