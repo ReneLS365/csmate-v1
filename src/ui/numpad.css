@@ -1,105 +1,12 @@
-.csmate-numpad {
-  font-family: system-ui, sans-serif;
-  position: fixed;
-  inset: auto 0 0 0;
-  background: rgba(15, 23, 42, 0.9);
-  color: #fff;
-  z-index: 1000;
-  display: grid;
-  gap: 0.5rem;
-  padding: 0.75rem;
-  box-shadow: 0 -12px 32px rgba(15, 23, 42, 0.35);
-  backdrop-filter: blur(10px);
-}
-
-.csmate-numpad[data-hidden="true"] {
-  display: none;
-}
-
-.csmate-numpad-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.csmate-numpad .csmate-expression {
-  min-height: 1.25rem;
-  font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.65);
-}
-
-.csmate-numpad .csmate-display {
-  font-size: clamp(1.8rem, 5vw, 2.4rem);
-  font-variant-numeric: tabular-nums;
-  font-weight: 600;
-  min-height: 2.4rem;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-}
-
-.csmate-numpad-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(44px, 1fr));
-  gap: 0.4rem;
-}
-
-.csmate-numpad button {
-  font: inherit;
-  border: none;
-  border-radius: 12px;
-  padding: 0.75rem;
-  min-height: 52px;
-  min-width: 44px;
-  background: rgba(255, 255, 255, 0.1);
-  color: inherit;
-  cursor: pointer;
-  transition: transform 0.12s ease, background 0.12s ease;
-}
-
-.csmate-numpad button:active {
-  transform: translateY(1px) scale(0.98);
-  background: rgba(255, 255, 255, 0.2);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .csmate-numpad button {
-    transition: none;
-  }
-}
-
-.csmate-numpad button[data-key="Enter"] {
-  grid-column: span 1;
-  background: #22c55e;
-  color: #0f172a;
-  font-weight: 700;
-}
-
-.csmate-numpad button[data-key="⌫"] {
-  background: #ef4444;
-  color: #fff;
-}
-
-.csmate-numpad button:focus-visible {
-  outline: 3px solid rgba(94, 234, 212, 0.8);
-  outline-offset: 1px;
-}
-
-.csmate-numpad .csmate-handle {
-  width: 3rem;
-  height: 0.25rem;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.35);
-  margin: 0 auto;
-}
-
-@media (min-width: 600px) {
-  .csmate-numpad {
-    max-width: 420px;
-    margin: 0 auto;
-    border-radius: 20px 20px 0 0;
-  }
-}
+/* Fullscreen modal */
+.csm-np-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;z-index:9999}
+.csm-np{width:100%;background:#1e1f22;color:#e7e7e7;border-radius:16px 16px 0 0;padding:16px}
+.csm-np-display{font-size:28px;text-align:right;padding:12px 16px;background:#2a2b30;border-radius:12px;margin-bottom:12px;min-height:48px;overflow-x:auto}
+.csm-np-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.csm-np-btn{padding:18px 0;border-radius:12px;background:#2f3136;border:0;color:#fff;font-size:20px}
+.csm-np-btn:active{transform:scale(.98)}
+.csm-np-op{background:#3b3e45}
+.csm-np-ok{background:#4b5563;font-weight:700}
+.csm-np-foot{margin-top:12px}
+.csm-np-close{width:100%;padding:16px 0;border-radius:12px;border:0;background:#2a2b30;color:#cfcfcf;font-size:18px}
+@media (min-width:768px){.csm-np{max-width:480px;margin:0 auto}}

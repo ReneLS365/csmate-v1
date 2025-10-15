@@ -1,5 +1,5 @@
 import './src/features/pctcalc/pctcalc.js'
-import { Numpad } from './src/ui/numpad.js'
+import { initNumpadBinding } from './src/ui/numpad.init.js'
 import { normalizeKey } from './src/lib/string-utils.js'
 import { EXCLUDED_MATERIAL_KEYS, shouldExcludeMaterialEntry } from './src/lib/materials/exclusions.js'
 
@@ -1154,7 +1154,7 @@ function updateSelectedSummary() {
       }
     }
     const qtyInput = row.querySelector('input.qty,input.quantity');
-    const qty = parseFloat(qtyInput?.value || '0') || 0;
+    const qty = toNumber(qtyInput?.value);
     if (qty > 0) {
       selected.push({ name, qty });
     }
@@ -1189,7 +1189,7 @@ function updateMaterialVisibility() {
   const rows = document.querySelectorAll('#optaellingContainer .material-row');
 
   rows.forEach(row => {
-    const qty = parseFloat(row.querySelector('input.qty,input.quantity')?.value || '0') || 0;
+    const qty = toNumber(row.querySelector('input.qty,input.quantity')?.value);
     row.style.display = (!only || qty > 0) ? '' : 'none';
   });
 }
@@ -2052,7 +2052,7 @@ function addWorker() {
     <div class="worker-grid">
       <label>
         <span>Timer</span>
-        <input type="number" class="worker-hours" value="0" min="0" step="0.25" inputmode="decimal">
+        <input type="number" class="worker-hours" value="0" min="0" step="0.25" inputmode="decimal" data-numpad="true" data-decimal="comma">
       </label>
       <label>
         <span>Uddannelse</span>
@@ -2063,7 +2063,7 @@ function addWorker() {
       </label>
       <label>
         <span>Mentortillæg (22,26 kr/t)</span>
-        <input type="number" class="worker-tillaeg" value="0" min="0" step="0.01" inputmode="decimal">
+        <input type="number" class="worker-tillaeg" value="0" min="0" step="0.01" inputmode="decimal" data-numpad="true" data-decimal="comma">
       </label>
     </div>
     <div class="worker-output" aria-live="polite"></div>
@@ -2094,9 +2094,9 @@ async function loadLocalData(key) {
 function beregnLon() {
   const info = collectSagsinfo();
   const sagsnummer = info.sagsnummer?.trim() || 'uspecified';
-  const montagepris = parseFloat(document.getElementById('montagepris')?.value) || 0;
-  const demontagepris = parseFloat(document.getElementById('demontagepris')?.value) || 0;
-  const slaebePctInput = parseFloat(document.getElementById('slaebePct')?.value) || 0;
+  const montagepris = toNumber(document.getElementById('montagepris')?.value);
+  const demontagepris = toNumber(document.getElementById('demontagepris')?.value);
+  const slaebePctInput = toNumber(document.getElementById('slaebePct')?.value);
   const slaebePct = slaebePctInput / 100;
   const jobType = document.getElementById('jobType')?.value || 'montage';
 
@@ -2110,14 +2110,14 @@ function beregnLon() {
   const tillægUdd2 = 49.38;
   lastEkompletData = null;
 
-  const antalBoringHuller = parseFloat(document.getElementById('antalBoringHuller')?.value) || 0;
-  const antalLukHuller = parseFloat(document.getElementById('antalLukHuller')?.value) || 0;
-  const antalBoringBeton = parseFloat(document.getElementById('antalBoringBeton')?.value) || 0;
-  const antalOpskydeligt = parseFloat(document.getElementById('antalOpskydeligt')?.value) || 0;
-  const antalKm = parseFloat(document.getElementById('km')?.value) || 0;
+  const antalBoringHuller = toNumber(document.getElementById('antalBoringHuller')?.value);
+  const antalLukHuller = toNumber(document.getElementById('antalLukHuller')?.value);
+  const antalBoringBeton = toNumber(document.getElementById('antalBoringBeton')?.value);
+  const antalOpskydeligt = toNumber(document.getElementById('antalOpskydeligt')?.value);
+  const antalKm = toNumber(document.getElementById('km')?.value);
 
-  const traelle35 = parseFloat(document.getElementById('traelleloeft35')?.value) || 0;
-  const traelle50 = parseFloat(document.getElementById('traelleloeft50')?.value) || 0;
+  const traelle35 = toNumber(document.getElementById('traelleloeft35')?.value);
+  const traelle50 = toNumber(document.getElementById('traelleloeft50')?.value);
 
   const boringHullerTotal = antalBoringHuller * boringHullerPris;
   const lukHullerTotal = antalLukHuller * lukHullerPris;
@@ -2182,7 +2182,7 @@ function beregnLon() {
 
   workers.forEach(worker => {
     const hoursEl = worker.querySelector('.worker-hours');
-    const hours = parseFloat(hoursEl?.value) || 0;
+    const hours = toNumber(hoursEl?.value);
     if (hours === 0) return;
     samletTimer += hours;
   });
@@ -2203,9 +2203,9 @@ function beregnLon() {
   const akkordTimeLøn = samletAkkordSum / samletTimer;
 
   workers.forEach((worker, index) => {
-    const hours = parseFloat(worker.querySelector('.worker-hours')?.value) || 0;
+    const hours = toNumber(worker.querySelector('.worker-hours')?.value);
     if (hours === 0) return;
-    const tillaeg = parseFloat(worker.querySelector('.worker-tillaeg')?.value) || 0;
+    const tillaeg = toNumber(worker.querySelector('.worker-tillaeg')?.value);
     const uddSelect = worker.querySelector('.worker-udd');
     const udd = uddSelect?.value || '';
     const outputEl = worker.querySelector('.worker-output');
@@ -2961,137 +2961,6 @@ function uploadCSV(file) {
   reader.readAsText(file, 'utf-8');
 }
 
-
-// --- CSMate Numpad Integration ---
-function setupGlobalNumpad() {
-  const numpad = new Numpad({ root: document.body });
-  let activeInput = null;
-
-  const originalExit = numpad.exitAugmentMode.bind(numpad);
-  numpad.exitAugmentMode = (commit, overrideValue) => {
-    const result = originalExit(commit, overrideValue);
-    if (!commit) {
-      activeInput = null;
-    }
-    return result;
-  };
-
-  function openForInput(input) {
-    const baseValue = parseNumpadBaseValue(input);
-    const operator = input.dataset.numpadOperator || '+';
-    const decimalsAttr = input.dataset.numpadDecimals;
-    const decimals = decimalsAttr != null ? Number.parseInt(decimalsAttr, 10) : null;
-    const preferComma = shouldPreferCommaFormatting(input);
-
-    activeInput = input;
-
-    numpad.enterAugmentMode({
-      base: baseValue,
-      operator,
-      targetEl: input,
-      onCommit: value => {
-        const formatted = formatNumpadCommitValue(value, {
-          decimals: Number.isFinite(decimals) ? decimals : null,
-          preferComma,
-          inputType: (input.getAttribute('type') || '').toLowerCase(),
-        });
-        input.value = formatted;
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-        input.dispatchEvent(new Event('change', { bubbles: true }));
-        activeInput = null;
-      },
-    });
-
-    requestAnimationFrame(() => {
-      if (typeof input.blur === 'function') {
-        input.blur();
-      }
-    });
-  }
-
-  function handleFocusIn(event) {
-    const target = event.target;
-    if (numpad.container?.contains(target)) return;
-
-    if (target instanceof HTMLInputElement) {
-      if (!shouldAttachNumpad(target)) {
-        if (activeInput && target !== activeInput) {
-          numpad.exitAugmentMode(false);
-        }
-        return;
-      }
-
-      if (target === activeInput) return;
-      openForInput(target);
-      return;
-    }
-
-    if (activeInput) {
-      numpad.exitAugmentMode(false);
-    }
-  }
-
-  document.addEventListener('focusin', handleFocusIn, true);
-}
-
-function shouldAttachNumpad(input) {
-  if (!(input instanceof HTMLInputElement)) return false;
-  if (input.disabled || input.readOnly) return false;
-  if (input.dataset.numpad === 'false') return false;
-
-  const type = (input.getAttribute('type') || '').toLowerCase();
-  if (['date', 'datetime-local', 'month', 'time', 'week'].includes(type)) {
-    return false;
-  }
-
-  if (input.dataset.numpad === 'true') return true;
-  if (type === 'number') return true;
-
-  const inputmode = (input.getAttribute('inputmode') || '').toLowerCase();
-  return inputmode === 'numeric' || inputmode === 'decimal';
-}
-
-function parseNumpadBaseValue(input) {
-  if (!input) return 0;
-  return toNumber(input.value ?? 0);
-}
-
-function shouldPreferCommaFormatting(input) {
-  if (!input) return false;
-  const locale = input.dataset.numpadLocale;
-  if (locale === 'da' || locale === 'comma') return true;
-  if (locale === 'en' || locale === 'dot') return false;
-
-  const raw = input.value || '';
-  if (raw.includes(',') && !raw.includes('.')) return true;
-
-  const placeholder = input.getAttribute('placeholder') || '';
-  if (placeholder.includes(',') && !placeholder.includes('.')) return true;
-
-  return false;
-}
-
-function formatNumpadCommitValue(value, { decimals = null, preferComma = false, inputType = '' } = {}) {
-  if (!Number.isFinite(value)) return '';
-
-  let numeric = Number(value);
-  if (Object.is(numeric, -0)) numeric = 0;
-
-  let text;
-  if (Number.isInteger(decimals) && decimals >= 0) {
-    text = numeric.toFixed(decimals);
-  } else {
-    const rounded = Number.parseFloat(numeric.toFixed(12));
-    text = String(rounded);
-  }
-
-  if (preferComma && inputType !== 'number') {
-    text = text.replace('.', ',');
-  }
-
-  return text;
-}
-
 function setupMobileKeyboardDismissal() {
   document.addEventListener('keydown', event => {
     if (event.key !== 'Enter') return;
@@ -3116,6 +2985,48 @@ function setupMobileKeyboardDismissal() {
       }
     }
   });
+}
+
+function setupServiceWorkerMessaging() {
+  if (!('serviceWorker' in navigator)) return;
+  navigator.serviceWorker.addEventListener('message', event => {
+    if (event.data?.type === 'CSMATE_UPDATED') {
+      window.location.reload();
+    }
+  });
+}
+
+async function hardResetApp() {
+  if (navigator.serviceWorker) {
+    const regs = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(regs.map(reg => reg.unregister()));
+  }
+
+  if (window.caches) {
+    const names = await caches.keys();
+    await Promise.all(names.map(name => caches.delete(name)));
+  }
+
+  if (window.indexedDB) {
+    const dbs = await indexedDB.databases?.() || [];
+    await Promise.all(dbs.map(db => new Promise(resolve => {
+      if (!db?.name) {
+        resolve();
+        return;
+      }
+      const request = indexedDB.deleteDatabase(db.name);
+      request.onsuccess = request.onerror = request.onblocked = () => resolve();
+    })));
+  }
+
+  try {
+    window.localStorage?.clear();
+  } catch {}
+  try {
+    window.sessionStorage?.clear();
+  } catch {}
+
+  window.location.reload(true);
 }
 
 
@@ -3223,8 +3134,13 @@ function initApp() {
 
   validateSagsinfo();
   updateTotals(true);
-  setupGlobalNumpad();
+  initNumpadBinding();
   setupMobileKeyboardDismissal();
+  setupServiceWorkerMessaging();
+
+  document.getElementById('btnHardResetApp')?.addEventListener('click', () => {
+    hardResetApp();
+  });
 
   const calendarIcon = document.getElementById('calendarIcon');
   if (calendarIcon) {
