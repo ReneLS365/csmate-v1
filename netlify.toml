@@ -1,5 +1,5 @@
 [build]
-  command = ""
+  command = "npm run build"
   publish = "."
 
 # Ensure the SPA always resolves to the latest HTML shell
