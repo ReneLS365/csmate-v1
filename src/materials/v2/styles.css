@@ -1,0 +1,143 @@
+.materials-v2 {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-family: inherit;
+}
+
+.materials-v2__header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.materials-v2__header h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.materials-v2__firm-select {
+  display: flex;
+  flex-direction: column;
+  font-size: 0.875rem;
+  gap: 4px;
+}
+
+.materials-v2__grid {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.materials-v2__row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1fr;
+  gap: 8px;
+  align-items: center;
+}
+
+.materials-v2__row--header {
+  font-weight: 600;
+  border-bottom: 1px solid #d9d9d9;
+  padding-bottom: 4px;
+}
+
+.materials-v2__cell {
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+}
+
+.materials-v2__cell--total {
+  justify-content: flex-end;
+  font-variant-numeric: tabular-nums;
+}
+
+.materials-v2__input {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid #c7c7c7;
+  border-radius: 4px;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  background: #fff;
+}
+
+.materials-v2__input[readonly] {
+  background: #f5f5f5;
+  border-style: dashed;
+  color: #555;
+}
+
+.materials-v2__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.materials-v2__save {
+  align-self: flex-end;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: none;
+  background: #0b6efd;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.materials-v2__save:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.materials-v2__admin {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid #d0d0d0;
+  border-radius: 6px;
+  background: #fafafa;
+}
+
+.materials-v2__admin-status {
+  font-weight: 600;
+}
+
+.materials-v2__admin-form {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.materials-v2__admin-form button {
+  padding: 6px 12px;
+  border-radius: 4px;
+  border: 1px solid #b5b5b5;
+  background: #fff;
+  cursor: pointer;
+}
+
+.materials-v2__admin-message {
+  font-size: 0.85rem;
+  color: #444;
+  min-height: 1em;
+}
+
+@media (max-width: 720px) {
+  .materials-v2__row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .materials-v2__cell--total {
+    justify-content: flex-start;
+  }
+
+  .materials-v2__row--header {
+    display: none;
+  }
+}
