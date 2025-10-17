@@ -68,6 +68,24 @@ function buildEnvKey(firmId) {
   return `FIRM_${firmId.replace(/[^a-z0-9]/gi, '_').toUpperCase()}_HASH`;
 }
 
+async function getFirmHash(firmId) {
+  const envKey = buildEnvKey(firmId);
+  return process.env[envKey] || process.env.FIRM_DEFAULT_HASH || '';
+}
+
+async function verifyAdminCode(firmId, code, providedHash) {
+  const hash = providedHash || (await getFirmHash(firmId));
+  if (!hash || typeof code !== 'string' || !code) {
+    return false;
+  }
+  try {
+    return await bcrypt.compare(code, hash);
+  } catch (error) {
+    console.error('Fejl ved kode verifikation', error);
+    return false;
+  }
+}
+
 async function handleVerify(body) {
   const firmId = sanitizeFirmId(body?.firmId);
   const code = typeof body?.code === 'string' ? body.code : '';
@@ -79,8 +97,7 @@ async function handleVerify(body) {
     };
   }
 
-  const envKey = buildEnvKey(firmId);
-  const hash = process.env[envKey] || process.env.FIRM_DEFAULT_HASH || '';
+  const hash = await getFirmHash(firmId);
   if (!hash) {
     return {
       statusCode: 401,
@@ -89,7 +106,7 @@ async function handleVerify(body) {
     };
   }
 
-  const verified = await bcrypt.compare(code, hash);
+  const verified = await verifyAdminCode(firmId, code, hash);
   return {
     statusCode: verified ? 200 : 401,
     headers: { 'Content-Type': 'application/json' },
@@ -99,6 +116,15 @@ async function handleVerify(body) {
 
 async function handleUpdate(body) {
   const firmId = sanitizeFirmId(body?.firmId);
+  const code = typeof body?.code === 'string' ? body.code : '';
+  const authorized = await verifyAdminCode(firmId, code);
+  if (!authorized) {
+    return {
+      statusCode: 401,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: 'Ugyldig eller manglende kode' })
+    };
+  }
   const updates = body?.updates && typeof body.updates === 'object' ? body.updates : {};
   const removals = Array.isArray(body?.removals) ? body.removals : [];
   const allowedIds = await getAllowedIds();
