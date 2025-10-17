@@ -1,0 +1,12 @@
+[
+  { "id": "B001", "name": "Spindelfod kort", "unit": "stk", "price": 2.675425 },
+  { "id": "B002", "name": "Spindelfod lang", "unit": "stk", "price": 2.675425 },
+  { "id": "B005", "name": "Ramme 200/70", "unit": "stk", "price": 16.7053537 },
+  { "id": "B010", "name": "Gulvplade 300/70", "unit": "stk", "price": 16.7053537 },
+  { "id": "B011", "name": "Gulvplade 250/70", "unit": "stk", "price": 12.5316907 },
+  { "id": "B024", "name": "Ståldæk 300/35", "unit": "stk", "price": 15.66 },
+  { "id": "B030", "name": "Diagonaler 200", "unit": "stk", "price": 9.3960926 },
+  { "id": "M036", "name": "Profildæk 70/350", "unit": "stk", "price": 16.71 },
+  { "id": "M037", "name": "Profildæk 70/300", "unit": "stk", "price": 16.71 },
+  { "id": "M073", "name": "Udd. tillæg 1", "unit": "stk", "price": 42.98 }
+]

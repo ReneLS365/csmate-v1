@@ -37,3 +37,14 @@
   for = "/assets/*"
   [headers.values]
   Cache-Control = "public, max-age=31536000, immutable"
+
+[functions]
+  included_files = ["data/materials.json", "data/tenants/*.json"]
+
+[context.production.environment]
+  FF_MATERIALS_V2 = "false"
+  FF_TENANT_PRICES = "false"
+
+[context.deploy-preview.environment]
+  FF_MATERIALS_V2 = "true"
+  FF_TENANT_PRICES = "true"
