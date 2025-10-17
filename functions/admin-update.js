@@ -116,23 +116,11 @@ async function handleVerify(body) {
 
 async function handleUpdate(body) {
   const firmId = sanitizeFirmId(body?.firmId);
-  const code = typeof body?.code === 'string' ? body.code : '';
-  const authorized = await verifyAdminCode(firmId, code);
-  if (!authorized) {
-    return {
-      statusCode: 401,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: 'Ugyldig eller manglende kode' })
-    };
-  }
   const updates = body?.updates && typeof body.updates === 'object' ? body.updates : {};
   const removals = Array.isArray(body?.removals) ? body.removals : [];
   const allowedIds = await getAllowedIds();
-  const existing = await readJson(path.join(TENANTS_DIR, `${firmId}.json`));
-  const next = { ...existing };
 
-  const changed = new Set();
-
+  const normalizedUpdates = {};
   for (const [id, value] of Object.entries(updates)) {
     if (!allowedIds.has(id)) {
       return {
@@ -149,13 +137,30 @@ async function handleUpdate(body) {
         body: JSON.stringify({ error: `Ugyldig pris for ${id}` })
       };
     }
-    const rounded = Math.round(price * 100) / 100;
+    normalizedUpdates[id] = Math.round(price * 100) / 100;
+  }
+
+  const code = typeof body?.code === 'string' ? body.code : '';
+  const authorized = await verifyAdminCode(firmId, code);
+  if (!authorized) {
+    return {
+      statusCode: 401,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: 'Ugyldig eller manglende kode' })
+    };
+  }
+
+  const existing = await readJson(path.join(TENANTS_DIR, `${firmId}.json`));
+  const next = { ...existing };
+  const changed = new Set();
+
+  for (const [id, rounded] of Object.entries(normalizedUpdates)) {
     next[id] = rounded;
     changed.add(id);
   }
 
   removals.forEach(id => {
-    if (allowedIds.has(id) && id in next) {
+    if (id in next) {
       delete next[id];
       changed.add(id);
     }
