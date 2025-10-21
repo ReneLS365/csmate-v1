@@ -38,6 +38,7 @@ describe('admin-update handler', () => {
       body: JSON.stringify({
         action: 'update_prices',
         firmId: 'test',
+        code: 'hemmelig',
         updates: { UNKNOWN: 10 }
       })
     });
