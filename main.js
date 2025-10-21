@@ -1814,8 +1814,8 @@ function populateWorkersFromLabor(entries) {
     if (!worker) return;
     const hoursInput = worker.querySelector('.worker-hours');
     const tillaegInput = worker.querySelector('.worker-tillaeg');
-    if (hoursInput) hoursInput.value = toNumber(entry.hours);
-    if (tillaegInput) tillaegInput.value = 0;
+    if (hoursInput) hoursInput.value = formatNumber(toNumber(entry.hours));
+    if (tillaegInput) tillaegInput.value = formatNumber(0);
   });
 }
 
@@ -2052,7 +2052,7 @@ function addWorker() {
     <div class="worker-grid">
       <label>
         <span>Timer</span>
-        <input type="number" class="worker-hours" value="0" min="0" step="0.25" inputmode="decimal" data-numpad="true" data-decimal="comma">
+        <input type="text" class="worker-hours" value="0" inputmode="decimal" data-numpad="true" data-decimal="comma">
       </label>
       <label>
         <span>Uddannelse</span>
@@ -2063,7 +2063,7 @@ function addWorker() {
       </label>
       <label>
         <span>Mentortillæg (22,26 kr/t)</span>
-        <input type="number" class="worker-tillaeg" value="0" min="0" step="0.01" inputmode="decimal" data-numpad="true" data-decimal="comma">
+        <input type="text" class="worker-tillaeg" value="0" inputmode="decimal" data-numpad="true" data-decimal="comma">
       </label>
     </div>
     <div class="worker-output" aria-live="polite"></div>
