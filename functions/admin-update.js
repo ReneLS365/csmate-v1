@@ -116,22 +116,11 @@ async function handleVerify(body) {
 
 async function handleUpdate(body) {
   const firmId = sanitizeFirmId(body?.firmId);
-  const code = typeof body?.code === 'string' ? body.code : '';
-  const authorized = await verifyAdminCode(firmId, code);
-  if (!authorized) {
-    return {
-      statusCode: 401,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: 'Ugyldig eller manglende kode' })
-    };
-  }
   const updates = body?.updates && typeof body.updates === 'object' ? body.updates : {};
   const removals = Array.isArray(body?.removals) ? body.removals : [];
   const allowedIds = await getAllowedIds();
-  const existing = await readJson(path.join(TENANTS_DIR, `${firmId}.json`));
-  const next = { ...existing };
 
-  const changed = new Set();
+  const normalizedUpdates = new Map();
 
   for (const [id, value] of Object.entries(updates)) {
     if (!allowedIds.has(id)) {
@@ -150,7 +139,25 @@ async function handleUpdate(body) {
       };
     }
     const rounded = Math.round(price * 100) / 100;
-    next[id] = rounded;
+    normalizedUpdates.set(id, rounded);
+  }
+
+  const code = typeof body?.code === 'string' ? body.code : '';
+  const authorized = await verifyAdminCode(firmId, code);
+  if (!authorized) {
+    return {
+      statusCode: 401,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ error: 'Ugyldig eller manglende kode' })
+    };
+  }
+
+  const existing = await readJson(path.join(TENANTS_DIR, `${firmId}.json`));
+  const next = { ...existing };
+  const changed = new Set();
+
+  for (const [id, price] of normalizedUpdates.entries()) {
+    next[id] = price;
     changed.add(id);
   }
 
