@@ -917,10 +917,9 @@ function renderOptaelling() {
     qtyInput.id = qtyInputId;
     qtyInput.name = `qty[${item.id}]`;
     qtyInput.dataset.field = 'qty';
-    qtyInput.inputMode = 'numeric';
-    qtyInput.pattern = '[0-9]*';
+    qtyInput.inputMode = 'decimal';
     qtyInput.autocomplete = 'off';
-    qtyInput.step = '1';
+    qtyInput.step = '0.01';
     qtyInput.min = '0';
     qtyInput.dataset.numpad = 'true';
     qtyInput.placeholder = '0';
