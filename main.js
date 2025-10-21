@@ -3,6 +3,20 @@ import { initNumpadBinding } from './src/ui/numpad.init.js'
 import { normalizeKey } from './src/lib/string-utils.js'
 import { EXCLUDED_MATERIAL_KEYS, shouldExcludeMaterialEntry } from './src/lib/materials/exclusions.js'
 
+const MATERIAL_LIST_STYLE_ID = 'material-list-styles'
+const MATERIAL_LIST_STYLE_HREF = 'src/materials/styles/material-list.css'
+
+function ensureMaterialListStyles () {
+  if (typeof document === 'undefined') return
+  if (document.getElementById(MATERIAL_LIST_STYLE_ID)) return
+
+  const link = document.createElement('link')
+  link.id = MATERIAL_LIST_STYLE_ID
+  link.rel = 'stylesheet'
+  link.href = MATERIAL_LIST_STYLE_HREF
+  document.head.appendChild(link)
+}
+
 // --- Utility Functions ---
 function resolveSectionId(id) {
   if (!id) return '';
@@ -827,25 +841,27 @@ function renderOptaelling() {
     return;
   }
 
-  let list = container.querySelector('.materials-list');
+  ensureMaterialListStyles();
+
+  let list = container.querySelector('.ml-container');
   if (!list) {
     container.textContent = '';
-    list = document.createElement('div');
-    list.className = 'materials-list';
+    list = document.createElement('section');
+    list.className = 'ml-container';
     container.appendChild(list);
   } else {
     container.querySelectorAll('.empty-state').forEach(node => node.remove());
   }
 
-  let header = list.querySelector('.materials-header');
+  let header = list.querySelector('.ml-header');
   if (!header) {
     header = document.createElement('div');
-    header.className = 'materials-header';
+    header.className = 'ml-header';
     header.innerHTML = `
-      <span class="header-material">Materiale</span>
-      <span class="header-qty">Antal</span>
-      <span class="header-price">Pris</span>
-      <span class="header-total">Linjetotal</span>
+      <div>Materiale</div>
+      <div>Antal</div>
+      <div>Pris</div>
+      <div>I alt</div>
     `;
     list.prepend(header);
   }
@@ -854,11 +870,11 @@ function renderOptaelling() {
     list.insertBefore(header, list.firstElementChild);
   }
 
-  Array.from(list.querySelectorAll('.material-row')).forEach(row => row.remove());
+  Array.from(list.querySelectorAll('.ml-row')).forEach(row => row.remove());
 
   items.forEach(item => {
     const row = document.createElement('div');
-    row.className = `material-row mat-row${item.manual ? ' manual' : ''}`;
+    row.className = `ml-row${item.manual ? ' ml-row--manual' : ''}`;
     row.dataset.itemId = item.id;
     if (item.systemKey) {
       row.dataset.system = item.systemKey;
@@ -867,48 +883,48 @@ function renderOptaelling() {
     const sanitizedId = String(item.id).replace(/[^a-zA-Z0-9_-]+/g, '-');
     const qtyInputId = `qty-${sanitizedId}`;
 
-    const nameLabel = document.createElement('label');
-    nameLabel.className = 'mat-name';
-    nameLabel.htmlFor = qtyInputId;
+    const nameCell = document.createElement('div');
+    nameCell.className = 'ml-name';
+    nameCell.title = item.manual ? `ID: ${item.id}` : item.name;
 
     if (item.manual) {
-      const manualWrapper = document.createElement('div');
-      manualWrapper.className = 'manual-name-wrapper';
-      manualWrapper.title = `ID: ${item.id}`;
-
       const nameInput = document.createElement('input');
       nameInput.type = 'text';
       nameInput.className = 'manual-name';
       nameInput.dataset.id = item.id;
       nameInput.placeholder = 'Materiale';
       nameInput.value = item.name || '';
-      manualWrapper.appendChild(nameInput);
-
-      nameLabel.appendChild(manualWrapper);
-      nameLabel.classList.add('manual-name-cell');
+      nameInput.setAttribute('aria-label', `Materialenavn for ${item.id}`);
+      nameCell.appendChild(nameInput);
     } else {
       const systemLabel = item.systemKey ? systemLabelMap.get(item.systemKey) || item.systemKey : '';
-      const badge = systemLabel ? `<span class="system-badge">${systemLabel}</span>` : '';
-      const nameWrapper = document.createElement('div');
-      nameWrapper.className = 'item-name-wrapper';
-      nameWrapper.innerHTML = `
-        <div class="item-name">${item.name}${badge}</div>
-      `;
-      nameWrapper.title = `Varenr. ${item.id}`;
-      nameLabel.appendChild(nameWrapper);
+      const nameText = document.createElement('span');
+      nameText.className = 'ml-name-text';
+      nameText.textContent = item.name;
+      nameCell.appendChild(nameText);
+      if (systemLabel) {
+        const badge = document.createElement('span');
+        badge.className = 'system-badge';
+        badge.textContent = systemLabel;
+        nameCell.appendChild(badge);
+      }
     }
 
     const qtyInput = document.createElement('input');
     qtyInput.type = 'number';
-    qtyInput.className = 'qty mat-qty';
+    qtyInput.className = 'ml-qty qty';
     qtyInput.dataset.id = item.id;
     qtyInput.id = qtyInputId;
     qtyInput.name = `qty[${item.id}]`;
-    qtyInput.inputMode = 'decimal';
+    qtyInput.dataset.field = 'qty';
+    qtyInput.inputMode = 'numeric';
+    qtyInput.pattern = '[0-9]*';
     qtyInput.autocomplete = 'off';
-    qtyInput.step = '0.01';
+    qtyInput.step = '1';
+    qtyInput.min = '0';
     qtyInput.dataset.numpad = 'true';
-    qtyInput.setAttribute('aria-label', 'Antal');
+    qtyInput.placeholder = '0';
+    qtyInput.setAttribute('aria-label', `Antal for ${item.name}`);
     if (item.manual) {
       qtyInput.placeholder = 'Antal';
       const hasQuantity = item.quantity !== null && item.quantity !== undefined && item.quantity !== '';
@@ -918,9 +934,13 @@ function renderOptaelling() {
       qtyInput.value = String(qtyValue);
     }
 
+    const priceCell = document.createElement('div');
+    priceCell.className = 'ml-price';
+    priceCell.setAttribute('aria-label', 'Pris pr. enhed');
+
     const priceInput = document.createElement('input');
     priceInput.type = 'number';
-    priceInput.className = 'price mat-price';
+    priceInput.className = 'ml-price-input price';
     priceInput.dataset.id = item.id;
     priceInput.id = `price-${sanitizedId}`;
     priceInput.name = `price[${item.id}]`;
@@ -929,6 +949,7 @@ function renderOptaelling() {
     priceInput.step = '0.01';
     priceInput.dataset.numpad = 'true';
     priceInput.setAttribute('aria-label', 'Enhedspris');
+    priceInput.dataset.field = 'price';
     const hasPrice = item.price !== null && item.price !== undefined && item.price !== '';
     const priceValue = hasPrice ? toNumber(item.price) : 0;
     priceInput.dataset.price = hasPrice ? String(priceValue) : '';
@@ -941,19 +962,18 @@ function renderOptaelling() {
       priceInput.readOnly = !admin;
       priceInput.value = displayPrice;
     }
+    priceCell.appendChild(priceInput);
 
-    const lineInput = document.createElement('input');
-    lineInput.type = 'text';
-    lineInput.className = 'mat-line item-total';
-    lineInput.readOnly = true;
-    lineInput.setAttribute('aria-label', 'Linjetotal');
+    const lineCell = document.createElement('div');
+    lineCell.className = 'ml-line-total';
+    lineCell.setAttribute('aria-label', 'Linjetotal');
     const lineValue = formatCurrency(toNumber(item.price) * toNumber(item.quantity));
-    lineInput.value = `${lineValue} kr`;
+    lineCell.textContent = `${lineValue} kr`;
 
-    row.appendChild(nameLabel);
+    row.appendChild(nameCell);
     row.appendChild(qtyInput);
-    row.appendChild(priceInput);
-    row.appendChild(lineInput);
+    row.appendChild(priceCell);
+    row.appendChild(lineCell);
 
     list.appendChild(row);
   });
@@ -993,7 +1013,7 @@ function handleManualNameChange(event) {
 }
 
 function findMaterialRowElement(id) {
-  const rows = document.querySelectorAll('.material-row');
+  const rows = document.querySelectorAll('.ml-row');
   return Array.from(rows).find(row =>
     Array.from(row.querySelectorAll('input[data-id]')).some(input => input.dataset.id === String(id))
   ) || null;
@@ -1048,12 +1068,12 @@ function refreshMaterialRowDisplay(id) {
     priceInput.dataset.price = hasPrice ? String(priceValue) : '';
   }
 
-  const lineInput = row.querySelector('.mat-line');
-  if (lineInput) {
+  const lineCell = row.querySelector('.ml-line-total');
+  if (lineCell) {
     if (typeof window !== 'undefined' && typeof window.updateMaterialLine === 'function') {
       window.updateMaterialLine(row, { formatPrice: true, shouldUpdateTotals: false });
     } else {
-      lineInput.value = `${formatCurrency(toNumber(item.price) * toNumber(item.quantity))} kr`;
+      lineCell.textContent = `${formatCurrency(toNumber(item.price) * toNumber(item.quantity))} kr`;
     }
   }
 }
@@ -1140,11 +1160,11 @@ function performTotalsUpdate() {
 
 function updateSelectedSummary() {
   const summaryEl = document.getElementById('selectedItemsSummary');
-  const rows = document.querySelectorAll('#optaellingContainer .material-row');
+  const rows = document.querySelectorAll('#optaellingContainer .ml-row');
   const selected = [];
 
   rows.forEach(row => {
-    const nameElement = row.querySelector('.item-name') || row.querySelector('.manual-name');
+    const nameElement = row.querySelector('.ml-name-text') || row.querySelector('.manual-name');
     let name = '';
     if (nameElement) {
       if (nameElement instanceof HTMLInputElement || nameElement instanceof HTMLTextAreaElement) {
@@ -1153,7 +1173,7 @@ function updateSelectedSummary() {
         name = nameElement.textContent?.trim() || '';
       }
     }
-    const qtyInput = row.querySelector('input.qty,input.quantity');
+    const qtyInput = row.querySelector('.ml-qty');
     const qty = toNumber(qtyInput?.value);
     if (qty > 0) {
       selected.push({ name, qty });
@@ -1186,10 +1206,10 @@ function updateSelectedSummary() {
 function updateMaterialVisibility() {
   const showSelectedOnly = document.getElementById('showSelectedOnly');
   const only = !!showSelectedOnly?.checked;
-  const rows = document.querySelectorAll('#optaellingContainer .material-row');
+  const rows = document.querySelectorAll('#optaellingContainer .ml-row');
 
   rows.forEach(row => {
-    const qty = toNumber(row.querySelector('input.qty,input.quantity')?.value);
+    const qty = toNumber(row.querySelector('.ml-qty')?.value);
     row.style.display = (!only || qty > 0) ? '' : 'none';
   });
 }

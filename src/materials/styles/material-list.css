@@ -1,0 +1,156 @@
+/* Container – mobil first */
+.ml-container{
+  display:grid;
+  gap:8px;
+  padding:8px 12px 96px;
+}
+
+/* Sticky header (match 4 kolonner) */
+.ml-header{
+  position:sticky;
+  top:0;
+  z-index:2;
+  display:grid;
+  grid-template-columns:1fr 64px 72px 88px;
+  padding:8px 10px;
+  font-weight:600;
+  backdrop-filter:blur(6px);
+  background:var(--ml-header-bg, rgba(18,22,28,0.8));
+}
+
+/* Række */
+.ml-row{
+  display:grid;
+  align-items:center;
+  grid-template-columns:1fr 64px 72px 88px;
+  gap:8px;
+  padding:10px;
+  border-radius:10px;
+  border:1px solid var(--ml-border, rgba(255,255,255,.08));
+  background:var(--ml-row-bg, rgba(18,22,28,0.35));
+}
+
+.ml-row--manual{
+  border-style:dashed;
+  background:var(--ml-row-manual-bg, rgba(18,22,28,0.45));
+}
+
+/* Navn – må bryde, min. to linjer hvis nødvendigt */
+.ml-name{
+  line-height:1.2;
+  word-break:break-word;
+  overflow-wrap:anywhere;
+  font-size:clamp(14px, 3.4vw, 16px);
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+}
+
+.ml-name-text{
+  font-weight:600;
+}
+
+.ml-name .system-badge{
+  align-self:flex-start;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  margin-left:0;
+  padding:2px 8px;
+  border-radius:999px;
+  border:1px solid var(--ml-border, rgba(255,255,255,.16));
+  background:rgba(142,160,181,0.15);
+  color:var(--accent, #b9c6d6);
+  font-size:0.7rem;
+  letter-spacing:0.02em;
+  text-transform:uppercase;
+}
+
+.ml-name .manual-name{
+  width:100%;
+  padding:8px 10px;
+  border-radius:8px;
+  border:1px solid var(--ml-input-border, rgba(255,255,255,.12));
+  background:var(--ml-input-bg, rgba(255,255,255,.04));
+  font-size:clamp(14px, 3.4vw, 16px);
+  color:inherit;
+}
+
+/* Antal input – kompakt, høj kontrast, høj klikzone */
+.ml-qty{
+  width:100%;
+  text-align:right;
+  padding:8px 6px;
+  border-radius:8px;
+  border:1px solid var(--ml-input-border, rgba(255,255,255,.12));
+  background:var(--ml-input-bg, rgba(255,255,255,.04));
+  font-size:clamp(14px, 3.4vw, 16px);
+  -moz-appearance:textfield;
+  color:inherit;
+}
+.ml-qty::-webkit-outer-spin-button,
+.ml-qty::-webkit-inner-spin-button{ -webkit-appearance: none; margin: 0; }
+
+/* Pris og total */
+.ml-price,
+.ml-line-total{
+  text-align:right;
+  font-variant-numeric:tabular-nums;
+  white-space:nowrap;
+  font-size:clamp(14px, 3.4vw, 16px);
+}
+
+.ml-price{
+  display:flex;
+  align-items:center;
+}
+
+.ml-price-input{
+  width:100%;
+  text-align:right;
+  padding:8px 6px;
+  border-radius:8px;
+  border:1px solid var(--ml-input-border, rgba(255,255,255,.12));
+  background:var(--ml-input-bg, rgba(255,255,255,.04));
+  font-size:clamp(14px, 3.4vw, 16px);
+  color:inherit;
+  -moz-appearance:textfield;
+}
+.ml-price-input[readonly]{
+  border-color:transparent;
+  background:transparent;
+}
+.ml-price-input::-webkit-outer-spin-button,
+.ml-price-input::-webkit-inner-spin-button{ -webkit-appearance: none; margin: 0; }
+
+.ml-line-total{
+  display:flex;
+  justify-content:flex-end;
+  align-items:center;
+  min-height:44px;
+}
+
+/* Touch targets */
+.ml-row, .ml-qty{ min-height:44px; }
+
+/* Mørk tema kompatibilitet */
+:root{
+  --ml-border:rgba(255,255,255,.08);
+  --ml-input-border:rgba(255,255,255,.12);
+  --ml-input-bg:rgba(255,255,255,.04);
+}
+
+/* > 400px – lidt mere luft */
+@media (min-width: 400px){
+  .ml-header, .ml-row{
+    grid-template-columns:1fr 72px 80px 96px;
+  }
+}
+
+/* Tablet/desktop */
+@media (min-width: 768px){
+  .ml-container{ max-width:900px; margin:0 auto; }
+  .ml-header, .ml-row{
+    grid-template-columns:1fr 80px 96px 120px;
+  }
+}

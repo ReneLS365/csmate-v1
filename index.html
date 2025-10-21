@@ -265,11 +265,11 @@
 
     const fmtDK = new Intl.NumberFormat('da-DK', { style: 'currency', currency: 'DKK' });
 
-    container.querySelectorAll('.mat-row').forEach(updateLine);
+    container.querySelectorAll('.ml-row').forEach(updateLine);
 
     container.addEventListener('input', (e) => {
-      if (!e.target.classList.contains('mat-qty')) return;
-      const row = e.target.closest('.mat-row');
+      if (!e.target.classList.contains('ml-qty')) return;
+      const row = e.target.closest('.ml-row');
       updateLine(row);
 
       if (typeof recalcTotals === 'function') {
@@ -284,7 +284,7 @@
       mutations.forEach(mutation => {
         if (mutation.type === 'childList') {
           mutation.addedNodes.forEach(node => {
-            if (node instanceof Element && (node.classList.contains('mat-row') || node.querySelector('.mat-row'))) {
+            if (node instanceof Element && (node.classList.contains('ml-row') || node.querySelector('.ml-row'))) {
               needsUpdate = true;
             }
           });
@@ -293,7 +293,7 @@
         }
       });
       if (needsUpdate) {
-        container.querySelectorAll('.mat-row').forEach(updateLine);
+        container.querySelectorAll('.ml-row').forEach(updateLine);
       }
     });
 
@@ -355,9 +355,9 @@
     function updateLine(row){
       if (!row) return;
 
-      const qtyEl   = row.querySelector('.mat-qty');
-      const priceEl = row.querySelector('.mat-price');
-      const lineEl  = row.querySelector('.mat-line');
+      const qtyEl   = row.querySelector('.ml-qty');
+      const priceEl = row.querySelector('.ml-price-input');
+      const lineEl  = row.querySelector('.ml-line-total');
       if (!qtyEl || !priceEl || !lineEl) return;
 
       const qty   = parseQty(qtyEl.value);
@@ -388,7 +388,7 @@
         priceEl.value = '';
       }
 
-      lineEl.value  = fmtDK.format(line);
+      lineEl.textContent = fmtDK.format(line);
     }
 
     window.parseQty = parseQty;
