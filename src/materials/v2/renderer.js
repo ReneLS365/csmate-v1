@@ -130,8 +130,7 @@ function createLineRow (line, state, handlers) {
     dataset: { id: line.id },
     className: 'materials-v2__input--numeric'
   })
-  qtyInput.inputMode = 'numeric'
-  qtyInput.pattern = '[0-9]*'
+  qtyInput.inputMode = 'decimal'
   qtyInput.min = '0'
   qtyInput.setAttribute('aria-labelledby', 'materials-v2__header-quantity')
   qtyInput.addEventListener('input', () => {

@@ -94,8 +94,8 @@ describe('materials v2 renderer', () => {
     const qtyInput = document.querySelector('input[name="qty-B005"]');
     expect(qtyInput).toBeTruthy();
     if (!qtyInput) throw new Error('missing qty input');
-    expect(qtyInput.getAttribute('inputmode')).toBe('numeric');
-    expect(qtyInput.getAttribute('pattern')).toBe('[0-9]*');
+    expect(qtyInput.getAttribute('inputmode')).toBe('decimal');
+    expect(qtyInput.getAttribute('pattern')).toBe('[0-9]*[.,]?[0-9]*');
     expect(qtyInput.getAttribute('min')).toBe('0');
     expect(qtyInput.classList.contains('materials-v2__input--numeric')).toBe(true);
   });
