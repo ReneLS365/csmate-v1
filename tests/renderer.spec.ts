@@ -37,6 +37,18 @@ describe('materials v2 renderer', () => {
     expect(priceInput?.readOnly).toBe(true);
   });
 
+  it('renders materials grid with table semantics', () => {
+    setupRenderer({ isAdmin: true });
+    const grid = document.querySelector('.materials-v2__grid');
+    expect(grid?.getAttribute('role')).toBe('table');
+    const headerRow = grid?.querySelector('.materials-v2__row--header');
+    expect(headerRow?.getAttribute('role')).toBe('row');
+    const headerTexts = Array.from(
+      headerRow?.querySelectorAll('.materials-v2__cell') ?? []
+    ).map(cell => cell.textContent?.trim());
+    expect(headerTexts).toEqual(['Navn', 'Antal', 'Pris', 'Linjetotal']);
+  });
+
   it('unlocks after admin verify and collects price diff on save', async () => {
     const verifySpy = vi.fn().mockResolvedValue(true);
     const saveSpy = vi.fn().mockResolvedValue(undefined);
@@ -77,6 +89,17 @@ describe('materials v2 renderer', () => {
     expect(updatedLine?.price).toBeCloseTo(20, 2);
   });
 
+  it('applies numeric input constraints to quantities', () => {
+    setupRenderer({ isAdmin: true });
+    const qtyInput = document.querySelector('input[name="qty-B005"]');
+    expect(qtyInput).toBeTruthy();
+    if (!qtyInput) throw new Error('missing qty input');
+    expect(qtyInput.getAttribute('inputmode')).toBe('decimal');
+    expect(qtyInput.getAttribute('pattern')).toBe('[0-9]*[.,]?[0-9]*');
+    expect(qtyInput.getAttribute('min')).toBe('0');
+    expect(qtyInput.classList.contains('materials-v2__input--numeric')).toBe(true);
+  });
+
   it('calculates decimal totals including custom lines', async () => {
     const renderer = setupRenderer({ isAdmin: true });
 
@@ -109,5 +132,22 @@ describe('materials v2 renderer', () => {
     const customLine = lines.find(line => line.id === 'CUST_1');
     expect(customLine?.name).toBe('Ekstra');
     expect(renderer.getMaterialSum()).toBeCloseTo(135.33, 2);
+  });
+
+  it('updates accessible labels when custom line name changes', () => {
+    setupRenderer({ isAdmin: true });
+    const customRow = document.querySelector('.materials-v2__body .materials-v2__row[data-id="CUST_1"]');
+    const nameInput = document.querySelector('input[name="name-CUST_1"]') as HTMLInputElement | null;
+    const qtyInput = document.querySelector('input[name="qty-CUST_1"]');
+    const totalCell = customRow?.querySelector('.materials-v2__cell--total');
+    expect(customRow?.getAttribute('aria-label')).toBe('Materiale Brugerlinje 1');
+    expect(qtyInput?.getAttribute('aria-label')).toBe('Antal for Brugerlinje 1');
+    expect(totalCell?.getAttribute('aria-label')).toBe('Linjetotal for Brugerlinje 1');
+    if (!nameInput) throw new Error('missing name input');
+    nameInput.value = 'Ekstra plade';
+    nameInput.dispatchEvent(new window.Event('input', { bubbles: true }));
+    expect(customRow?.getAttribute('aria-label')).toBe('Materiale Ekstra plade');
+    expect(qtyInput?.getAttribute('aria-label')).toBe('Antal for Ekstra plade');
+    expect(totalCell?.getAttribute('aria-label')).toBe('Linjetotal for Ekstra plade');
   });
 });

@@ -35,7 +35,8 @@ function createInput ({
   readOnly = false,
   value = '',
   name,
-  dataset = {}
+  dataset = {},
+  className
 }) {
   const input = document.createElement('input')
   if (type === 'number') {
@@ -60,7 +61,15 @@ function createInput ({
   Object.entries(dataset).forEach(([key, val]) => {
     input.dataset[key] = String(val)
   })
-  input.className = 'materials-v2__input'
+  const classes = ['materials-v2__input']
+  if (className) {
+    if (Array.isArray(className)) {
+      classes.push(...className)
+    } else {
+      classes.push(className)
+    }
+  }
+  input.className = classes.join(' ')
   return input
 }
 
@@ -81,20 +90,29 @@ function createLineRow (line, state, handlers) {
   const row = document.createElement('div')
   row.className = 'materials-v2__row'
   row.dataset.id = line.id
+  row.setAttribute('role', 'row')
+  row.setAttribute('aria-label', 'Materiale')
 
   const nameCell = document.createElement('div')
   nameCell.className = 'materials-v2__cell materials-v2__cell--name'
+  nameCell.setAttribute('role', 'cell')
   if (line.type === 'base') {
     nameCell.textContent = line.name
+    if (line.name) {
+      nameCell.title = line.name
+    }
   } else {
     const nameInput = createInput({
       value: line.name || '',
       name: `name-${line.id}`
     })
     nameInput.placeholder = 'Tilføj materiale'
+    nameInput.setAttribute('aria-labelledby', 'materials-v2__header-name')
+    nameInput.setAttribute('aria-label', 'Navn på materiale')
     nameInput.addEventListener('input', () => {
       line.name = nameInput.value
       handlers.onLinesChange()
+      updateAccessibleLabels()
     })
     line.nameInput = nameInput
     nameCell.appendChild(nameInput)
@@ -103,13 +121,18 @@ function createLineRow (line, state, handlers) {
 
   const qtyCell = document.createElement('div')
   qtyCell.className = 'materials-v2__cell materials-v2__cell--quantity'
+  qtyCell.setAttribute('role', 'cell')
   const qtyInput = createInput({
     type: 'number',
     step: '0.01',
     value: line.quantity ? String(line.quantity) : '',
     name: `qty-${line.id}`,
-    dataset: { id: line.id }
+    dataset: { id: line.id },
+    className: 'materials-v2__input--numeric'
   })
+  qtyInput.inputMode = 'decimal'
+  qtyInput.min = '0'
+  qtyInput.setAttribute('aria-labelledby', 'materials-v2__header-quantity')
   qtyInput.addEventListener('input', () => {
     const normalized = normalizeDecimalInput(qtyInput)
     line.quantity = toDecimal(normalized)
@@ -121,14 +144,17 @@ function createLineRow (line, state, handlers) {
 
   const priceCell = document.createElement('div')
   priceCell.className = 'materials-v2__cell materials-v2__cell--price'
+  priceCell.setAttribute('role', 'cell')
   const priceInput = createInput({
     type: 'number',
     step: '0.01',
     value: line.price != null ? String(line.price) : '',
     name: `price-${line.id}`,
     readOnly: line.type === 'base' && !state.isAdmin,
-    dataset: { id: line.id }
+    dataset: { id: line.id },
+    className: 'materials-v2__input--numeric'
   })
+  priceInput.setAttribute('aria-labelledby', 'materials-v2__header-price')
   priceInput.addEventListener('input', () => {
     const normalized = normalizeDecimalInput(priceInput)
     line.price = toDecimal(normalized)
@@ -140,9 +166,25 @@ function createLineRow (line, state, handlers) {
 
   const totalCell = document.createElement('div')
   totalCell.className = 'materials-v2__cell materials-v2__cell--total'
+  totalCell.setAttribute('role', 'cell')
+  totalCell.setAttribute('aria-labelledby', 'materials-v2__header-total')
   totalCell.textContent = toCurrency(line.total || 0)
   line.totalCell = totalCell
   row.appendChild(totalCell)
+
+  function updateAccessibleLabels () {
+    const rawName = typeof line.name === 'string' ? line.name.trim() : ''
+    const labelName = rawName || 'materiale'
+    row.setAttribute('aria-label', rawName ? `Materiale ${rawName}` : 'Materiale')
+    qtyInput.setAttribute('aria-label', `Antal for ${labelName}`)
+    priceInput.setAttribute('aria-label', `Pris for ${labelName}`)
+    totalCell.setAttribute('aria-label', `Linjetotal for ${labelName}`)
+    if (line.type === 'base') {
+      nameCell.title = rawName
+    }
+  }
+
+  updateAccessibleLabels()
 
   return row
 }
@@ -297,20 +339,32 @@ export function createMaterialsRenderer ({
 
   const linesWrapper = document.createElement('div')
   linesWrapper.className = 'materials-v2__grid'
+  linesWrapper.setAttribute('role', 'table')
+  linesWrapper.setAttribute('aria-label', 'Materialeliste')
   root.appendChild(linesWrapper)
 
   const headerRow = document.createElement('div')
   headerRow.className = 'materials-v2__row materials-v2__row--header'
-  headerRow.innerHTML = `
-    <div class="materials-v2__cell materials-v2__cell--name">Navn</div>
-    <div class="materials-v2__cell materials-v2__cell--quantity">Antal</div>
-    <div class="materials-v2__cell materials-v2__cell--price">Pris</div>
-    <div class="materials-v2__cell materials-v2__cell--total">Linjetotal</div>
-  `
+  headerRow.setAttribute('role', 'row')
+  const headerCells = [
+    { key: 'name', label: 'Navn' },
+    { key: 'quantity', label: 'Antal' },
+    { key: 'price', label: 'Pris' },
+    { key: 'total', label: 'Linjetotal' }
+  ]
+  headerCells.forEach(({ key, label }) => {
+    const cell = document.createElement('div')
+    cell.className = `materials-v2__cell materials-v2__cell--${key} materials-v2__cell--header`
+    cell.id = `materials-v2__header-${key}`
+    cell.setAttribute('role', 'columnheader')
+    cell.textContent = label
+    headerRow.appendChild(cell)
+  })
   linesWrapper.appendChild(headerRow)
 
   const body = document.createElement('div')
   body.className = 'materials-v2__body'
+  body.setAttribute('role', 'rowgroup')
   linesWrapper.appendChild(body)
 
   const footer = document.createElement('div')
