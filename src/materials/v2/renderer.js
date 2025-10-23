@@ -137,6 +137,11 @@ function createLineRow (line, state, handlers) {
   qtyInput.inputMode = 'decimal'
   qtyInput.min = '0'
   qtyInput.setAttribute('aria-labelledby', 'materials-v2__header-quantity')
+  qtyInput.addEventListener('focus', () => {
+    if (typeof handlers.onRowFocus === 'function') {
+      handlers.onRowFocus(row)
+    }
+  })
   qtyInput.addEventListener('input', () => {
     const normalized = normalizeDecimalInput(qtyInput)
     line.quantity = toDecimal(normalized)
@@ -391,9 +396,23 @@ export function createMaterialsRenderer ({
   chipsContainer.className = 'materials-v2__chips-list'
   chipsContainer.setAttribute('aria-label', 'Valgte materialer chips')
   chipsDetails.appendChild(chipsContainer)
-  toolbar.appendChild(chipsDetails)
+  let chipsMounted = false
 
-  let chipsManualOpen = false
+  function mountChips () {
+    if (chipsMounted) return
+    chipsDetails.open = false
+    chipsContainer.innerHTML = ''
+    toolbar.appendChild(chipsDetails)
+    chipsMounted = true
+  }
+
+  function unmountChips () {
+    if (!chipsMounted) return
+    chipsDetails.remove()
+    chipsDetails.open = false
+    chipsContainer.innerHTML = ''
+    chipsMounted = false
+  }
 
   const linesWrapper = document.createElement('div')
   linesWrapper.className = 'materials-v2__grid'
@@ -507,6 +526,38 @@ export function createMaterialsRenderer ({
     totalValue.textContent = toCurrency(state.total)
   }
 
+  function scrollRowIntoView (row) {
+    if (!row) return
+    const container = body
+    if (!container) return
+    const containerRect = typeof container.getBoundingClientRect === 'function'
+      ? container.getBoundingClientRect()
+      : null
+    const rowRect = typeof row.getBoundingClientRect === 'function'
+      ? row.getBoundingClientRect()
+      : null
+    if (!containerRect || !rowRect) {
+      if (typeof row.scrollIntoView === 'function') {
+        row.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+      }
+      return
+    }
+    const containerHeight = containerRect.bottom - containerRect.top
+    const rowHeight = rowRect.bottom - rowRect.top
+    if (containerHeight <= 0 || rowHeight <= 0) {
+      if (typeof row.scrollIntoView === 'function') {
+        row.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+      }
+      return
+    }
+    const buffer = 8
+    if (rowRect.top < containerRect.top + buffer) {
+      container.scrollTop += rowRect.top - containerRect.top - buffer
+    } else if (rowRect.bottom > containerRect.bottom - buffer) {
+      container.scrollTop += rowRect.bottom - containerRect.bottom + buffer
+    }
+  }
+
   const handlers = {
     onLinesChange: () => {
       updateTotals()
@@ -523,7 +574,8 @@ export function createMaterialsRenderer ({
       line.price = toDecimal(line.priceInput.value)
       updateLineTotal(line)
       updateTotals()
-    }
+    },
+    onRowFocus: scrollRowIntoView
   }
 
   function getSelectedLines () {
@@ -550,7 +602,8 @@ export function createMaterialsRenderer ({
   function updateSelectedUI () {
     const selected = getSelectedLines()
     chipsSummary.textContent = `Valgte materialer (${selected.length})`
-    if (chipsDetails.open || state.showOnlySelected) {
+    if (!chipsMounted) return
+    if (chipsDetails.open) {
       renderSelectedChips(selected)
     } else {
       chipsContainer.innerHTML = ''
@@ -574,25 +627,25 @@ export function createMaterialsRenderer ({
   showOnlySelectedInput.addEventListener('change', () => {
     state.showOnlySelected = showOnlySelectedInput.checked
     if (state.showOnlySelected) {
-      chipsDetails.open = true
+      mountChips()
     } else {
-      chipsDetails.open = chipsManualOpen
+      unmountChips()
     }
     updateSelectedUI()
     applyFilter()
   })
 
   chipsDetails.addEventListener('toggle', () => {
-    if (state.showOnlySelected && !chipsDetails.open) {
-      chipsDetails.open = true
-      updateSelectedUI()
-      return
-    }
-    if (!state.showOnlySelected) {
-      chipsManualOpen = chipsDetails.open
-    }
+    if (!chipsMounted) return
     updateSelectedUI()
   })
+
+  if (state.showOnlySelected) {
+    showOnlySelectedInput.checked = true
+    mountChips()
+    updateSelectedUI()
+    applyFilter()
+  }
 
   function addLine (lineData) {
     const line = {
