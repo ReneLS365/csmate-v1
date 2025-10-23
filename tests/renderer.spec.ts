@@ -43,6 +43,7 @@ describe('materials v2 renderer', () => {
     expect(grid?.getAttribute('role')).toBe('table');
     const headerRow = grid?.querySelector('.materials-v2__row--header');
     expect(headerRow?.getAttribute('role')).toBe('row');
+    expect(headerRow?.classList.contains('sr-only')).toBe(true);
     const headerTexts = Array.from(
       headerRow?.querySelectorAll('.materials-v2__cell') ?? []
     ).map(cell => cell.textContent?.trim());
