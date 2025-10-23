@@ -72,8 +72,8 @@
   font-weight: 600;
   letter-spacing: 0.01em;
   text-transform: none;
-  border-bottom: 2px solid #c7c7c7;
-  padding-bottom: 8px;
+  padding: 0;
+  border: 0;
   background: none;
 }
 
