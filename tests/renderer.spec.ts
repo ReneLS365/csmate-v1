@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { createMaterialsRenderer } from '../src/materials/v2/renderer.js';
+import { createMaterialsRenderer } from '../app/src/materials/v2/renderer.js';
 
 const BASE_MATERIALS = [
   { id: 'B005', name: 'Ramme 200/70', price: 16.7053537 },

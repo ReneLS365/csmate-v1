@@ -5,7 +5,7 @@ Denne dokumentation samler den afsluttende gennemgang af CSMate-applikationen in
 ## 1. Test- og kvalitetsstatus
 - **Automatiserede enhedstests**: `npm test` (Vitest) – alle 14 tests består uden fejl.
 - **Statisk kodeanalyse**: `npm run lint` (ESLint m. Standard-konfiguration) – ingen fejl eller advarsler.
-- **Service Worker**: `service-worker.js` benytter cache-navn `csmate-cache-20241008`, hvilket sikrer cache-busting ved nye releases.
+- **Service Worker**: `app/service-worker.js` benytter cache-navn `csmate-cache-20241008`, hvilket sikrer cache-busting ved nye releases.
 
 ## 2. Manuel QA
 - **Kernefunktioner**
@@ -26,8 +26,8 @@ Denne dokumentation samler den afsluttende gennemgang af CSMate-applikationen in
   - Sticky header og materialeliste bevarer kontekst uden overlap pga. `scrollbar-gutter` og `max-height` justeringer.
 
 ## 4. Performance & PWA
-- `manifest.json` og `service-worker.js` muliggør installation på understøttede enheder og offline-tilstand med versioneret cache (`CACHE_PREFIX` + `CACHE_VERSION`).
-- `main.js` opdaterer kun beregninger, når relevante input-events forekommer, hvilket minimerer unødvendige DOM-skriveoperationer.
+- `app/manifest.json` og `app/service-worker.js` muliggør installation på understøttede enheder og offline-tilstand med versioneret cache (`CACHE_PREFIX` + `CACHE_VERSION`).
+- `app/main.js` opdaterer kun beregninger, når relevante input-events forekommer, hvilket minimerer unødvendige DOM-skriveoperationer.
 
 ## 5. Udgivelsesanbefaling
 Applikationen er klar til udgivelse. For endelig release anbefales følgende:

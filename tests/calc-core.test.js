@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { CalcCore } from '../src/lib/calc-core.js'
+import { CalcCore } from '../app/src/lib/calc-core.js'
 
 function inputNumber (calc, value) {
   String(value).split('').forEach(ch => {

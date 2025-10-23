@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { evalExpr } from '../src/ui/numpad.js'
+import { evalExpr } from '../app/src/ui/numpad.js'
 
 describe('evalExpr', () => {
   it('returns base value when expression is empty', () => {

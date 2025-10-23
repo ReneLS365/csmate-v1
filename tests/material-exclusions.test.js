@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { shouldExcludeMaterialEntry } from '../src/lib/materials/exclusions.js'
+import { shouldExcludeMaterialEntry } from '../app/src/lib/materials/exclusions.js'
 
 describe('material exclusion helpers', () => {
   it('skips entries with excluded names', () => {

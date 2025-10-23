@@ -45,12 +45,13 @@ Alle tre handlinger kræver udfyldt Sagsinfo. Ved manglende data vises en tydeli
 Manglende sektioner giver 0 i summerne – appen viser alligevel Sagsinfo og eksisterende værdier.
 
 ## Kode struktur
-- `index.html` – markup, faner og sektioner
-- `style.css` – hovedtema, responsive grids og tastaturoverlay
-- `print.css` – printoptimering
-- `main.js` – datasæt, rendering, beregninger, CSV/PDF, drag-drop og numerisk tastatur
-- `dataset.js` – yderligere datalister
-- `service-worker.js` – PWA-cache (minimal)
+- `app/index.html` – markup, faner og sektioner
+- `app/style.css` – hovedtema, responsive grids og tastaturoverlay
+- `app/print.css` – printoptimering
+- `app/main.js` – datasæt, rendering, beregninger, CSV/PDF, drag-drop og numerisk tastatur
+- `app/dataset.js` – yderligere datalister
+- `app/service-worker.js` – PWA-cache (minimal)
+- `app/data/` – materialer, tenants og øvrige JSON-kilder til appen og Netlify Functions
 
 ## Vedligeholdelsesnoter
 - `window.__traelleloeft` anvendes til at overføre tralleløft-data mellem lønberegning og eksport.

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { validateRows } from '../src/lib/e-komplet/validate.js'
+import { validateRows } from '../app/src/lib/e-komplet/validate.js'
 
 const baseRow = {
   Type: 'TIME',
