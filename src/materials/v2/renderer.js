@@ -5,10 +5,6 @@ const NUMBER_FORMAT = new Intl.NumberFormat('da-DK', {
   minimumFractionDigits: 2,
   maximumFractionDigits: 2
 })
-const QUANTITY_FORMAT = new Intl.NumberFormat('da-DK', {
-  minimumFractionDigits: 0,
-  maximumFractionDigits: 2
-})
 
 function toDecimal (value) {
   if (typeof value === 'number' && Number.isFinite(value)) {
@@ -101,7 +97,10 @@ function createLineRow (line, state, handlers) {
   nameCell.className = 'materials-v2__cell materials-v2__cell--name'
   nameCell.setAttribute('role', 'cell')
   if (line.type === 'base') {
-    nameCell.textContent = line.name
+    const scroll = document.createElement('span')
+    scroll.className = 'materials-v2__name-scroll'
+    scroll.textContent = line.name || ''
+    nameCell.appendChild(scroll)
     if (line.name) {
       nameCell.title = line.name
     }
@@ -268,29 +267,6 @@ function createAdminPanel (state, handlers) {
   return { element: wrapper, updateStatus, message }
 }
 
-function formatQuantityLabel (line) {
-  const rawInput = typeof line.qtyInput?.value === 'string' ? line.qtyInput.value.trim() : ''
-  if (rawInput) {
-    return rawInput.replace(/\./g, ',')
-  }
-  if (typeof line.quantity === 'number' && Number.isFinite(line.quantity) && line.quantity !== 0) {
-    return QUANTITY_FORMAT.format(Math.round(line.quantity * 100) / 100)
-  }
-  return '0'
-}
-
-function getLineDisplayName (line) {
-  if (line.type === 'base') {
-    return line.name || 'Materiale'
-  }
-  const fromInput = typeof line.nameInput?.value === 'string' ? line.nameInput.value.trim() : ''
-  if (fromInput) return fromInput
-  if (typeof line.name === 'string' && line.name.trim()) {
-    return line.name.trim()
-  }
-  return 'Materiale'
-}
-
 export function createMaterialsRenderer ({
   container,
   materials,
@@ -386,33 +362,6 @@ export function createMaterialsRenderer ({
   toggleLabel.appendChild(showOnlySelectedInput)
   toggleLabel.appendChild(toggleText)
   toolbar.appendChild(toggleLabel)
-
-  const chipsDetails = document.createElement('details')
-  chipsDetails.className = 'materials-v2__chips'
-  const chipsSummary = document.createElement('summary')
-  chipsSummary.textContent = 'Valgte materialer (0)'
-  chipsDetails.appendChild(chipsSummary)
-  const chipsContainer = document.createElement('div')
-  chipsContainer.className = 'materials-v2__chips-list'
-  chipsContainer.setAttribute('aria-label', 'Valgte materialer chips')
-  chipsDetails.appendChild(chipsContainer)
-  let chipsMounted = false
-
-  function mountChips () {
-    if (chipsMounted) return
-    chipsDetails.open = false
-    chipsContainer.innerHTML = ''
-    toolbar.appendChild(chipsDetails)
-    chipsMounted = true
-  }
-
-  function unmountChips () {
-    if (!chipsMounted) return
-    chipsDetails.remove()
-    chipsDetails.open = false
-    chipsContainer.innerHTML = ''
-    chipsMounted = false
-  }
 
   const linesWrapper = document.createElement('div')
   linesWrapper.className = 'materials-v2__grid'
@@ -585,29 +534,10 @@ export function createMaterialsRenderer ({
     })
   }
 
-  function renderSelectedChips (selected) {
-    chipsContainer.innerHTML = ''
-    selected.forEach(line => {
-      const chip = document.createElement('span')
-      chip.className = 'materials-v2__chip'
-      const name = getLineDisplayName(line)
-      const qtyLabel = formatQuantityLabel(line)
-      const text = `${name} — ${qtyLabel}`
-      chip.textContent = text
-      chip.title = text
-      chipsContainer.appendChild(chip)
-    })
-  }
-
   function updateSelectedUI () {
     const selected = getSelectedLines()
-    chipsSummary.textContent = `Valgte materialer (${selected.length})`
-    if (!chipsMounted) return
-    if (chipsDetails.open) {
-      renderSelectedChips(selected)
-    } else {
-      chipsContainer.innerHTML = ''
-    }
+    const labelText = selected.length ? `Vis kun valgte (${selected.length})` : 'Vis kun valgte'
+    toggleText.textContent = labelText
   }
 
   function applyFilter () {
@@ -626,25 +556,16 @@ export function createMaterialsRenderer ({
 
   showOnlySelectedInput.addEventListener('change', () => {
     state.showOnlySelected = showOnlySelectedInput.checked
-    if (state.showOnlySelected) {
-      mountChips()
-    } else {
-      unmountChips()
-    }
     updateSelectedUI()
     applyFilter()
-  })
-
-  chipsDetails.addEventListener('toggle', () => {
-    if (!chipsMounted) return
-    updateSelectedUI()
   })
 
   if (state.showOnlySelected) {
     showOnlySelectedInput.checked = true
-    mountChips()
     updateSelectedUI()
     applyFilter()
+  } else {
+    updateSelectedUI()
   }
 
   function addLine (lineData) {

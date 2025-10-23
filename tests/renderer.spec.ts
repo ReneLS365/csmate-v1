@@ -49,42 +49,35 @@ describe('materials v2 renderer', () => {
     expect(headerTexts).toEqual(['Navn', 'Antal', 'Pris', 'Linjetotal']);
   });
 
-  it('only renders selected chips when "Vis kun valgte" is enabled', async () => {
+  it('updates toggle label count without rendering chips', () => {
     setupRenderer({ isAdmin: true });
 
-    const qtyInput = document.querySelector('input[name="qty-B005"]');
+    const qtyInput = document.querySelector('input[name="qty-B005"]') as HTMLInputElement | null;
+    const toggle = document.querySelector('input[aria-label="Vis kun valgte materialer"]') as HTMLInputElement | null;
+    const toggleLabelText = () => document.querySelector('.materials-v2__toggle span')?.textContent ?? '';
+
     expect(qtyInput).toBeTruthy();
-    if (!qtyInput) throw new Error('missing qty input');
+    expect(toggle).toBeTruthy();
+    if (!qtyInput || !toggle) throw new Error('missing inputs');
+
+    expect(toggleLabelText()).toBe('Vis kun valgte');
+    expect(document.querySelector('.materials-v2__chips')).toBeNull();
+
     qtyInput.value = '1';
     qtyInput.dispatchEvent(new window.Event('input', { bubbles: true }));
 
-    expect(document.querySelector('.materials-v2__chips')).toBeNull();
+    expect(toggleLabelText()).toBe('Vis kun valgte (1)');
 
-    const toggle = document.querySelector('input[aria-label="Vis kun valgte materialer"]') as HTMLInputElement | null;
-    expect(toggle).toBeTruthy();
-    if (!toggle) throw new Error('missing show only selected toggle');
     toggle.checked = true;
     toggle.dispatchEvent(new window.Event('change', { bubbles: true }));
 
-    const details = document.querySelector('.materials-v2__chips') as HTMLDetailsElement | null;
-    expect(details).toBeTruthy();
-    expect(details?.open).toBe(false);
-
-    const summary = details?.querySelector('summary');
-    expect(summary?.textContent).toContain('(1)');
-
-    summary?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
-    expect(details?.open).toBe(true);
-
-    await vi.waitFor(() => {
-      const chipsRegion = document.querySelector('[aria-label="Valgte materialer chips"]');
-      const count = chipsRegion ? chipsRegion.querySelectorAll('.materials-v2__chip').length : 0;
-      expect(count).toBe(1);
-    });
-
-    toggle.checked = false;
-    toggle.dispatchEvent(new window.Event('change', { bubbles: true }));
+    expect(toggleLabelText()).toBe('Vis kun valgte (1)');
     expect(document.querySelector('.materials-v2__chips')).toBeNull();
+
+    qtyInput.value = '0';
+    qtyInput.dispatchEvent(new window.Event('input', { bubbles: true }));
+
+    expect(toggleLabelText()).toBe('Vis kun valgte');
   });
 
   it('scrolls focused quantity rows into view without chips present by default', () => {
