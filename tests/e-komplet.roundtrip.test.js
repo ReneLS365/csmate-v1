@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { buildEKompletRows, rowsToCsv } from '../src/lib/e-komplet/export.js'
-import { parseCsv, applyMapping } from '../src/lib/e-komplet/import.js'
-import { validateRows } from '../src/lib/e-komplet/validate.js'
-import { CSV_HEADERS } from '../src/lib/e-komplet/schema.js'
+import { buildEKompletRows, rowsToCsv } from '../app/src/lib/e-komplet/export.js'
+import { parseCsv, applyMapping } from '../app/src/lib/e-komplet/import.js'
+import { validateRows } from '../app/src/lib/e-komplet/validate.js'
+import { CSV_HEADERS } from '../app/src/lib/e-komplet/schema.js'
 
 describe('E-Komplet export/import roundtrip', () => {
   it('keeps core fields identical', async () => {

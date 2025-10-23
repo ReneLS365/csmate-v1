@@ -1,6 +1,9 @@
 [build]
-  command = "npm run build"
-  publish = "."
+  command = "npm run ci"
+  publish = "app"
+
+[[plugins]]
+  package = "netlify-plugin-minify-html"
 
 # Ensure the SPA always resolves to the latest HTML shell
 [[redirects]]
@@ -20,8 +23,8 @@
   [headers.values]
   Cache-Control = "no-cache, no-store, must-revalidate"
 
+# Service worker should never be cached by the edge
 [[headers]]
-  # Service worker should never be cached by the edge
   for = "/service-worker.js"
   [headers.values]
   Cache-Control = "no-cache, no-store, must-revalidate"
@@ -32,14 +35,14 @@
   [headers.values]
   Cache-Control = "max-age=300"
 
+# Long-term cache for hashed asset bundles
 [[headers]]
-  # Long-term cache for hashed asset bundles
   for = "/assets/*"
   [headers.values]
   Cache-Control = "public, max-age=31536000, immutable"
 
 [functions]
-  included_files = ["data/materials.json", "data/tenants/*.json"]
+  included_files = ["app/data/materials.json", "app/data/tenants/*.json"]
 
 [context.production.environment]
   FF_MATERIALS_V2 = "false"

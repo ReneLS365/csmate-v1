@@ -1,7 +1,7 @@
 import { promises as fs } from 'fs';
 import path from 'path';
 
-const DATA_DIR = path.resolve(process.cwd(), 'data');
+const DATA_DIR = path.resolve(process.cwd(), 'app', 'data');
 const TENANTS_DIR = path.join(DATA_DIR, 'tenants');
 
 async function readJson(filePath) {

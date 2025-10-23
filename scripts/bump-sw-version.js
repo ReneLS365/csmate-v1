@@ -6,7 +6,7 @@ import { dirname, resolve } from 'node:path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const projectRoot = resolve(__dirname, '..');
-const swPath = resolve(projectRoot, 'service-worker.js');
+const swPath = resolve(projectRoot, 'app', 'service-worker.js');
 
 const source = readFileSync(swPath, 'utf8');
 const versionPattern = /const VERSION = ['"].+?['"];?/;

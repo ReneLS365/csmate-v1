@@ -2,7 +2,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import bcrypt from 'bcryptjs';
 
-const DATA_DIR = path.resolve(process.cwd(), 'data');
+const DATA_DIR = path.resolve(process.cwd(), 'app', 'data');
 const TENANTS_DIR = path.join(DATA_DIR, 'tenants');
 const MATERIALS_FILE = path.join(DATA_DIR, 'materials.json');
 const MAX_PRICE = 100000;
