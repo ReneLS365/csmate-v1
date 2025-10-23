@@ -12,10 +12,10 @@
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
 header{position:sticky;top:0;background:var(--elev);border-bottom:1px solid var(--border);z-index:5}
-header .bar{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:10px var(--pad)}
+header .bar{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:8px var(--pad)}
 header .ttl{font-weight:700}
 nav{display:flex;gap:8px;flex-wrap:wrap}
-nav button{background:#34353b;color:var(--text);border:1px solid var(--border);border-radius:12px;padding:12px 16px;min-height:44px}
+nav button{background:#34353b;color:var(--text);border:1px solid var(--border);border-radius:12px;padding:8px 14px;min-height:40px}
 nav button.active{outline:2px solid var(--accent)}
 main{padding:var(--pad);display:flex;flex-direction:column;gap:var(--gap)}
 fieldset{border:1px solid var(--border);background:var(--panel);border-radius:12px;margin:0;padding:var(--pad)}
@@ -137,13 +137,13 @@ button{cursor:pointer}
   .status-bar{flex-direction:column;align-items:flex-start}
   .status-pill{min-width:0;width:100%;justify-content:flex-start;padding-inline:12px}
   .btn-group{flex-direction:column}
-  nav button{padding:10px 12px}
+  nav button{padding:7px 12px;min-height:38px}
   .system-selector-options{gap:8px}
   .system-option{flex:1 1 calc(50% - 8px);justify-content:flex-start}
 }
 @media (max-width:480px){
   body{font-size:15px}
-  nav button{flex:1 1 auto;width:100%}
+  nav button{flex:1 1 auto;width:100%;padding:7px 10px;min-height:36px}
   .material-row label{font-size:0.9rem}
   .material-row .system-badge{margin-left:6px;font-size:0.65rem}
   .system-option{flex:1 1 100%}
