@@ -29,6 +29,10 @@ function toCurrency (value) {
   return NUMBER_FORMAT.format(Math.round(value * 100) / 100)
 }
 
+function formatCurrencyDisplay (value) {
+  return `${toCurrency(value)} kr`
+}
+
 function createInput ({
   type = 'text',
   step,
@@ -88,13 +92,13 @@ function normalizeDecimalInput (input) {
 
 function createLineRow (line, state, handlers) {
   const row = document.createElement('div')
-  row.className = 'materials-v2__row'
+  row.className = 'materials-v2__row material-row'
   row.dataset.id = line.id
   row.setAttribute('role', 'row')
   row.setAttribute('aria-label', 'Materiale')
 
   const nameCell = document.createElement('div')
-  nameCell.className = 'materials-v2__cell materials-v2__cell--name'
+  nameCell.className = 'materials-v2__cell materials-v2__cell--name name'
   nameCell.setAttribute('role', 'cell')
   if (line.type === 'base') {
     const scroll = document.createElement('span')
@@ -133,6 +137,7 @@ function createLineRow (line, state, handlers) {
     dataset: { id: line.id },
     className: 'materials-v2__input--numeric'
   })
+  qtyInput.classList.add('qty')
   qtyInput.inputMode = 'decimal'
   qtyInput.min = '0'
   qtyInput.setAttribute('aria-labelledby', 'materials-v2__header-quantity')
@@ -151,12 +156,12 @@ function createLineRow (line, state, handlers) {
   row.appendChild(qtyCell)
 
   const priceCell = document.createElement('div')
-  priceCell.className = 'materials-v2__cell materials-v2__cell--price'
+  priceCell.className = 'materials-v2__cell materials-v2__cell--price price'
   priceCell.setAttribute('role', 'cell')
   const priceInput = createInput({
     type: 'number',
     step: '0.01',
-    value: line.price != null ? String(line.price) : '',
+    value: line.price != null ? toCurrency(line.price) : '',
     name: `price-${line.id}`,
     readOnly: line.type === 'base' && !state.isAdmin,
     dataset: { id: line.id },
@@ -173,10 +178,10 @@ function createLineRow (line, state, handlers) {
   row.appendChild(priceCell)
 
   const totalCell = document.createElement('div')
-  totalCell.className = 'materials-v2__cell materials-v2__cell--total'
+  totalCell.className = 'materials-v2__cell materials-v2__cell--total total'
   totalCell.setAttribute('role', 'cell')
   totalCell.setAttribute('aria-labelledby', 'materials-v2__header-total')
-  totalCell.textContent = toCurrency(line.total || 0)
+  totalCell.textContent = formatCurrencyDisplay(line.total || 0)
   line.totalCell = totalCell
   row.appendChild(totalCell)
 
@@ -287,8 +292,7 @@ export function createMaterialsRenderer ({
     isAdmin: Boolean(isAdmin),
     firmId,
     lines: [],
-    total: 0,
-    showOnlySelected: false
+    total: 0
   }
 
   const root = document.createElement('div')
@@ -346,23 +350,6 @@ export function createMaterialsRenderer ({
   })
   root.appendChild(adminPanel.element)
 
-  const toolbar = document.createElement('div')
-  toolbar.className = 'materials-v2__toolbar'
-  toolbar.setAttribute('role', 'region')
-  toolbar.setAttribute('aria-label', 'Materiale filtre')
-  root.appendChild(toolbar)
-
-  const toggleLabel = document.createElement('label')
-  toggleLabel.className = 'materials-v2__toggle'
-  const showOnlySelectedInput = document.createElement('input')
-  showOnlySelectedInput.type = 'checkbox'
-  showOnlySelectedInput.setAttribute('aria-label', 'Vis kun valgte materialer')
-  const toggleText = document.createElement('span')
-  toggleText.textContent = 'Vis kun valgte'
-  toggleLabel.appendChild(showOnlySelectedInput)
-  toggleLabel.appendChild(toggleText)
-  toolbar.appendChild(toggleLabel)
-
   const linesWrapper = document.createElement('div')
   linesWrapper.className = 'materials-v2__grid'
   linesWrapper.setAttribute('role', 'table')
@@ -389,7 +376,7 @@ export function createMaterialsRenderer ({
   linesWrapper.appendChild(headerRow)
 
   const body = document.createElement('div')
-  body.className = 'materials-v2__body'
+  body.className = 'materials-v2__body material-list'
   body.setAttribute('role', 'rowgroup')
   linesWrapper.appendChild(body)
 
@@ -398,7 +385,7 @@ export function createMaterialsRenderer ({
   const totalLabel = document.createElement('span')
   totalLabel.textContent = 'Materialesum'
   const totalValue = document.createElement('strong')
-  totalValue.textContent = '0,00'
+  totalValue.textContent = '0,00 kr'
   footer.appendChild(totalLabel)
   footer.appendChild(totalValue)
   root.appendChild(footer)
@@ -460,7 +447,7 @@ export function createMaterialsRenderer ({
     const total = Math.round(quantity * price * 100) / 100
     line.total = total
     if (line.totalCell) {
-      line.totalCell.textContent = toCurrency(total)
+      line.totalCell.textContent = formatCurrencyDisplay(total)
     }
   }
 
@@ -472,7 +459,7 @@ export function createMaterialsRenderer ({
       }
     })
     state.total = Math.round(sum * 100) / 100
-    totalValue.textContent = toCurrency(state.total)
+    totalValue.textContent = formatCurrencyDisplay(state.total)
   }
 
   function scrollRowIntoView (row) {
@@ -510,14 +497,11 @@ export function createMaterialsRenderer ({
   const handlers = {
     onLinesChange: () => {
       updateTotals()
-      updateSelectedUI()
     },
     onQuantityChange: line => {
       line.quantity = toDecimal(line.qtyInput.value)
       updateLineTotal(line)
       updateTotals()
-      updateSelectedUI()
-      applyFilter()
     },
     onPriceChange: line => {
       line.price = toDecimal(line.priceInput.value)
@@ -525,47 +509,6 @@ export function createMaterialsRenderer ({
       updateTotals()
     },
     onRowFocus: scrollRowIntoView
-  }
-
-  function getSelectedLines () {
-    return state.lines.filter(line => {
-      const quantity = typeof line.quantity === 'number' ? line.quantity : toDecimal(line.qtyInput?.value ?? 0)
-      return quantity > 0
-    })
-  }
-
-  function updateSelectedUI () {
-    const selected = getSelectedLines()
-    const labelText = selected.length ? `Vis kun valgte (${selected.length})` : 'Vis kun valgte'
-    toggleText.textContent = labelText
-  }
-
-  function applyFilter () {
-    state.lines.forEach(line => {
-      if (!line.element) return
-      const shouldShow = !state.showOnlySelected || (typeof line.quantity === 'number' ? line.quantity : 0) > 0
-      if (shouldShow) {
-        line.element.hidden = false
-        line.element.removeAttribute('aria-hidden')
-      } else {
-        line.element.hidden = true
-        line.element.setAttribute('aria-hidden', 'true')
-      }
-    })
-  }
-
-  showOnlySelectedInput.addEventListener('change', () => {
-    state.showOnlySelected = showOnlySelectedInput.checked
-    updateSelectedUI()
-    applyFilter()
-  })
-
-  if (state.showOnlySelected) {
-    showOnlySelectedInput.checked = true
-    updateSelectedUI()
-    applyFilter()
-  } else {
-    updateSelectedUI()
   }
 
   function addLine (lineData) {
@@ -609,8 +552,6 @@ export function createMaterialsRenderer ({
 
   updateTotals()
   applyAdminState()
-  updateSelectedUI()
-  applyFilter()
 
   return {
     getLines () {
