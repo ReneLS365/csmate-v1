@@ -26,6 +26,7 @@
 .materials-v2__chips {
   position: static;
   width: 100%;
+  max-width: 100%;
 }
 
 .materials-v2__chips > summary {
@@ -40,6 +41,8 @@
   flex-wrap: wrap;
   gap: 8px;
   padding: 8px 0;
+  max-height: 40vh;
+  overflow: auto;
 }
 
 .materials-v2__chip {
@@ -82,6 +85,7 @@
 .materials-v2__body {
   display: flex;
   flex-direction: column;
+  overflow: auto;
 }
 
 .materials-v2__row {

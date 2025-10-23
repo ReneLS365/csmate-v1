@@ -49,11 +49,8 @@ describe('materials v2 renderer', () => {
     expect(headerTexts).toEqual(['Navn', 'Antal', 'Pris', 'Linjetotal']);
   });
 
-  it('shows collapsible selected materials without blocking layout', async () => {
+  it('only renders selected chips when "Vis kun valgte" is enabled', async () => {
     setupRenderer({ isAdmin: true });
-    const details = document.querySelector('.materials-v2__chips') as HTMLDetailsElement | null;
-    expect(details).toBeTruthy();
-    expect(details?.open).toBe(false);
 
     const qtyInput = document.querySelector('input[name="qty-B005"]');
     expect(qtyInput).toBeTruthy();
@@ -61,8 +58,21 @@ describe('materials v2 renderer', () => {
     qtyInput.value = '1';
     qtyInput.dispatchEvent(new window.Event('input', { bubbles: true }));
 
+    expect(document.querySelector('.materials-v2__chips')).toBeNull();
+
+    const toggle = document.querySelector('input[aria-label="Vis kun valgte materialer"]') as HTMLInputElement | null;
+    expect(toggle).toBeTruthy();
+    if (!toggle) throw new Error('missing show only selected toggle');
+    toggle.checked = true;
+    toggle.dispatchEvent(new window.Event('change', { bubbles: true }));
+
+    const details = document.querySelector('.materials-v2__chips') as HTMLDetailsElement | null;
+    expect(details).toBeTruthy();
+    expect(details?.open).toBe(false);
+
     const summary = details?.querySelector('summary');
-    expect(summary).toBeTruthy();
+    expect(summary?.textContent).toContain('(1)');
+
     summary?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
     expect(details?.open).toBe(true);
 
@@ -72,17 +82,56 @@ describe('materials v2 renderer', () => {
       expect(count).toBe(1);
     });
 
-    const toggle = document.querySelector('input[aria-label="Vis kun valgte materialer"]') as HTMLInputElement | null;
-    expect(toggle).toBeTruthy();
-    if (!toggle) throw new Error('missing show only selected toggle');
-    toggle.checked = true;
-    toggle.dispatchEvent(new window.Event('change', { bubbles: true }));
-    expect(details?.open).toBe(true);
-    expect(summary?.textContent).toContain('(1)');
-
     toggle.checked = false;
     toggle.dispatchEvent(new window.Event('change', { bubbles: true }));
-    expect(details?.open).toBe(true);
+    expect(document.querySelector('.materials-v2__chips')).toBeNull();
+  });
+
+  it('scrolls focused quantity rows into view without chips present by default', () => {
+    setupRenderer({ isAdmin: true });
+
+    const body = document.querySelector('.materials-v2__body') as HTMLElement | null;
+    const qtyInput = document.querySelector('input[name="qty-B005"]') as HTMLInputElement | null;
+    expect(body).toBeTruthy();
+    expect(qtyInput).toBeTruthy();
+    if (!body || !qtyInput) throw new Error('missing elements for focus scroll');
+
+    const row = qtyInput.closest('.materials-v2__row') as HTMLElement | null;
+    expect(row).toBeTruthy();
+    if (!row) throw new Error('missing row element');
+
+    body.scrollTop = 0;
+    body.getBoundingClientRect = () => ({
+      top: 0,
+      bottom: 100,
+      left: 0,
+      right: 0,
+      width: 0,
+      height: 100,
+      x: 0,
+      y: 0,
+      toJSON () {
+        return {};
+      }
+    } as DOMRect);
+    row.getBoundingClientRect = () => ({
+      top: 150,
+      bottom: 200,
+      left: 0,
+      right: 0,
+      width: 0,
+      height: 50,
+      x: 0,
+      y: 150,
+      toJSON () {
+        return {};
+      }
+    } as DOMRect);
+
+    qtyInput.dispatchEvent(new window.FocusEvent('focus', { bubbles: true }));
+
+    expect(body.scrollTop).toBeGreaterThan(0);
+    expect(document.querySelector('.materials-v2__chips')).toBeNull();
   });
 
   it('filters materials when "Vis kun valgte" is enabled', () => {
