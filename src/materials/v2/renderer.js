@@ -5,6 +5,10 @@ const NUMBER_FORMAT = new Intl.NumberFormat('da-DK', {
   minimumFractionDigits: 2,
   maximumFractionDigits: 2
 })
+const QUANTITY_FORMAT = new Intl.NumberFormat('da-DK', {
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 2
+})
 
 function toDecimal (value) {
   if (typeof value === 'number' && Number.isFinite(value)) {
@@ -259,6 +263,29 @@ function createAdminPanel (state, handlers) {
   return { element: wrapper, updateStatus, message }
 }
 
+function formatQuantityLabel (line) {
+  const rawInput = typeof line.qtyInput?.value === 'string' ? line.qtyInput.value.trim() : ''
+  if (rawInput) {
+    return rawInput.replace(/\./g, ',')
+  }
+  if (typeof line.quantity === 'number' && Number.isFinite(line.quantity) && line.quantity !== 0) {
+    return QUANTITY_FORMAT.format(Math.round(line.quantity * 100) / 100)
+  }
+  return '0'
+}
+
+function getLineDisplayName (line) {
+  if (line.type === 'base') {
+    return line.name || 'Materiale'
+  }
+  const fromInput = typeof line.nameInput?.value === 'string' ? line.nameInput.value.trim() : ''
+  if (fromInput) return fromInput
+  if (typeof line.name === 'string' && line.name.trim()) {
+    return line.name.trim()
+  }
+  return 'Materiale'
+}
+
 export function createMaterialsRenderer ({
   container,
   materials,
@@ -279,7 +306,8 @@ export function createMaterialsRenderer ({
     isAdmin: Boolean(isAdmin),
     firmId,
     lines: [],
-    total: 0
+    total: 0,
+    showOnlySelected: false
   }
 
   const root = document.createElement('div')
@@ -336,6 +364,36 @@ export function createMaterialsRenderer ({
     }
   })
   root.appendChild(adminPanel.element)
+
+  const toolbar = document.createElement('div')
+  toolbar.className = 'materials-v2__toolbar'
+  toolbar.setAttribute('role', 'region')
+  toolbar.setAttribute('aria-label', 'Materiale filtre')
+  root.appendChild(toolbar)
+
+  const toggleLabel = document.createElement('label')
+  toggleLabel.className = 'materials-v2__toggle'
+  const showOnlySelectedInput = document.createElement('input')
+  showOnlySelectedInput.type = 'checkbox'
+  showOnlySelectedInput.setAttribute('aria-label', 'Vis kun valgte materialer')
+  const toggleText = document.createElement('span')
+  toggleText.textContent = 'Vis kun valgte'
+  toggleLabel.appendChild(showOnlySelectedInput)
+  toggleLabel.appendChild(toggleText)
+  toolbar.appendChild(toggleLabel)
+
+  const chipsDetails = document.createElement('details')
+  chipsDetails.className = 'materials-v2__chips'
+  const chipsSummary = document.createElement('summary')
+  chipsSummary.textContent = 'Valgte materialer (0)'
+  chipsDetails.appendChild(chipsSummary)
+  const chipsContainer = document.createElement('div')
+  chipsContainer.className = 'materials-v2__chips-list'
+  chipsContainer.setAttribute('aria-label', 'Valgte materialer chips')
+  chipsDetails.appendChild(chipsContainer)
+  toolbar.appendChild(chipsDetails)
+
+  let chipsManualOpen = false
 
   const linesWrapper = document.createElement('div')
   linesWrapper.className = 'materials-v2__grid'
@@ -450,11 +508,16 @@ export function createMaterialsRenderer ({
   }
 
   const handlers = {
-    onLinesChange: () => updateTotals(),
+    onLinesChange: () => {
+      updateTotals()
+      updateSelectedUI()
+    },
     onQuantityChange: line => {
       line.quantity = toDecimal(line.qtyInput.value)
       updateLineTotal(line)
       updateTotals()
+      updateSelectedUI()
+      applyFilter()
     },
     onPriceChange: line => {
       line.price = toDecimal(line.priceInput.value)
@@ -462,6 +525,74 @@ export function createMaterialsRenderer ({
       updateTotals()
     }
   }
+
+  function getSelectedLines () {
+    return state.lines.filter(line => {
+      const quantity = typeof line.quantity === 'number' ? line.quantity : toDecimal(line.qtyInput?.value ?? 0)
+      return quantity > 0
+    })
+  }
+
+  function renderSelectedChips (selected) {
+    chipsContainer.innerHTML = ''
+    selected.forEach(line => {
+      const chip = document.createElement('span')
+      chip.className = 'materials-v2__chip'
+      const name = getLineDisplayName(line)
+      const qtyLabel = formatQuantityLabel(line)
+      const text = `${name} — ${qtyLabel}`
+      chip.textContent = text
+      chip.title = text
+      chipsContainer.appendChild(chip)
+    })
+  }
+
+  function updateSelectedUI () {
+    const selected = getSelectedLines()
+    chipsSummary.textContent = `Valgte materialer (${selected.length})`
+    if (chipsDetails.open || state.showOnlySelected) {
+      renderSelectedChips(selected)
+    } else {
+      chipsContainer.innerHTML = ''
+    }
+  }
+
+  function applyFilter () {
+    state.lines.forEach(line => {
+      if (!line.element) return
+      const shouldShow = !state.showOnlySelected || (typeof line.quantity === 'number' ? line.quantity : 0) > 0
+      if (shouldShow) {
+        line.element.hidden = false
+        line.element.removeAttribute('aria-hidden')
+      } else {
+        line.element.hidden = true
+        line.element.setAttribute('aria-hidden', 'true')
+      }
+    })
+  }
+
+  showOnlySelectedInput.addEventListener('change', () => {
+    state.showOnlySelected = showOnlySelectedInput.checked
+    if (state.showOnlySelected) {
+      chipsDetails.open = true
+    } else {
+      chipsDetails.open = chipsManualOpen
+    }
+    updateSelectedUI()
+    applyFilter()
+  })
+
+  chipsDetails.addEventListener('toggle', () => {
+    if (state.showOnlySelected && !chipsDetails.open) {
+      chipsDetails.open = true
+      updateSelectedUI()
+      return
+    }
+    if (!state.showOnlySelected) {
+      chipsManualOpen = chipsDetails.open
+    }
+    updateSelectedUI()
+  })
 
   function addLine (lineData) {
     const line = {
@@ -472,6 +603,7 @@ export function createMaterialsRenderer ({
     }
     const row = createLineRow(line, state, handlers)
     body.appendChild(row)
+    line.element = row
     updateLineTotal(line)
     state.lines.push(line)
   }
@@ -503,6 +635,8 @@ export function createMaterialsRenderer ({
 
   updateTotals()
   applyAdminState()
+  updateSelectedUI()
+  applyFilter()
 
   return {
     getLines () {

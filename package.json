@@ -6,7 +6,8 @@
     "build": "node scripts/bump-sw-version.js",
     "test": "vitest run",
     "lint": "eslint \"src/**/*.js\"",
-    "bump-sw": "node scripts/bump-sw-version.js"
+    "bump-sw": "node scripts/bump-sw-version.js",
+    "ci": "npm run lint && npm run test && npm run build"
   },
   "devDependencies": {
     "@vitest/coverage-v8": "^1.6.1",

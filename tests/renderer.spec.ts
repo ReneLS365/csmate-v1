@@ -49,6 +49,66 @@ describe('materials v2 renderer', () => {
     expect(headerTexts).toEqual(['Navn', 'Antal', 'Pris', 'Linjetotal']);
   });
 
+  it('shows collapsible selected materials without blocking layout', async () => {
+    setupRenderer({ isAdmin: true });
+    const details = document.querySelector('.materials-v2__chips') as HTMLDetailsElement | null;
+    expect(details).toBeTruthy();
+    expect(details?.open).toBe(false);
+
+    const qtyInput = document.querySelector('input[name="qty-B005"]');
+    expect(qtyInput).toBeTruthy();
+    if (!qtyInput) throw new Error('missing qty input');
+    qtyInput.value = '1';
+    qtyInput.dispatchEvent(new window.Event('input', { bubbles: true }));
+
+    const summary = details?.querySelector('summary');
+    expect(summary).toBeTruthy();
+    summary?.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+    expect(details?.open).toBe(true);
+
+    await vi.waitFor(() => {
+      const chipsRegion = document.querySelector('[aria-label="Valgte materialer chips"]');
+      const count = chipsRegion ? chipsRegion.querySelectorAll('.materials-v2__chip').length : 0;
+      expect(count).toBe(1);
+    });
+
+    const toggle = document.querySelector('input[aria-label="Vis kun valgte materialer"]') as HTMLInputElement | null;
+    expect(toggle).toBeTruthy();
+    if (!toggle) throw new Error('missing show only selected toggle');
+    toggle.checked = true;
+    toggle.dispatchEvent(new window.Event('change', { bubbles: true }));
+    expect(details?.open).toBe(true);
+    expect(summary?.textContent).toContain('(1)');
+
+    toggle.checked = false;
+    toggle.dispatchEvent(new window.Event('change', { bubbles: true }));
+    expect(details?.open).toBe(true);
+  });
+
+  it('filters materials when "Vis kun valgte" is enabled', () => {
+    setupRenderer({ isAdmin: true });
+    const qtyInput = document.querySelector('input[name="qty-B005"]');
+    const toggle = document.querySelector('input[aria-label="Vis kun valgte materialer"]') as HTMLInputElement | null;
+    expect(qtyInput).toBeTruthy();
+    expect(toggle).toBeTruthy();
+    if (!qtyInput || !toggle) throw new Error('missing inputs for filtering');
+
+    qtyInput.value = '2';
+    qtyInput.dispatchEvent(new window.Event('input', { bubbles: true }));
+
+    toggle.checked = true;
+    toggle.dispatchEvent(new window.Event('change', { bubbles: true }));
+
+    const hiddenRow = document.querySelector('.materials-v2__body .materials-v2__row[data-id="M037"]') as HTMLElement | null;
+    const visibleRow = document.querySelector('.materials-v2__body .materials-v2__row[data-id="B005"]') as HTMLElement | null;
+    expect(hiddenRow?.hidden).toBe(true);
+    expect(visibleRow?.hidden).toBe(false);
+
+    toggle.checked = false;
+    toggle.dispatchEvent(new window.Event('change', { bubbles: true }));
+    expect(hiddenRow?.hidden).toBe(false);
+  });
+
   it('unlocks after admin verify and collects price diff on save', async () => {
     const verifySpy = vi.fn().mockResolvedValue(true);
     const saveSpy = vi.fn().mockResolvedValue(undefined);
