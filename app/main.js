@@ -1113,57 +1113,9 @@ function performTotalsUpdate() {
     demontageField.value = (materialSum * 0.5).toFixed(2);
   }
 
-  if (typeof updateSelectedSummary === 'function') {
-    updateSelectedSummary();
-  }
   if (typeof updateMaterialVisibility === 'function') {
     updateMaterialVisibility();
   }
-}
-
-function updateSelectedSummary() {
-  const summaryEl = document.getElementById('selectedItemsSummary');
-  const rows = document.querySelectorAll('#optaellingContainer .material-row');
-  const selected = [];
-
-  rows.forEach(row => {
-    const nameElement = row.querySelector('.item-name') || row.querySelector('.manual-name');
-    let name = '';
-    if (nameElement) {
-      if (nameElement instanceof HTMLInputElement || nameElement instanceof HTMLTextAreaElement) {
-        name = nameElement.value?.trim() || '';
-      } else {
-        name = nameElement.textContent?.trim() || '';
-      }
-    }
-    const qtyInput = row.querySelector('input.qty,input.quantity');
-    const qty = toNumber(qtyInput?.value);
-    if (qty > 0) {
-      selected.push({ name, qty });
-    }
-  });
-
-  if (!summaryEl) return;
-
-  if (!selected.length) {
-    summaryEl.style.display = 'none';
-    summaryEl.innerHTML = '';
-    return;
-  }
-
-  summaryEl.style.display = 'block';
-  summaryEl.innerHTML = `
-    <fieldset>
-      <legend>Valgte materialer</legend>
-      <div style="display:flex;flex-wrap:wrap;gap:8px;">
-        ${selected.map(s => `
-          <span style="background:#2f3238;border:1px solid #3b3d45;border-radius:6px;padding:6px 10px;">
-            ${s.name} — ${formatNumber(s.qty)}
-          </span>
-        `).join('')}
-      </div>
-    </fieldset>
-  `;
 }
 
 function updateMaterialVisibility() {
@@ -3083,9 +3035,6 @@ function initApp() {
   hydrateMaterialListsFromJson();
   setupListSelectors();
   renderOptaelling();
-  if (typeof updateSelectedSummary === 'function') {
-    updateSelectedSummary();
-  }
   addWorker();
 
   setupCSVImport();
