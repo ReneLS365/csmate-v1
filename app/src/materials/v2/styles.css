@@ -1,26 +1,10 @@
+
 .materials-v2 {
   display: flex;
   flex-direction: column;
   gap: 12px;
   font-family: inherit;
-}
-
-.materials-v2__toolbar {
-  position: static;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  align-items: center;
-  justify-content: space-between;
-  padding: 8px 4px;
-  border-radius: 8px;
-}
-
-.materials-v2__toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.95rem;
+  color: #f2f2f2;
 }
 
 .materials-v2__header {
@@ -43,29 +27,41 @@
 }
 
 
+
 .materials-v2__grid {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
 }
 
-.materials-v2__body {
+.materials-v2__body,
+.material-list {
   display: flex;
   flex-direction: column;
-  overflow: auto;
+  gap: 4px;
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: 6px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+  backdrop-filter: blur(2px);
 }
 
-.materials-v2__row {
+.materials-v2__row,
+.material-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 7ch 9ch 11ch;
-  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) 70px 60px 80px;
   align-items: center;
-  padding: 10px 12px;
-  border-bottom: 1px solid #d9d9d9;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  transition: background 0.2s ease;
 }
 
-.materials-v2__row:last-child {
-  border-bottom: none;
+.materials-v2__row:hover,
+.material-row:hover {
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .materials-v2__row--header {
@@ -77,10 +73,11 @@
   background: none;
 }
 
+
 .materials-v2__cell {
   display: flex;
   align-items: center;
-  min-height: 36px;
+  min-height: 34px;
   min-width: 0;
 }
 
@@ -95,6 +92,22 @@
   overflow-x: auto;
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
+  color: #f2f2f2;
+}
+
+.material-row span,
+.material-row input,
+.material-row .materials-v2__name-scroll {
+  font-size: 0.9rem;
+  color: #e5e5e5;
+}
+
+.material-row .price,
+.material-row .total,
+.material-row .materials-v2__cell--price,
+.material-row .materials-v2__cell--total {
+  justify-content: flex-end;
+  text-align: right;
 }
 
 .materials-v2__cell--quantity,
@@ -113,30 +126,41 @@
 .materials-v2__input {
   width: 100%;
   padding: 6px 8px;
-  border: 1px solid #c7c7c7;
+  border: 1px solid #333;
   border-radius: 8px;
   font: inherit;
-  font-size: 16px;
-  background: #fff;
+  font-size: 0.95rem;
+  background: #111;
+  color: #f5f5f5;
+  transition: border-color 0.2s ease, background 0.2s ease;
+  height: 28px;
+}
+
+.materials-v2__input:focus {
+  outline: none;
+  border-color: #5c7cfa;
+  background: #151515;
 }
 
 .materials-v2__input--numeric {
   font-variant-numeric: tabular-nums;
-  text-align: right;
+  text-align: center;
 }
 
 .materials-v2__input[readonly] {
-  background: #f5f5f5;
-  border-style: dashed;
-  color: #555;
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.85);
 }
+
 
 .materials-v2__footer {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 600;
+  color: #f2f2f2;
 }
 
 .materials-v2__save {
@@ -144,10 +168,11 @@
   padding: 8px 12px;
   border-radius: 6px;
   border: none;
-  background: #0b6efd;
+  background: #4263eb;
   color: #fff;
   font-weight: 600;
   cursor: pointer;
+  transition: background 0.2s ease, opacity 0.2s ease;
 }
 
 .materials-v2__save:disabled {
@@ -160,13 +185,15 @@
   flex-direction: column;
   gap: 8px;
   padding: 8px;
-  border: 1px solid #d0d0d0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 6px;
-  background: #fafafa;
+  background: rgba(255, 255, 255, 0.05);
+  color: #f2f2f2;
 }
 
 .materials-v2__admin-status {
   font-weight: 600;
+  color: #f5f5f5;
 }
 
 .materials-v2__admin-form {
@@ -178,25 +205,29 @@
 .materials-v2__admin-form button {
   padding: 6px 12px;
   border-radius: 4px;
-  border: 1px solid #b5b5b5;
-  background: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  color: #f2f2f2;
   cursor: pointer;
 }
 
 .materials-v2__admin-message {
   font-size: 0.85rem;
-  color: #444;
+  color: rgba(255, 255, 255, 0.7);
   min-height: 1em;
 }
 
 @media (max-width: 480px) {
-  .materials-v2__row {
-    gap: 8px;
-    padding: 8px 10px;
-    grid-template-columns: minmax(0, 1fr) 6ch 8ch 9ch;
+  .materials-v2__row,
+  .material-row {
+    gap: 6px;
+    padding: 6px 8px;
+    grid-template-columns: minmax(0, 1fr) 62px 56px 76px;
   }
 
   .materials-v2__input {
-    padding: 6px;
+    padding: 4px 6px;
+    height: 26px;
+    font-size: 0.85rem;
   }
 }

@@ -9,6 +9,12 @@ const BASE_MATERIALS = [
   { id: 'M037', name: 'Profildæk 70/300', price: 16.71 }
 ];
 
+const SCENARIO_MATERIALS = [
+  { id: 'MAT1', name: 'Spindelfod kort', price: 2.68 },
+  { id: 'MAT2', name: 'Ramme 200/70', price: 16.71 },
+  { id: 'MAT3', name: 'Gulvplade 300/70', price: 16.71 }
+];
+
 describe('materials v2 renderer', () => {
   beforeEach(() => {
     document.body.innerHTML = '<div id="root"></div>';
@@ -49,38 +55,30 @@ describe('materials v2 renderer', () => {
     expect(headerTexts).toEqual(['Navn', 'Antal', 'Pris', 'Linjetotal']);
   });
 
-  it('updates toggle label count without rendering chips', () => {
+  it('renders compact material list without overlay controls', () => {
     setupRenderer({ isAdmin: true });
 
-    const qtyInput = document.querySelector('input[name="qty-B005"]') as HTMLInputElement | null;
-    const toggle = document.querySelector('input[aria-label="Vis kun valgte materialer"]') as HTMLInputElement | null;
-    const toggleLabelText = () => document.querySelector('.materials-v2__toggle span')?.textContent ?? '';
+    expect(document.querySelector('.materials-v2__toolbar')).toBeNull();
+    expect(document.querySelector('.materials-v2__toggle')).toBeNull();
+
+    const list = document.querySelector('.materials-v2__body');
+    expect(list).toBeTruthy();
+    expect(list?.classList.contains('material-list')).toBe(true);
+
+    const row = document.querySelector('.materials-v2__body .materials-v2__row');
+    expect(row).toBeTruthy();
+    expect(row?.classList.contains('material-row')).toBe(true);
+
+    const qtyInput = row?.querySelector('input.qty') as HTMLInputElement | null;
+    const priceCell = row?.querySelector('.price');
+    const totalCell = row?.querySelector('.total');
 
     expect(qtyInput).toBeTruthy();
-    expect(toggle).toBeTruthy();
-    if (!qtyInput || !toggle) throw new Error('missing inputs');
-
-    expect(toggleLabelText()).toBe('Vis kun valgte');
-    expect(document.querySelector('.materials-v2__chips')).toBeNull();
-
-    qtyInput.value = '1';
-    qtyInput.dispatchEvent(new window.Event('input', { bubbles: true }));
-
-    expect(toggleLabelText()).toBe('Vis kun valgte (1)');
-
-    toggle.checked = true;
-    toggle.dispatchEvent(new window.Event('change', { bubbles: true }));
-
-    expect(toggleLabelText()).toBe('Vis kun valgte (1)');
-    expect(document.querySelector('.materials-v2__chips')).toBeNull();
-
-    qtyInput.value = '0';
-    qtyInput.dispatchEvent(new window.Event('input', { bubbles: true }));
-
-    expect(toggleLabelText()).toBe('Vis kun valgte');
+    expect(priceCell).toBeTruthy();
+    expect(totalCell?.textContent?.trim()).toMatch(/kr$/);
   });
 
-  it('scrolls focused quantity rows into view without chips present by default', () => {
+  it('scrolls focused quantity rows into view inside the compact list', () => {
     setupRenderer({ isAdmin: true });
 
     const body = document.querySelector('.materials-v2__body') as HTMLElement | null;
@@ -124,31 +122,64 @@ describe('materials v2 renderer', () => {
     qtyInput.dispatchEvent(new window.FocusEvent('focus', { bubbles: true }));
 
     expect(body.scrollTop).toBeGreaterThan(0);
-    expect(document.querySelector('.materials-v2__chips')).toBeNull();
   });
 
-  it('filters materials when "Vis kun valgte" is enabled', () => {
-    setupRenderer({ isAdmin: true });
-    const qtyInput = document.querySelector('input[name="qty-B005"]');
-    const toggle = document.querySelector('input[aria-label="Vis kun valgte materialer"]') as HTMLInputElement | null;
-    expect(qtyInput).toBeTruthy();
-    expect(toggle).toBeTruthy();
-    if (!qtyInput || !toggle) throw new Error('missing inputs for filtering');
+  it('calculates totals for the predefined material scenario', () => {
+    const renderer = setupRenderer({ isAdmin: true, materials: SCENARIO_MATERIALS });
 
-    qtyInput.value = '2';
-    qtyInput.dispatchEvent(new window.Event('input', { bubbles: true }));
+    const scenarios = [
+      { id: 'MAT1', qty: '3', expected: '8,04 kr' },
+      { id: 'MAT2', qty: '2', expected: '33,42 kr' },
+      { id: 'MAT3', qty: '5', expected: '83,55 kr' }
+    ];
 
-    toggle.checked = true;
-    toggle.dispatchEvent(new window.Event('change', { bubbles: true }));
+    scenarios.forEach(({ id, qty, expected }) => {
+      const input = document.querySelector(`input[name="qty-${id}"]`) as HTMLInputElement | null;
+      expect(input).toBeTruthy();
+      if (!input) throw new Error(`missing input for ${id}`);
 
-    const hiddenRow = document.querySelector('.materials-v2__body .materials-v2__row[data-id="M037"]') as HTMLElement | null;
-    const visibleRow = document.querySelector('.materials-v2__body .materials-v2__row[data-id="B005"]') as HTMLElement | null;
-    expect(hiddenRow?.hidden).toBe(true);
-    expect(visibleRow?.hidden).toBe(false);
+      input.value = qty;
+      input.dispatchEvent(new window.Event('input', { bubbles: true }));
 
-    toggle.checked = false;
-    toggle.dispatchEvent(new window.Event('change', { bubbles: true }));
-    expect(hiddenRow?.hidden).toBe(false);
+      const totalCell = document.querySelector(`.materials-v2__row[data-id="${id}"] .total`);
+      expect(totalCell?.textContent?.trim()).toBe(expected);
+    });
+
+    expect(renderer.getMaterialSum()).toBeCloseTo(125.01, 2);
+    const footerTotal = document.querySelector('.materials-v2__footer strong');
+    expect(footerTotal?.textContent?.trim()).toBe('125,01 kr');
+  });
+
+  it('updates totals when quantities are corrected or cleared', () => {
+    setupRenderer({ isAdmin: true, materials: SCENARIO_MATERIALS });
+
+    const first = document.querySelector('input[name="qty-MAT1"]') as HTMLInputElement | null;
+    const second = document.querySelector('input[name="qty-MAT2"]') as HTMLInputElement | null;
+    expect(first).toBeTruthy();
+    expect(second).toBeTruthy();
+    if (!first || !second) throw new Error('missing quantity inputs');
+
+    const totalFor = (id: string) => document.querySelector(`.materials-v2__row[data-id="${id}"] .total`)?.textContent?.trim();
+
+    first.value = '5';
+    first.dispatchEvent(new window.Event('input', { bubbles: true }));
+    expect(totalFor('MAT1')).toBe('13,40 kr');
+
+    first.value = '0';
+    first.dispatchEvent(new window.Event('input', { bubbles: true }));
+    expect(totalFor('MAT1')).toBe('0,00 kr');
+
+    first.value = '7';
+    first.dispatchEvent(new window.Event('input', { bubbles: true }));
+    expect(totalFor('MAT1')).toBe('18,76 kr');
+
+    second.value = '1,5';
+    second.dispatchEvent(new window.Event('input', { bubbles: true }));
+    expect(totalFor('MAT2')).toBe('25,07 kr');
+
+    second.value = '';
+    second.dispatchEvent(new window.Event('input', { bubbles: true }));
+    expect(totalFor('MAT2')).toBe('0,00 kr');
   });
 
   it('unlocks after admin verify and collects price diff on save', async () => {

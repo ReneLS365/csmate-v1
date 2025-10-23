@@ -2,7 +2,11 @@
 
 ## Unreleased
 
+### Added
+- Automated renderer tests covering mobile material list calculations and input corrections.
+
 ### Changed
+- Redesigned the materials list into a compact, scrollable layout without filter overlays for better mobile density.
 - Hid material list header row visually while keeping it available to screen readers for accessibility.
 
 ### Fixed
