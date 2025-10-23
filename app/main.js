@@ -1806,17 +1806,45 @@ function populateWorkersFromLabor(entries) {
   resetWorkers();
   if (!Array.isArray(entries) || entries.length === 0) {
     addWorker();
+    updateTotals(true);
     return;
   }
+
   entries.forEach((entry, index) => {
     addWorker();
     const worker = document.getElementById(`worker${index + 1}`);
     if (!worker) return;
+
     const hoursInput = worker.querySelector('.worker-hours');
     const tillaegInput = worker.querySelector('.worker-tillaeg');
-    if (hoursInput) hoursInput.value = formatNumber(toNumber(entry.hours));
-    if (tillaegInput) tillaegInput.value = formatNumber(0);
+    const uddSelect = worker.querySelector('.worker-udd');
+
+    if (hoursInput) {
+      hoursInput.value = formatNumber(toNumber(entry.hours));
+    }
+    if (tillaegInput) {
+      tillaegInput.value = formatNumber(toNumber(entry.mentortillaeg));
+    }
+    if (uddSelect instanceof HTMLSelectElement) {
+      const savedValue = (entry?.udd ?? '').toString().trim();
+      if (savedValue) {
+        const hasOption = Array.from(uddSelect.options).some(option => option.value === savedValue);
+        if (hasOption) {
+          uddSelect.value = savedValue;
+        } else if (uddSelect.options.length > 0) {
+          uddSelect.selectedIndex = 0;
+        }
+      } else if (uddSelect.options.length > 0) {
+        uddSelect.selectedIndex = 0;
+      }
+    }
   });
+
+  updateTotals(true);
+  const hasRegisteredHours = entries.some(entry => toNumber(entry.hours) > 0);
+  if (hasRegisteredHours && typeof beregnLon === 'function') {
+    beregnLon();
+  }
 }
 
 function matchMaterialByName(name) {
@@ -3164,3 +3192,5 @@ if (document.readyState === 'loading') {
 } else {
   initApp();
 }
+
+export { populateWorkersFromLabor };
