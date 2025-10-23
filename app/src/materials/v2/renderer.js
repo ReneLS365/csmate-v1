@@ -370,7 +370,7 @@ export function createMaterialsRenderer ({
   root.appendChild(linesWrapper)
 
   const headerRow = document.createElement('div')
-  headerRow.className = 'materials-v2__row materials-v2__row--header'
+  headerRow.className = 'materials-v2__row materials-v2__row--header sr-only'
   headerRow.setAttribute('role', 'row')
   const headerCells = [
     { key: 'name', label: 'Navn' },
