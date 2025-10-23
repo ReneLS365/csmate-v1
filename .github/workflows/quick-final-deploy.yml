@@ -93,6 +93,13 @@ Branch: ${head} → ${base}`
               }
             }
 
+      - name: Refresh base checkout (post-merge)
+        if: ${{ success() }}
+        run: |
+          BASE="${{ github.event.inputs.base }}"
+          git fetch origin "$BASE"
+          git checkout -B "$BASE" "origin/$BASE"
+
       - name: Create tag & GitHub Release
         if: ${{ success() }}
         uses: softprops/action-gh-release@v2
@@ -107,10 +114,13 @@ Branch: ${head} → ${base}`
         if: ${{ success() }}
         run: |
           TAG="${{ github.event.inputs.tag }}"
+          git fetch origin --tags
           # safety: create tag if GH release action didn't create it (it usually does)
           if ! git rev-parse "$TAG" >/dev/null 2>&1; then
             git tag "$TAG"
             git push origin "$TAG"
+          else
+            echo "Tag '$TAG' already exists on remote. Skipping manual creation."
           fi
 
       - name: Done (Netlify auto-builds from base branch)
