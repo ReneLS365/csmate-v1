@@ -1,0 +1,121 @@
+name: Quick Final Deploy (merge → release)
+
+on:
+  workflow_dispatch:
+    inputs:
+      branches:
+        description: "Komma-separeret liste af feature-branches der skal merges ind i main (i rækkefølge)."
+        required: true
+        default: "feature/material-list,feature/approvals,feature/indexeddb-sync"
+      base:
+        description: "Base branch (typisk main)"
+        required: true
+        default: "main"
+      tag:
+        description: "Release tag (fx v1.0.0-final)"
+        required: true
+        default: "v1.0.0-final"
+      title:
+        description: "Release title"
+        required: true
+        default: "CSMate FINAL (Quick)"
+      body:
+        description: "Release notes (changelog)"
+        required: true
+        default: |
+          - Materialeliste (mobil) redesignet (15–17 rækker, Navn/Antal/Pris/Linjetotal)
+          - Approvals: kladde/afventer/godkendt/afvist m. rolle-kontrol
+          - IndexedDB: offline-synk (20 seneste projekter)
+          - Tralleløft flyttet til Ekstra arbejde + med i oversigt
+          - Oversigt summeringer: Materiale sum, Løn sum, Total
+          - Admin “StilAce” for prisredigering
+          - Eksport: PDF/Excel/Print + E-komplet CSV/JSON
+          - PWA SW bump i tidligere builds
+
+jobs:
+  quick-final:
+    name: Merge branches → Release tag
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Merge branches into base (fast & API-driven)
+        id: merge
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const base = core.getInput('base') || 'main';
+            const raw = core.getInput('branches') || '';
+            const list = raw.split(',').map(s => s.trim()).filter(Boolean);
+
+            core.info(`Base: ${base}`);
+            core.info(`Branches: ${list.join(', ')}`);
+
+            // ensure base exists locally (not strictly needed for API merge)
+            // Try merging each via API: POST /merges
+            for (const head of list) {
+              core.info(`Merging ${head} → ${base}`);
+              try {
+                const res = await github.rest.repos.merge({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  base,
+                  head,
+                  commit_message: `merge(quick-final): ${head} → ${base}`
+                });
+                core.info(`Merged ${head}: ${res.status} ${res.data.sha}`);
+              } catch (e) {
+                if (e.status === 409) {
+                  // conflict → create PR as fallback and stop
+                  core.warning(`Conflict while merging ${head}. Creating PR and failing job.`);
+                  const pr = await github.rest.pulls.create({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    title: `FINAL (conflict): Merge ${head} into ${base}`,
+                    head,
+                    base,
+                    body: `Automatisk oprettet pga. merge-conflict. Løs conflicts i denne PR og kør workflow igen.
+
+Branch: ${head} → ${base}`
+                  });
+                  core.setFailed(`Merge conflict i ${head}. PR oprettet: #${pr.data.number}`);
+                } else {
+                  core.setFailed(`Merge API fejl for ${head}: ${e.message}`);
+                }
+                return;
+              }
+            }
+
+      - name: Create tag & GitHub Release
+        if: ${{ success() }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event.inputs.tag }}
+          name: ${{ github.event.inputs.title }}
+          body: ${{ github.event.inputs.body }}
+          draft: false
+          prerelease: false
+
+      - name: Push lightweight tag (if not created)
+        if: ${{ success() }}
+        run: |
+          TAG="${{ github.event.inputs.tag }}"
+          # safety: create tag if GH release action didn't create it (it usually does)
+          if ! git rev-parse "$TAG" >/dev/null 2>&1; then
+            git tag "$TAG"
+            git push origin "$TAG"
+          fi
+
+      - name: Done (Netlify auto-builds from base branch)
+        if: ${{ success() }}
+        run: |
+          echo "::notice title=Final Deploy::Merges til '${{ github.event.inputs.base }}' er gennemført."
+          echo "::notice::Tag '${{ github.event.inputs.tag }}' og release oprettet."
+          echo "::notice::Netlify bygger automatisk fra '${{ github.event.inputs.base }}'."
