@@ -241,8 +241,7 @@ button{cursor:pointer}
 }
 
 
-.materials-list .mat-head,
-.materials-header{
+.materials-list .mat-head{
   display:grid;
   grid-template-columns:minmax(0,1fr);
   gap:8px;
@@ -257,8 +256,7 @@ button{cursor:pointer}
   backdrop-filter:blur(8px);
 }
 
-.materials-list .mat-head span,
-.materials-header span{
+.materials-list .mat-head span{
   font-size:0.75rem;
   text-transform:uppercase;
   letter-spacing:0.08em;
@@ -268,11 +266,6 @@ button{cursor:pointer}
   text-align:right;
 }
 
-.materials-list .mat-head .header-material,
-.materials-header .header-material{justify-self:start;text-align:left}
-
-.materials-list .mat-head .header-total,
-.materials-header .header-total{grid-column:1/-1}
 
 .materials-list .mat-row{
   display:grid;
@@ -331,26 +324,20 @@ button{cursor:pointer}
 
 @media (min-width:420px){
   .materials-list .mat-head,
-  .materials-header,
   .materials-list .mat-row{
     grid-template-columns:minmax(0,1fr) minmax(68px,0.65fr) minmax(92px,0.7fr);
   }
 
   .materials-list .mat-line,
-  .materials-list .mat-line-total,
-  .materials-list .mat-head .header-total,
-  .materials-header .header-total{grid-column:1/-1}
+  .materials-list .mat-line-total{grid-column:1/-1}
 }
 
 @media (min-width:640px){
   .materials-list .mat-head,
-  .materials-header,
   .materials-list .mat-row{
     grid-template-columns:minmax(0,1.6fr) minmax(72px,0.55fr) minmax(100px,0.65fr) minmax(120px,0.75fr);
   }
 
   .materials-list .mat-line,
-  .materials-list .mat-line-total,
-  .materials-list .mat-head .header-total,
-  .materials-header .header-total{grid-column:auto}
+  .materials-list .mat-line-total{grid-column:auto}
 }

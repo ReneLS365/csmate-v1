@@ -837,23 +837,6 @@ function renderOptaelling() {
     container.querySelectorAll('.empty-state').forEach(node => node.remove());
   }
 
-  let header = list.querySelector('.materials-header');
-  if (!header) {
-    header = document.createElement('div');
-    header.className = 'materials-header';
-    header.innerHTML = `
-      <span class="header-material">Materiale</span>
-      <span class="header-qty">Antal</span>
-      <span class="header-price">Pris</span>
-      <span class="header-total">Linjetotal</span>
-    `;
-    list.prepend(header);
-  }
-
-  if (list.firstElementChild !== header) {
-    list.insertBefore(header, list.firstElementChild);
-  }
-
   Array.from(list.querySelectorAll('.material-row')).forEach(row => row.remove());
 
   items.forEach(item => {
