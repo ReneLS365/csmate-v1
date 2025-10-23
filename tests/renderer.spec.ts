@@ -182,6 +182,23 @@ describe('materials v2 renderer', () => {
     expect(totalFor('MAT2')).toBe('0,00 kr');
   });
 
+  it('does not persist overrides when untouched prices only differ by rounding', async () => {
+    const saveSpy = vi.fn().mockResolvedValue(undefined);
+    setupRenderer({ isAdmin: true, onSavePrices: saveSpy });
+
+    const saveButton = document.querySelector('.materials-v2__save');
+    expect(saveButton).toBeTruthy();
+    saveButton?.dispatchEvent(new window.Event('click'));
+
+    await vi.waitFor(() => {
+      expect(saveSpy).toHaveBeenCalled();
+    });
+
+    const payload = saveSpy.mock.calls[0][0] as { updates: Record<string, number>, removals: string[] };
+    expect(payload.updates).toEqual({});
+    expect(payload.removals).toEqual([]);
+  });
+
   it('unlocks after admin verify and collects price diff on save', async () => {
     const verifySpy = vi.fn().mockResolvedValue(true);
     const saveSpy = vi.fn().mockResolvedValue(undefined);
