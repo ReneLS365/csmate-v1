@@ -421,9 +421,14 @@ export function createMaterialsRenderer ({
       const current = toDecimal(line.priceInput.value)
       const basePrice = line.basePrice
       const overridePrice = line.overridePrice
-      const changedFromBase = Math.abs(current - basePrice) > 0.000001
+      const roundedCurrent = Math.round(current * 100) / 100
+      const hasBasePrice = Number.isFinite(basePrice)
+      const roundedBase = hasBasePrice ? Math.round(basePrice * 100) / 100 : roundedCurrent
+      const changedFromBase = hasBasePrice
+        ? Math.abs(roundedCurrent - roundedBase) > 0.000001
+        : true
       if (changedFromBase) {
-        updates[line.id] = Math.round(current * 100) / 100
+        updates[line.id] = roundedCurrent
       } else if (typeof overridePrice === 'number') {
         removals.push(line.id)
       }
