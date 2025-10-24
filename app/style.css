@@ -349,6 +349,7 @@ button{cursor:pointer}
   --mat-name-min: 42%;
   --mat-num-w: 84px;
   --mat-zoom: 0.55;
+  overflow-x: hidden;
 }
 
 #materials .mat-zoom, .materials .mat-zoom {
