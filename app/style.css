@@ -341,3 +341,91 @@ button{cursor:pointer}
   .materials-list .mat-line,
   .materials-list .mat-line-total{grid-column:auto}
 }
+
+/* === Materialeliste: nyt kompakt én-linje layout === */
+#materials, .materials {
+  --mat-row-h: 40px;
+  --mat-gap: 8px;
+  --mat-name-min: 42%;
+  --mat-num-w: 84px;
+  --mat-zoom: 0.55;
+  overflow-x: hidden;
+}
+
+#materials .mat-zoom, .materials .mat-zoom {
+  transform: scale(var(--mat-zoom));
+  transform-origin: top left;
+  width: calc(100% / var(--mat-zoom));
+}
+
+#materials .mat-row, .materials .mat-row {
+  display: grid;
+  grid-template-columns: minmax(var(--mat-name-min), 1fr) var(--mat-num-w) var(--mat-num-w) var(--mat-num-w);
+  align-items: center;
+  gap: var(--mat-gap);
+  height: var(--mat-row-h);
+  padding: 6px 10px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.02);
+}
+
+#materials .mat-line,
+#materials .mat-line-total,
+.materials .mat-line,
+.materials .mat-line-total {
+  grid-column: auto;
+}
+
+#materials .mat-name, .materials .mat-name {
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 600;
+}
+
+#materials .mat-qty,
+#materials .mat-price,
+#materials .mat-sum,
+.materials .mat-qty,
+.materials .mat-price,
+.materials .mat-sum {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+#materials input[type="number"],
+.materials input[type="number"] {
+  text-align: right;
+}
+
+#materials .mat-row + .mat-row,
+.materials .mat-row + .mat-row {
+  margin-top: 6px;
+}
+
+@media (max-width: 420px) {
+  #materials, .materials {
+    --mat-row-h: 36px;
+    --mat-num-w: 76px;
+    --mat-gap: 6px;
+    --mat-zoom: 0.50;
+  }
+}
+
+@media (min-width: 768px) {
+  #materials, .materials { --mat-zoom: 0.80; }
+}
+
+#materials .mat-row:focus-within,
+.materials .mat-row:focus-within {
+  outline: 1px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.04);
+}
+
+#materials .mat-name.manual-name-cell,
+.materials .mat-name.manual-name-cell {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: initial;
+}
