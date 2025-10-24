@@ -13,6 +13,7 @@
 - Restyled the numpad so it fits edge-to-edge with an Enter confirmation above a dedicated × cancel button for consistent actions on mobile.
 - Applied compact one-line grid styling with scoped zoom variables to materials rows for higher-density mobile overview.
 - Increased visibility of the materials quantity input with a high-contrast light theme treatment for easier entry.
+- Left-aligned the materials quantity column with placeholder-driven highlighting that emphasizes entered amounts.
 
 ### Fixed
 - Restored saved mentortillaeg and udd selections for workers when loading labor snapshots so totals and worker outputs stay in sync.

@@ -898,15 +898,24 @@ function renderOptaelling() {
     qtyInput.autocomplete = 'off';
     qtyInput.step = '0.01';
     qtyInput.dataset.numpad = 'true';
+    qtyInput.placeholder = '0';
     qtyInput.setAttribute('aria-label', 'Antal');
     if (item.manual) {
-      qtyInput.placeholder = 'Antal';
       const hasQuantity = item.quantity !== null && item.quantity !== undefined && item.quantity !== '';
       qtyInput.value = hasQuantity ? String(item.quantity) : '';
     } else {
       const qtyValue = item.quantity != null ? item.quantity : 0;
       qtyInput.value = String(qtyValue);
     }
+
+    const syncQtyVisibility = () => {
+      const qtyValue = toNumber(qtyInput.value);
+      row.dataset.hasQty = qtyValue > 0 ? 'true' : 'false';
+    };
+
+    syncQtyVisibility();
+    qtyInput.addEventListener('input', syncQtyVisibility);
+    qtyInput.addEventListener('change', syncQtyVisibility);
 
     const priceInput = document.createElement('input');
     priceInput.type = 'number';
