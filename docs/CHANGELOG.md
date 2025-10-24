@@ -12,6 +12,7 @@
 - Removed the sticky materials header from optælling and tidied the related layout styles after spacing verification on mobile and desktop.
 - Restyled the numpad so it fits edge-to-edge with an Enter confirmation above a dedicated × cancel button for consistent actions on mobile.
 - Applied compact one-line grid styling with scoped zoom variables to materials rows for higher-density mobile overview.
+- Increased visibility of the materials quantity input with a high-contrast light theme treatment for easier entry.
 
 ### Fixed
 - Restored saved mentortillaeg and udd selections for workers when loading labor snapshots so totals and worker outputs stay in sync.

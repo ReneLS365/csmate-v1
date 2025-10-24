@@ -142,6 +142,19 @@
   background: #151515;
 }
 
+.materials-v2__cell--quantity .materials-v2__input {
+  background: #f5f5f5;
+  color: #111;
+  border-color: rgba(17, 17, 17, 0.45);
+  font-weight: 600;
+}
+
+.materials-v2__cell--quantity .materials-v2__input:focus {
+  background: #fff;
+  border-color: #5c7cfa;
+  color: #111;
+}
+
 .materials-v2__input--numeric {
   font-variant-numeric: tabular-nums;
   text-align: center;
