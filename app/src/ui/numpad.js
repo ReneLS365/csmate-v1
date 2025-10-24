@@ -42,19 +42,32 @@ export function openNumpad ({ initial = '', baseValue = 0, onConfirm } = {}) {
     <div class="csm-np" role="dialog" aria-modal="true">
       <div class="csm-np-display" id="csm-np-display" aria-live="polite">0</div>
       <div class="csm-np-grid">
-        <button class="csm-np-btn">7</button><button class="csm-np-btn">8</button><button class="csm-np-btn">9</button><button class="csm-np-btn csm-np-op">×</button>
-        <button class="csm-np-btn">4</button><button class="csm-np-btn">5</button><button class="csm-np-btn">6</button><button class="csm-np-btn csm-np-op">÷</button>
-        <button class="csm-np-btn">1</button><button class="csm-np-btn">2</button><button class="csm-np-btn">3</button><button class="csm-np-btn csm-np-op">-</button>
-        <button class="csm-np-btn">0</button><button class="csm-np-btn">,</button><button class="csm-np-btn" data-act="clear">C</button><button class="csm-np-btn csm-np-op">+</button>
+        <button class="csm-np-btn">7</button>
+        <button class="csm-np-btn">8</button>
+        <button class="csm-np-btn">9</button>
+        <button class="csm-np-btn csm-np-op">×</button>
+        <button class="csm-np-btn">4</button>
+        <button class="csm-np-btn">5</button>
+        <button class="csm-np-btn">6</button>
+        <button class="csm-np-btn csm-np-op">÷</button>
+        <button class="csm-np-btn">1</button>
+        <button class="csm-np-btn">2</button>
+        <button class="csm-np-btn">3</button>
+        <button class="csm-np-btn csm-np-op">-</button>
+        <button class="csm-np-btn">0</button>
+        <button class="csm-np-btn">,</button>
+        <button class="csm-np-btn" data-action="clear">C</button>
+        <button class="csm-np-btn csm-np-op">+</button>
+        <button class="csm-np-btn csm-np-close" data-action="close" aria-label="Luk">✕</button>
       </div>
       <div class="csm-np-foot">
-        <button class="csm-np-close" data-act="close">✕</button>
-        <button class="csm-np-ok" data-act="ok">OK</button>
+        <button class="csm-np-ok" data-action="ok" aria-label="Bekræft">OK</button>
       </div>
     </div>
   `
   document.body.appendChild(overlay)
 
+  const dialog = overlay.querySelector('.csm-np')
   const display = overlay.querySelector('#csm-np-display')
   const base = toNumber(baseValue, 0)
   const initialDisplay = typeof initial === 'string' ? initial.trim() : ''
@@ -68,13 +81,15 @@ export function openNumpad ({ initial = '', baseValue = 0, onConfirm } = {}) {
   const prevOverflow = document.documentElement.style.overflow
   document.documentElement.style.overflow = 'hidden'
 
-  const closeOverlay = () => {
-    window.removeEventListener('keydown', keyHandler)
+  function closeOverlay () {
+    if (dialog) {
+      dialog.removeEventListener('keydown', handleKeydown)
+    }
     document.documentElement.style.overflow = prevOverflow || ''
     overlay.remove()
   }
 
-  const confirmValue = () => {
+  function confirmValue () {
     try {
       const result = evalExpr(buffer, base)
       if (typeof onConfirm === 'function') {
@@ -88,60 +103,71 @@ export function openNumpad ({ initial = '', baseValue = 0, onConfirm } = {}) {
     }
   }
 
-  overlay.addEventListener(
-    'click',
-    event => {
-      const target = event.target
-      if (!(target instanceof HTMLElement)) return
-
-      if (target === overlay) {
-        closeOverlay()
-        return
-      }
-
-      const action = target.dataset.act
-      if (action === 'close') {
-        closeOverlay()
-        return
-      }
-      if (action === 'clear') {
-        buffer = ''
-        render()
-        return
-      }
-      if (action === 'ok') {
-        confirmValue()
-        return
-      }
-      if (target.classList.contains('csm-np-btn') && !action) {
-        buffer += target.textContent.trim()
-        render()
-      }
-    },
-    { passive: true }
-  )
-
-  const keyHandler = event => {
+  function handleKeydown (event) {
     if (event.key === 'Escape') {
+      event.preventDefault()
       closeOverlay()
       return
     }
     if (event.key === 'Enter') {
+      event.preventDefault()
       confirmValue()
       return
     }
     if (event.key === 'Backspace') {
+      event.preventDefault()
       buffer = buffer.slice(0, -1)
       render()
       return
     }
     if ('0123456789+-*/.,xX'.includes(event.key)) {
+      event.preventDefault()
       const key = event.key.replace('x', '×').replace('X', '×').replace('.', ',')
       buffer += key
       render()
     }
   }
-  window.addEventListener('keydown', keyHandler)
+
+  overlay.addEventListener('click', event => {
+    const target = event.target
+    if (!(target instanceof HTMLElement)) return
+
+    if (target === overlay) {
+      closeOverlay()
+      return
+    }
+
+    const button = target.closest('button[data-action], .csm-np-btn, .csm-np-ok')
+    if (!(button instanceof HTMLButtonElement) || !overlay.contains(button)) return
+
+    const action = button.dataset.action
+    if (action === 'close') {
+      closeOverlay()
+      return
+    }
+    if (action === 'clear') {
+      buffer = ''
+      render()
+      return
+    }
+    if (action === 'ok') {
+      confirmValue()
+      return
+    }
+    if (button.classList.contains('csm-np-btn') && !action) {
+      buffer += button.textContent.trim()
+      render()
+    }
+  })
+
+  if (dialog) {
+    dialog.addEventListener('keydown', handleKeydown)
+  }
+
+  const firstFocusable = dialog?.querySelector('.csm-np-grid button, .csm-np-ok')
+  if (firstFocusable instanceof HTMLElement) {
+    requestAnimationFrame(() => firstFocusable.focus())
+  }
 
   render()
 }
