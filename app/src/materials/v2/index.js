@@ -215,7 +215,10 @@ function installMaterialsOverscrollStop () {
     startY = event.touches[0].clientY
   }, { passive: true })
 
+  const canScroll = () => el.scrollHeight - el.clientHeight > 1
+
   el.addEventListener('touchmove', event => {
+    if (!canScroll()) return
     const y = event.touches[0].clientY
     const movingUp = y > startY
     const movingDown = y < startY
@@ -227,6 +230,7 @@ function installMaterialsOverscrollStop () {
   }, { passive: false })
 
   el.addEventListener('wheel', event => {
+    if (!canScroll()) return
     const delta = Math.sign(event.deltaY)
     const atTop = el.scrollTop <= 0
     const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 1
