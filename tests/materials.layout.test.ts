@@ -10,7 +10,10 @@ function renderRow() {
     <div class="mat-zoom">
       <div class="mat-row" data-key="spindelfod-lang">
         <div class="mat-name">Spindelfod lang</div>
-        <input class="mat-qty" type="number" placeholder="0" />
+        <div class="mat-qty-wrap">
+          <input class="mat-qty" type="number" placeholder="0" value="0" />
+          <div class="mat-qty-display">0</div>
+        </div>
         <input class="mat-price" type="number" />
         <div class="mat-sum">0,00 kr.</div>
       </div>
@@ -26,6 +29,7 @@ describe('Materials layout classes', () => {
     expect(row).toBeTruthy();
     expect(row?.querySelector('.mat-name')?.textContent).toContain('Spindelfod');
     expect(row?.querySelector('.mat-qty')).toBeTruthy();
+    expect(row?.querySelector('.mat-qty-display')?.textContent).toBe('0');
     expect(row?.querySelector('.mat-price')).toBeTruthy();
     expect(row?.querySelector('.mat-sum')).toBeTruthy();
   });
@@ -34,5 +38,6 @@ describe('Materials layout classes', () => {
     const el = renderRow();
     const qty = el.querySelector<HTMLInputElement>('.mat-qty');
     expect(qty?.placeholder).toBe('0');
+    expect(qty?.value).toBe('0');
   });
 });

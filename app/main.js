@@ -908,14 +908,29 @@ function renderOptaelling() {
       qtyInput.value = String(qtyValue);
     }
 
+    const qtyWrap = document.createElement('div');
+    qtyWrap.className = 'mat-qty-wrap';
+
+    const qtyDisplay = document.createElement('div');
+    qtyDisplay.className = 'mat-qty-display';
+
     const syncQtyVisibility = () => {
-      const qtyValue = toNumber(qtyInput.value);
-      row.dataset.hasQty = qtyValue > 0 ? 'true' : 'false';
+      const rawValue = qtyInput.value ?? '';
+      const trimmed = rawValue.trim();
+      const qtyValue = toNumber(rawValue);
+      const hasQty = qtyValue > 0;
+
+      qtyDisplay.textContent = trimmed.length ? trimmed : '0';
+      row.toggleAttribute('data-has-qty', hasQty);
+      row.dataset.hasQty = hasQty ? 'true' : 'false';
     };
 
     syncQtyVisibility();
     qtyInput.addEventListener('input', syncQtyVisibility);
     qtyInput.addEventListener('change', syncQtyVisibility);
+
+    qtyWrap.appendChild(qtyInput);
+    qtyWrap.appendChild(qtyDisplay);
 
     const priceInput = document.createElement('input');
     priceInput.type = 'number';
@@ -950,7 +965,7 @@ function renderOptaelling() {
     lineInput.value = `${lineValue} kr`;
 
     row.appendChild(nameLabel);
-    row.appendChild(qtyInput);
+    row.appendChild(qtyWrap);
     row.appendChild(priceInput);
     row.appendChild(lineInput);
 

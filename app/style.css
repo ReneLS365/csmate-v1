@@ -431,40 +431,73 @@ button{cursor:pointer}
 }
 
 /* --- MATERIALER: Antal venstrejusteres og gøres tydeligt --- */
-#materials .mat-row{
-  /* behold eksisterende grid; antag kolonner = [navn][antal][pris][sum] */
-  grid-template-columns: minmax(var(--mat-name-min,42%),1fr)
-                         var(--mat-num-w,96px)
-                         var(--mat-num-w,84px)
-                         var(--mat-num-w,84px);
+#materials,
+.materials {
+  --mat-qty-w: 110px;
+  --mat-price-w: 84px;
+  --mat-sum-w: 100px;
 }
 
-/* Antal: venstrejusteret og høj kontrast */
-#materials .mat-qty{
-  text-align:left;
-  color:#fff;
-  background:#2a2b30;
-  border:1px solid rgba(255,255,255,.08);
-  border-radius:10px;
-  padding:6px 10px;
-  min-width:96px;
-  height:calc(var(--mat-row-h,40px) - 12px);
-  box-sizing:border-box;
-  appearance:textfield;
+#materials .mat-row,
+.materials .mat-row {
+  grid-template-columns: minmax(var(--mat-name-min, 42%), 1fr)
+                         var(--mat-qty-w)
+                         var(--mat-price-w)
+                         var(--mat-sum-w);
+  position: relative;
 }
 
-/* Placeholder svag – hjælper visuel forskel fra indtastet tal */
-#materials .mat-qty::placeholder{ color:rgba(231,231,231,.35); }
-
-/* Når der ER værdi i antal → gør det ekstra tydeligt */
-#materials .mat-row[data-has-qty="true"] .mat-qty,
-#materials .mat-qty:not(:placeholder-shown){
-  font-weight:700;
-  box-shadow:0 0 0 1px #2aa34a66 inset;
+/* Antal-input: venstrejusteret og tvangssynlig */
+#materials .mat-qty,
+.materials .mat-qty {
+  text-align: left;
+  color: #fff !important;
+  -webkit-text-fill-color: #fff !important;
+  opacity: 1 !important;
+  background: #2a2b30;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 10px;
+  padding: 6px 10px;
+  height: 32px;
+  box-sizing: border-box;
+  position: relative;
+  z-index: 2;
+  caret-color: #fff;
+  pointer-events: auto;
+  filter: none;
+  mix-blend-mode: normal;
+  appearance: textfield;
 }
 
-/* Sørg for at nul-værdier ikke fremhæves */
-#materials .mat-row[data-has-qty="false"] .mat-qty{
-  font-weight:400;
-  box-shadow:none;
+#materials .mat-qty::placeholder,
+.materials .mat-qty::placeholder { color: rgba(231,231,231,.35); }
+
+#materials .mat-qty-wrap,
+.materials .mat-qty-wrap {
+  position: relative;
+}
+
+#materials .mat-qty-display,
+.materials .mat-qty-display {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  padding: 6px 10px;
+  color: #fff;
+  font-weight: 700;
+  pointer-events: none;
+  opacity: .9;
+  z-index: 1;
+}
+
+#materials .mat-price,
+#materials .mat-sum,
+.materials .mat-price,
+.materials .mat-sum { text-align: right; }
+
+#materials .mat-row[data-has-qty] .mat-qty,
+.materials .mat-row[data-has-qty] .mat-qty {
+  box-shadow: 0 0 0 1px #2aa34a99 inset;
+  font-weight: 700;
 }
