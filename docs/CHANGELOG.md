@@ -19,3 +19,4 @@
 - Restored saved mentortillaeg and udd selections for workers when loading labor snapshots so totals and worker outputs stay in sync.
 - Slimmed header and navigation controls to reduce vertical space while preserving tap-target sizing.
 - Blocked rubber-band scrolling in the materials list so the page no longer bounces when reaching the top or bottom of the table.
+- Ensured the materials quantity input stays visible on mobile by widening the column, forcing text contrast, and mirroring the value in an overlay display.

@@ -358,7 +358,6 @@
       if (!qtyEl || !priceEl || !lineEl) return;
 
       const qty   = parseQty(qtyEl.value);
-      row.dataset.hasQty = qty > 0 ? 'true' : 'false';
       let price   = parseFloat(priceEl.dataset.price || '');
       if (!Number.isFinite(price)) {
         price = parseQty(priceEl.value);
@@ -369,6 +368,16 @@
       qtyEl.value = qtyEl.type === 'number'
         ? qtyFormatted.replace(',', '.')
         : qtyFormatted;
+
+      const mirror = row.querySelector('.mat-qty-display');
+      if (mirror) {
+        const displayValue = qtyEl.value && qtyEl.value.trim().length ? qtyEl.value.trim() : '0';
+        mirror.textContent = displayValue;
+      }
+
+      const hasQty = qty > 0;
+      row.toggleAttribute('data-has-qty', hasQty);
+      row.dataset.hasQty = hasQty ? 'true' : 'false';
 
       if (Number.isFinite(price)) {
         const priceFormatted = price.toFixed(2);
