@@ -58,10 +58,10 @@ export function openNumpad ({ initial = '', baseValue = 0, onConfirm } = {}) {
         <button class="csm-np-btn">,</button>
         <button class="csm-np-btn" data-action="clear">C</button>
         <button class="csm-np-btn csm-np-op">+</button>
-        <button class="csm-np-btn csm-np-close" data-action="close" aria-label="Luk">✕</button>
       </div>
-      <div class="csm-np-foot">
-        <button class="csm-np-ok" data-action="ok" aria-label="Bekræft">OK</button>
+      <div class="csm-np-footer">
+        <button type="button" class="csm-np-confirm" data-action="confirm">Enter</button>
+        <button type="button" class="csm-np-cancel" data-action="cancel" aria-label="Luk">×</button>
       </div>
     </div>
   `
@@ -137,11 +137,11 @@ export function openNumpad ({ initial = '', baseValue = 0, onConfirm } = {}) {
       return
     }
 
-    const button = target.closest('button[data-action], .csm-np-btn, .csm-np-ok')
+    const button = target.closest('button[data-action], .csm-np-btn')
     if (!(button instanceof HTMLButtonElement) || !overlay.contains(button)) return
 
     const action = button.dataset.action
-    if (action === 'close') {
+    if (action === 'cancel') {
       closeOverlay()
       return
     }
@@ -150,7 +150,7 @@ export function openNumpad ({ initial = '', baseValue = 0, onConfirm } = {}) {
       render()
       return
     }
-    if (action === 'ok') {
+    if (action === 'confirm') {
       confirmValue()
       return
     }
@@ -164,7 +164,7 @@ export function openNumpad ({ initial = '', baseValue = 0, onConfirm } = {}) {
     dialog.addEventListener('keydown', handleKeydown)
   }
 
-  const firstFocusable = dialog?.querySelector('.csm-np-grid button, .csm-np-ok')
+  const firstFocusable = dialog?.querySelector('.csm-np-grid button, .csm-np-confirm')
   if (firstFocusable instanceof HTMLElement) {
     requestAnimationFrame(() => firstFocusable.focus())
   }

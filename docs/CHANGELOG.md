@@ -10,9 +10,10 @@
 - Redesigned the materials list into a compact, scrollable layout without filter overlays for better mobile density.
 - Hid material list header row visually while keeping it available to screen readers for accessibility.
 - Removed the sticky materials header from optælling and tidied the related layout styles after spacing verification on mobile and desktop.
-- Restyled the numpad actions so OK is a full-width green confirmation button and Luk is a compact red cancel key in the grid, with Enter/Escape shortcuts aligned.
+- Restyled the numpad so it fits edge-to-edge with an Enter confirmation above a dedicated × cancel button for consistent actions on mobile.
 - Applied compact one-line grid styling with scoped zoom variables to materials rows for higher-density mobile overview.
 
 ### Fixed
 - Restored saved mentortillaeg and udd selections for workers when loading labor snapshots so totals and worker outputs stay in sync.
 - Slimmed header and navigation controls to reduce vertical space while preserving tap-target sizing.
+- Blocked rubber-band scrolling in the materials list so the page no longer bounces when reaching the top or bottom of the table.
