@@ -827,14 +827,21 @@ function renderOptaelling() {
     return;
   }
 
-  let list = container.querySelector('.materials-list');
-  if (!list) {
+  let zoomWrapper = container.querySelector('.mat-zoom');
+  if (!zoomWrapper) {
     container.textContent = '';
-    list = document.createElement('div');
-    list.className = 'materials-list';
-    container.appendChild(list);
+    zoomWrapper = document.createElement('div');
+    zoomWrapper.className = 'mat-zoom';
+    container.appendChild(zoomWrapper);
   } else {
     container.querySelectorAll('.empty-state').forEach(node => node.remove());
+  }
+
+  let list = zoomWrapper.querySelector('.materials-list');
+  if (!list) {
+    list = document.createElement('div');
+    list.className = 'materials-list';
+    zoomWrapper.appendChild(list);
   }
 
   Array.from(list.querySelectorAll('.material-row')).forEach(row => row.remove());
@@ -927,7 +934,7 @@ function renderOptaelling() {
 
     const lineInput = document.createElement('input');
     lineInput.type = 'text';
-    lineInput.className = 'mat-line item-total';
+    lineInput.className = 'mat-line item-total mat-sum';
     lineInput.readOnly = true;
     lineInput.setAttribute('aria-label', 'Linjetotal');
     const lineValue = formatCurrency(toNumber(item.price) * toNumber(item.quantity));
