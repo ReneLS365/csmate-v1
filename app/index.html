@@ -358,6 +358,7 @@
       if (!qtyEl || !priceEl || !lineEl) return;
 
       const qty   = parseQty(qtyEl.value);
+      row.dataset.hasQty = qty > 0 ? 'true' : 'false';
       let price   = parseFloat(priceEl.dataset.price || '');
       if (!Number.isFinite(price)) {
         price = parseQty(priceEl.value);
