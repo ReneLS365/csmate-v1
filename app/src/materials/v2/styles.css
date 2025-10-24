@@ -231,3 +231,13 @@
     font-size: 0.85rem;
   }
 }
+
+/* === MATERIALER: ingen scroll chaining/bounce === */
+#materials,
+#materials .mat-scroll,
+#materials-list,
+.materials-scroll,
+.materials-v2__body {
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+}

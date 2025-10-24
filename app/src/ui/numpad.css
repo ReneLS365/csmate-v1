@@ -1,14 +1,60 @@
-/* Fullscreen modal */
-.csm-np-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);display:flex;align-items:flex-end;z-index:9999}
-.csm-np{width:100%;background:#1e1f22;color:#e7e7e7;border-radius:16px 16px 0 0;padding:16px}
-.csm-np-display{font-size:28px;text-align:right;padding:12px 16px;background:#2a2b30;border-radius:12px;margin-bottom:12px;min-height:48px;overflow-x:auto}
-.csm-np-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
-.csm-np-btn{padding:18px 0;border-radius:12px;background:#2f3136;border:0;color:#fff;font-size:20px}
-.csm-np-btn:active{transform:scale(.98)}
-.csm-np-op{background:#3b3e45}
-.csm-np-close{background:#b91c1c;color:#fff;font-weight:700;padding:14px 0;border:0;border-radius:12px}
-.csm-np-close:active{filter:brightness(.9)}
-.csm-np-foot{margin-top:12px}
-.csm-np-ok{width:100%;padding:16px 0;border-radius:12px;border:0;background:#16a34a;color:#fff;font-size:18px;font-weight:800}
-.csm-np-ok:active{filter:brightness(.95)}
-@media (min-width:768px){.csm-np{max-width:480px;margin:0 auto}}
+/* === NUMPAD: always-fit & full-width @ 100% zoom === */
+.csm-np-overlay{
+  position:fixed; inset:0; display:flex; align-items:flex-end;
+  background:rgba(0,0,0,.5); z-index:9999;
+}
+
+.csm-np{
+  width:100vw; max-width:100vw; box-sizing:border-box;
+  margin:0; left:0; right:0;
+  border-radius:16px 16px 0 0;
+  background:#1e1f22; color:#e7e7e7;
+  padding:12px 16px calc(12px + env(safe-area-inset-bottom));
+  /* Højde der fungerer med mobil browser-chrome */
+  max-height:calc(100svh - 8px);
+  overflow:hidden;
+}
+@supports (height:100dvh){
+  .csm-np{ max-height:calc(100dvh - 8px); } /* fallback/fremtidssikring */
+}
+
+.csm-np-display{
+  font-size:28px; text-align:right;
+  padding:12px 16px; background:#2a2b30;
+  border-radius:12px; margin-bottom:12px;
+  min-height:48px; overflow-x:auto;
+}
+
+.csm-np-grid{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:10px;
+  /* Rækkehøjde der automatisk krymper så hele tastaturet kan være på skærmen */
+  grid-auto-rows:clamp(44px, 9svh, 64px);
+}
+
+.csm-np-btn{
+  padding:0; height:100%;
+  border-radius:12px; border:0; color:#fff; font-size:20px;
+  background:#2f3136;
+}
+.csm-np-btn:active{ transform:scale(.98); }
+.csm-np-op{ background:#3b3d43; } /* operator-knapper hvis de findes */
+
+/* Footer: Enter over X (begge full-width) */
+.csm-np-footer{
+  display:flex; flex-direction:column; gap:10px; margin-top:12px;
+}
+.csm-np-confirm{
+  display:block; width:100%; padding:14px 16px; border:0; border-radius:12px;
+  background:#2aa34a; color:#fff; font-weight:700; font-size:18px;
+}
+.csm-np-cancel{
+  display:block; width:100%; padding:14px 16px; border:0; border-radius:12px;
+  background:#b4342a; color:#fff; font-weight:700; font-size:18px;
+}
+
+/* Safe-area bund (iPhone) */
+@supports (padding:max(0px)){
+  .csm-np{ padding-bottom:max(12px, env(safe-area-inset-bottom)); }
+}

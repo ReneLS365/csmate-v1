@@ -196,6 +196,46 @@ async function updateTenantPrices (firmId, diff) {
   return response.json()
 }
 
+function installMaterialsOverscrollStop () {
+  if (typeof document === 'undefined') return
+
+  const el =
+    document.querySelector('#materials .mat-scroll') ||
+    document.querySelector('#materials-list') ||
+    document.querySelector('.materials-scroll') ||
+    document.querySelector('#materials') ||
+    document.querySelector('.materials-v2__body')
+
+  if (!el || el.dataset.csmOverscrollStop === '1') return
+
+  el.dataset.csmOverscrollStop = '1'
+
+  let startY = 0
+  el.addEventListener('touchstart', event => {
+    startY = event.touches[0].clientY
+  }, { passive: true })
+
+  el.addEventListener('touchmove', event => {
+    const y = event.touches[0].clientY
+    const movingUp = y > startY
+    const movingDown = y < startY
+    const atTop = el.scrollTop <= 0
+    const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 1
+    if ((atTop && movingUp) || (atBottom && movingDown)) {
+      event.preventDefault()
+    }
+  }, { passive: false })
+
+  el.addEventListener('wheel', event => {
+    const delta = Math.sign(event.deltaY)
+    const atTop = el.scrollTop <= 0
+    const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 1
+    if ((delta < 0 && atTop) || (delta > 0 && atBottom)) {
+      event.preventDefault()
+    }
+  }, { passive: false })
+}
+
 async function init () {
   if (typeof document === 'undefined') return
   if (!isMaterialsV2Enabled()) return
@@ -266,6 +306,7 @@ async function init () {
         await renderForFirm(firmId, true)
       }
     })
+    installMaterialsOverscrollStop()
     return renderer
   }
 
