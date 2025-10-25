@@ -9,17 +9,20 @@
   <link rel="stylesheet" href="print.css" media="print">
 </head>
 <body>
-<header>
-  <div class="bar">
+  <div id="app" class="app-shell">
+    <header>
+      <div class="bar">
     <div class="ttl">akkordseddel</div>
     <nav>
       <button id="btnSagsinfo" data-section="sagsinfo" class="active" type="button">Sagsinfo</button>
       <button id="btnOptaelling" data-section="optaelling" type="button">Optælling</button>
       <button id="btnLon" data-section="lon" type="button">Løn</button>
     </nav>
-  </div>
-</header>
-<main>
+      </div>
+    </header>
+    <div class="app-content">
+      <div class="materials-scroll">
+        <main>
   <section id="sagsinfoSection" class="sektion">
     <fieldset>
       <legend>Stamdata</legend>
@@ -228,25 +231,56 @@
       </div>
     </fieldset>
   </section>
-</main>
+        </main>
+      </div>
+    </div>
 
-<div id="guideModal" class="modal" hidden aria-hidden="true">
-  <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="guideModalTitle" tabindex="-1">
-    <button type="button" class="modal-close" aria-label="Luk">×</button>
-    <h2 id="guideModalTitle">Guide til CSMate</h2>
-    <p>
-      Følg disse trin for at genskabe den stabile arbejdsgang:
-    </p>
-    <ol>
-      <li>Udfyld <strong>Sagsinfo</strong> med de grundlæggende oplysninger.</li>
-      <li>Vælg system i <strong>Optælling</strong> og indtast materialer.</li>
-      <li>Importer eller eksporter CSV efter behov og generér PDF.</li>
-      <li>Tilføj medarbejdere under <strong>Løn</strong> og beregn akkord.</li>
-    </ol>
-    <p>
-      Har du brug for yderligere hjælp, kan du kontakte administratoren eller slå op i virksomhedens
-      interne vejledninger.
-    </p>
+    <div id="guideModal" class="modal" hidden aria-hidden="true">
+      <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="guideModalTitle" tabindex="-1">
+        <button type="button" class="modal-close" aria-label="Luk">×</button>
+        <h2 id="guideModalTitle">Guide til CSMate</h2>
+        <p>
+          Følg disse trin for at genskabe den stabile arbejdsgang:
+        </p>
+        <ol>
+          <li>Udfyld <strong>Sagsinfo</strong> med de grundlæggende oplysninger.</li>
+          <li>Vælg system i <strong>Optælling</strong> og indtast materialer.</li>
+          <li>Importer eller eksporter CSV efter behov og generér PDF.</li>
+          <li>Tilføj medarbejdere under <strong>Løn</strong> og beregn akkord.</li>
+        </ol>
+        <p>
+          Har du brug for yderligere hjælp, kan du kontakte administratoren eller slå op i virksomhedens
+          interne vejledninger.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="csm-np-overlay" aria-hidden="true">
+  <div class="csm-np" role="dialog" aria-modal="true" aria-label="Numerisk tastatur">
+    <div class="csm-np-display" id="csm-np-display" aria-live="polite">0</div>
+    <div class="csm-np-grid">
+      <button class="csm-np-btn">7</button>
+      <button class="csm-np-btn">8</button>
+      <button class="csm-np-btn">9</button>
+      <button class="csm-np-btn csm-np-op">×</button>
+      <button class="csm-np-btn">4</button>
+      <button class="csm-np-btn">5</button>
+      <button class="csm-np-btn">6</button>
+      <button class="csm-np-btn csm-np-op">÷</button>
+      <button class="csm-np-btn">1</button>
+      <button class="csm-np-btn">2</button>
+      <button class="csm-np-btn">3</button>
+      <button class="csm-np-btn csm-np-op">-</button>
+      <button class="csm-np-btn">0</button>
+      <button class="csm-np-btn">,</button>
+      <button class="csm-np-btn" data-action="clear">C</button>
+      <button class="csm-np-btn csm-np-op">+</button>
+    </div>
+    <div class="csm-np-footer">
+      <button type="button" class="csm-np-confirm" data-action="confirm">Enter</button>
+      <button type="button" class="csm-np-cancel np-close" data-action="cancel" aria-label="Luk">×</button>
+    </div>
   </div>
 </div>
 

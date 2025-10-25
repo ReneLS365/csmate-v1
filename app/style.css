@@ -10,7 +10,15 @@
   --pad:12px;
 }
 *{box-sizing:border-box}
-html,body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+.app-shell{height:100dvh;height:var(--app-vh,100dvh);display:flex;flex-direction:column}
+.app-content{flex:1 1 auto;min-height:0;overflow:hidden}
+.materials-scroll{height:100%;overflow-y:auto;overscroll-behavior:contain;padding-bottom:0!important;-webkit-overflow-scrolling:touch}
+.materials-scroll>:last-child{margin-bottom:0!important}
+:root.np-open,:root.np-open body{overflow:hidden!important}
+@supports not (height: 100dvh){
+  .app-shell{height:var(--app-vh,100vh)}
+}
 header{position:sticky;top:0;background:var(--elev);border-bottom:1px solid var(--border);z-index:5}
 header .bar{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:6px 10px;min-height:40px}
 header .ttl{font-weight:700}
@@ -53,13 +61,9 @@ button{cursor:pointer}
   --price-col: clamp(60px, 16vw, 110px);
   --total-col: clamp(64px, 20vw, 128px);
   --materials-grid: var(--name-col) var(--qty-col) var(--price-col) var(--total-col);
-  max-height: clamp(520px, 78vh, 640px);
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
   width: 100%;
-  padding-right: 4px;
-  scrollbar-gutter: stable both-edges;
 }
 .material-row{
   display: grid;

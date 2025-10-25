@@ -1,3 +1,5 @@
+import { initNumpadOverlay, getNumpadOverlayElements, showNumpadOverlay, hideNumpadOverlay } from '../modules/numpadOverlay.js'
+
 // Lightweight expression evaluator (+ - * /) with locale-safe decimals
 function toNumber (value, fallback = 0) {
   if (typeof value === 'number' && Number.isFinite(value)) return value
@@ -36,66 +38,46 @@ function formatDisplayValue (value) {
 }
 
 export function openNumpad ({ initial = '', baseValue = 0, onConfirm } = {}) {
-  const overlay = document.createElement('div')
-  overlay.className = 'csm-np-overlay'
-  overlay.innerHTML = `
-    <div class="csm-np" role="dialog" aria-modal="true">
-      <div class="csm-np-display" id="csm-np-display" aria-live="polite">0</div>
-      <div class="csm-np-grid">
-        <button class="csm-np-btn">7</button>
-        <button class="csm-np-btn">8</button>
-        <button class="csm-np-btn">9</button>
-        <button class="csm-np-btn csm-np-op">×</button>
-        <button class="csm-np-btn">4</button>
-        <button class="csm-np-btn">5</button>
-        <button class="csm-np-btn">6</button>
-        <button class="csm-np-btn csm-np-op">÷</button>
-        <button class="csm-np-btn">1</button>
-        <button class="csm-np-btn">2</button>
-        <button class="csm-np-btn">3</button>
-        <button class="csm-np-btn csm-np-op">-</button>
-        <button class="csm-np-btn">0</button>
-        <button class="csm-np-btn">,</button>
-        <button class="csm-np-btn" data-action="clear">C</button>
-        <button class="csm-np-btn csm-np-op">+</button>
-      </div>
-      <div class="csm-np-footer">
-        <button type="button" class="csm-np-confirm" data-action="confirm">Enter</button>
-        <button type="button" class="csm-np-cancel" data-action="cancel" aria-label="Luk">×</button>
-      </div>
-    </div>
-  `
-  document.body.appendChild(overlay)
+  initNumpadOverlay()
+  const elements = getNumpadOverlayElements()
+  if (!elements) return
 
-  const dialog = overlay.querySelector('.csm-np')
+  const { overlay, keypad } = elements
   const display = overlay.querySelector('#csm-np-display')
   const base = toNumber(baseValue, 0)
   const initialDisplay = typeof initial === 'string' ? initial.trim() : ''
   const fallbackDisplay = (initialDisplay !== '' ? initialDisplay : formatDisplayValue(base)) || '0'
-
   let buffer = ''
+  const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
+  let closed = false
+
   const render = () => {
     if (display) display.textContent = buffer || fallbackDisplay || '0'
   }
 
-  const prevOverflow = document.documentElement.style.overflow
-  document.documentElement.style.overflow = 'hidden'
-
-  function closeOverlay () {
-    if (dialog) {
-      dialog.removeEventListener('keydown', handleKeydown)
+  const cleanup = () => {
+    if (closed) return
+    closed = true
+    keypad?.removeEventListener('keydown', handleKeydown)
+    overlay.removeEventListener('click', handleClick)
+    document.removeEventListener('keydown', handleEscape, true)
+    hideNumpadOverlay()
+    if (previousFocus && typeof previousFocus.focus === 'function') {
+      previousFocus.focus({ preventScroll: true })
     }
-    document.documentElement.style.overflow = prevOverflow || ''
-    overlay.remove()
   }
 
-  function confirmValue () {
+  const closeOverlay = () => {
+    cleanup()
+  }
+
+  const confirmValue = () => {
     try {
       const result = evalExpr(buffer, base)
       if (typeof onConfirm === 'function') {
         onConfirm(result)
       }
-      closeOverlay()
+      cleanup()
     } catch (error) {
       if (display) {
         display.animate([{ opacity: 1 }, { opacity: 0.2 }, { opacity: 1 }], { duration: 160 })
@@ -103,7 +85,7 @@ export function openNumpad ({ initial = '', baseValue = 0, onConfirm } = {}) {
     }
   }
 
-  function handleKeydown (event) {
+  const handleKeydown = event => {
     if (event.key === 'Escape') {
       event.preventDefault()
       closeOverlay()
@@ -128,12 +110,22 @@ export function openNumpad ({ initial = '', baseValue = 0, onConfirm } = {}) {
     }
   }
 
-  overlay.addEventListener('click', event => {
+  const handleEscape = event => {
+    if (event.key === 'Escape' && overlay.classList.contains('open')) {
+      event.preventDefault()
+      closeOverlay()
+    }
+  }
+
+  const handleClick = event => {
     const target = event.target
     if (!(target instanceof HTMLElement)) return
 
     if (target === overlay) {
-      closeOverlay()
+      if (!overlay.classList.contains('no-backdrop-close')) {
+        event.preventDefault()
+        closeOverlay()
+      }
       return
     }
 
@@ -142,32 +134,42 @@ export function openNumpad ({ initial = '', baseValue = 0, onConfirm } = {}) {
 
     const action = button.dataset.action
     if (action === 'cancel') {
+      event.preventDefault()
       closeOverlay()
       return
     }
     if (action === 'clear') {
+      event.preventDefault()
       buffer = ''
       render()
       return
     }
     if (action === 'confirm') {
+      event.preventDefault()
       confirmValue()
       return
     }
     if (button.classList.contains('csm-np-btn') && !action) {
+      event.preventDefault()
       buffer += button.textContent.trim()
       render()
     }
-  })
-
-  if (dialog) {
-    dialog.addEventListener('keydown', handleKeydown)
   }
 
-  const firstFocusable = dialog?.querySelector('.csm-np-grid button, .csm-np-confirm')
-  if (firstFocusable instanceof HTMLElement) {
-    requestAnimationFrame(() => firstFocusable.focus())
+  const opened = showNumpadOverlay()
+  if (!opened) {
+    cleanup()
+    return
   }
+
+  keypad?.addEventListener('keydown', handleKeydown)
+  overlay.addEventListener('click', handleClick)
+  document.addEventListener('keydown', handleEscape, true)
 
   render()
+
+  const focusable = overlay.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')
+  if (focusable instanceof HTMLElement) {
+    requestAnimationFrame(() => focusable.focus({ preventScroll: true }))
+  }
 }
