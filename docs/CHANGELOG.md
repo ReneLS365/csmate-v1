@@ -25,3 +25,4 @@
 - Blocked rubber-band scrolling in the materials list so the page no longer bounces when reaching the top or bottom of the table.
 - Ensured the materials quantity input stays visible on mobile by widening the column, forcing text contrast, and mirroring the value in an overlay display.
 - Eliminated scroll jumps when opening the numeric keypad by locking body scroll and restoring the exact scroll position after closing on iOS Safari and Android Chrome.
+- Removed overlap between quantity and price inputs in the material list so both remain accessible on the lowest rows across zoom levels.

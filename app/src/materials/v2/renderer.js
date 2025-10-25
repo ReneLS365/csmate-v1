@@ -92,13 +92,13 @@ function normalizeDecimalInput (input) {
 
 function createLineRow (line, state, handlers) {
   const row = document.createElement('div')
-  row.className = 'materials-v2__row material-row'
+  row.className = 'materials-v2__row material-row csm-mat-row'
   row.dataset.id = line.id
   row.setAttribute('role', 'row')
   row.setAttribute('aria-label', 'Materiale')
 
   const nameCell = document.createElement('div')
-  nameCell.className = 'materials-v2__cell materials-v2__cell--name name'
+  nameCell.className = 'materials-v2__cell materials-v2__cell--name name csm-mat-name'
   nameCell.setAttribute('role', 'cell')
   if (line.type === 'base') {
     const scroll = document.createElement('span')
@@ -127,7 +127,7 @@ function createLineRow (line, state, handlers) {
   row.appendChild(nameCell)
 
   const qtyCell = document.createElement('div')
-  qtyCell.className = 'materials-v2__cell materials-v2__cell--quantity'
+  qtyCell.className = 'materials-v2__cell materials-v2__cell--quantity csm-mat-qty'
   qtyCell.setAttribute('role', 'cell')
   const qtyInput = createInput({
     type: 'number',
@@ -156,7 +156,7 @@ function createLineRow (line, state, handlers) {
   row.appendChild(qtyCell)
 
   const priceCell = document.createElement('div')
-  priceCell.className = 'materials-v2__cell materials-v2__cell--price price'
+  priceCell.className = 'materials-v2__cell materials-v2__cell--price price csm-mat-price'
   priceCell.setAttribute('role', 'cell')
   const priceInput = createInput({
     type: 'number',
@@ -178,7 +178,7 @@ function createLineRow (line, state, handlers) {
   row.appendChild(priceCell)
 
   const totalCell = document.createElement('div')
-  totalCell.className = 'materials-v2__cell materials-v2__cell--total total'
+  totalCell.className = 'materials-v2__cell materials-v2__cell--total total csm-mat-lineSum'
   totalCell.setAttribute('role', 'cell')
   totalCell.setAttribute('aria-labelledby', 'materials-v2__header-total')
   totalCell.textContent = formatCurrencyDisplay(line.total || 0)
