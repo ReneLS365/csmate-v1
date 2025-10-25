@@ -352,15 +352,17 @@ button{cursor:pointer}
   --mat-row-pad-y: 6px;
   --mat-row-spacing: 6px;
   --mat-gap: 8px;
-  --mat-name-min: 42%;
-  --mat-num-w: 84px;
+  --mat-name-min: 0;
+  --mat-qty-w: clamp(68px, 24vw, 120px);
+  --mat-price-w: clamp(68px, 23vw, 108px);
+  --mat-sum-w: clamp(76px, 26vw, 132px);
   --mat-font-size: 0.9rem;
   overflow-x: hidden;
 }
 
 #materials .mat-row, .materials .mat-row {
   display: grid;
-  grid-template-columns: minmax(var(--mat-name-min), 1fr) var(--mat-num-w) var(--mat-num-w) var(--mat-num-w);
+  grid-template-columns: minmax(var(--mat-name-min), 1fr) var(--mat-qty-w) var(--mat-price-w) var(--mat-sum-w);
   align-items: center;
   gap: var(--mat-gap);
   min-height: var(--mat-row-h);
@@ -369,6 +371,12 @@ button{cursor:pointer}
   background: rgba(255,255,255,0.02);
   font-size: var(--mat-font-size);
   line-height: 1.25;
+  position: relative;
+}
+
+#materials .mat-row > *,
+.materials .mat-row > * {
+  min-width: 0;
 }
 
 #materials .mat-row input,
@@ -422,7 +430,9 @@ button{cursor:pointer}
     --mat-row-h: 34px;
     --mat-row-pad-y: 4px;
     --mat-row-spacing: 4px;
-    --mat-num-w: 72px;
+    --mat-qty-w: clamp(62px, 28vw, 102px);
+    --mat-price-w: clamp(62px, 26vw, 96px);
+    --mat-sum-w: clamp(70px, 30vw, 120px);
     --mat-gap: 6px;
     --mat-font-size: 0.85rem;
   }
@@ -451,22 +461,6 @@ button{cursor:pointer}
 }
 
 /* --- MATERIALER: Antal venstrejusteres og gøres tydeligt --- */
-#materials,
-.materials {
-  --mat-qty-w: 110px;
-  --mat-price-w: 84px;
-  --mat-sum-w: 100px;
-}
-
-#materials .mat-row,
-.materials .mat-row {
-  grid-template-columns: minmax(var(--mat-name-min, 42%), 1fr)
-                         var(--mat-qty-w)
-                         var(--mat-price-w)
-                         var(--mat-sum-w);
-  position: relative;
-}
-
 /* Antal-input: venstrejusteret og tvangssynlig */
 #materials .mat-qty,
 .materials .mat-qty {
