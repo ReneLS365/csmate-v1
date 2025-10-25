@@ -863,7 +863,6 @@ function renderOptaelling() {
 
     const nameLabel = document.createElement('label');
     nameLabel.className = 'mat-name';
-    nameLabel.htmlFor = qtyInputId;
 
     if (item.manual) {
       const manualWrapper = document.createElement('div');
@@ -876,11 +875,13 @@ function renderOptaelling() {
       nameInput.dataset.id = item.id;
       nameInput.placeholder = 'Materiale';
       nameInput.value = item.name || '';
+      nameInput.setAttribute('aria-label', 'Materialenavn');
       manualWrapper.appendChild(nameInput);
 
       nameLabel.appendChild(manualWrapper);
       nameLabel.classList.add('manual-name-cell');
     } else {
+      nameLabel.htmlFor = qtyInputId;
       const systemLabel = item.systemKey ? systemLabelMap.get(item.systemKey) || item.systemKey : '';
       const badge = systemLabel ? `<span class="system-badge">${systemLabel}</span>` : '';
       const nameWrapper = document.createElement('div');
