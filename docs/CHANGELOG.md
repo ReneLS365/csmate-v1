@@ -15,6 +15,7 @@
 - Increased visibility of the materials quantity input with a high-contrast light theme treatment for easier entry.
 - Left-aligned the materials quantity column with placeholder-driven highlighting that emphasizes entered amounts.
 - Introduced an app-shell viewport controller with a single `.materials-scroll` container so the layout tracks the real device viewport on iOS and Android without padding hacks.
+- Replaced transform-based materials zoom with direct spacing, padding, and font sizing so rows stay compact without leaving gaps on mobile.
 
 ### Fixed
 - Prevented manual material name fields from redirecting focus to quantity inputs on touch devices while keeping them accessible for input handling.

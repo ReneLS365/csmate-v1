@@ -348,29 +348,44 @@ button{cursor:pointer}
 
 /* === Materialeliste: nyt kompakt én-linje layout === */
 #materials, .materials {
-  --mat-row-h: 40px;
+  --mat-row-h: 38px;
+  --mat-row-pad-y: 6px;
+  --mat-row-spacing: 6px;
   --mat-gap: 8px;
-  --mat-name-min: 42%;
-  --mat-num-w: 84px;
-  --mat-zoom: 0.55;
+  --mat-name-min: 0;
+  --mat-qty-w: clamp(68px, 24vw, 120px);
+  --mat-price-w: clamp(68px, 23vw, 108px);
+  --mat-sum-w: clamp(76px, 26vw, 132px);
+  --mat-font-size: 0.9rem;
   overflow-x: hidden;
-}
-
-#materials .mat-zoom, .materials .mat-zoom {
-  transform: scale(var(--mat-zoom));
-  transform-origin: top left;
-  width: calc(100% / var(--mat-zoom));
 }
 
 #materials .mat-row, .materials .mat-row {
   display: grid;
-  grid-template-columns: minmax(var(--mat-name-min), 1fr) var(--mat-num-w) var(--mat-num-w) var(--mat-num-w);
+  grid-template-columns: minmax(var(--mat-name-min), 1fr) var(--mat-qty-w) var(--mat-price-w) var(--mat-sum-w);
   align-items: center;
   gap: var(--mat-gap);
-  height: var(--mat-row-h);
-  padding: 6px 10px;
+  min-height: var(--mat-row-h);
+  padding: var(--mat-row-pad-y) 10px;
   border-radius: 10px;
   background: rgba(255,255,255,0.02);
+  font-size: var(--mat-font-size);
+  line-height: 1.25;
+  position: relative;
+}
+
+#materials .mat-row > *,
+.materials .mat-row > * {
+  min-width: 0;
+}
+
+#materials .mat-row input,
+#materials .mat-row select,
+.materials .mat-row input,
+.materials .mat-row select {
+  min-height: calc(var(--mat-row-h) - (var(--mat-row-pad-y) * 2));
+  padding: 4px 6px;
+  font-size: var(--mat-font-size);
 }
 
 #materials .mat-line,
@@ -386,6 +401,7 @@ button{cursor:pointer}
   overflow: hidden;
   text-overflow: ellipsis;
   font-weight: 600;
+  font-size: calc(var(--mat-font-size) + 0.05rem);
 }
 
 #materials .mat-qty,
@@ -396,6 +412,7 @@ button{cursor:pointer}
 .materials .mat-sum {
   text-align: right;
   font-variant-numeric: tabular-nums;
+  font-size: var(--mat-font-size);
 }
 
 #materials input[type="number"],
@@ -405,20 +422,29 @@ button{cursor:pointer}
 
 #materials .mat-row + .mat-row,
 .materials .mat-row + .mat-row {
-  margin-top: 6px;
+  margin-top: var(--mat-row-spacing);
 }
 
 @media (max-width: 420px) {
   #materials, .materials {
-    --mat-row-h: 36px;
-    --mat-num-w: 76px;
+    --mat-row-h: 34px;
+    --mat-row-pad-y: 4px;
+    --mat-row-spacing: 4px;
+    --mat-qty-w: clamp(62px, 28vw, 102px);
+    --mat-price-w: clamp(62px, 26vw, 96px);
+    --mat-sum-w: clamp(70px, 30vw, 120px);
     --mat-gap: 6px;
-    --mat-zoom: 0.50;
+    --mat-font-size: 0.85rem;
   }
 }
 
 @media (min-width: 768px) {
-  #materials, .materials { --mat-zoom: 0.80; }
+  #materials, .materials {
+    --mat-row-h: 42px;
+    --mat-row-pad-y: 8px;
+    --mat-row-spacing: 8px;
+    --mat-font-size: 0.95rem;
+  }
 }
 
 #materials .mat-row:focus-within,
@@ -435,22 +461,6 @@ button{cursor:pointer}
 }
 
 /* --- MATERIALER: Antal venstrejusteres og gøres tydeligt --- */
-#materials,
-.materials {
-  --mat-qty-w: 110px;
-  --mat-price-w: 84px;
-  --mat-sum-w: 100px;
-}
-
-#materials .mat-row,
-.materials .mat-row {
-  grid-template-columns: minmax(var(--mat-name-min, 42%), 1fr)
-                         var(--mat-qty-w)
-                         var(--mat-price-w)
-                         var(--mat-sum-w);
-  position: relative;
-}
-
 /* Antal-input: venstrejusteret og tvangssynlig */
 #materials .mat-qty,
 .materials .mat-qty {
