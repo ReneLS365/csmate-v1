@@ -14,9 +14,11 @@
 - Applied compact one-line grid styling with scoped zoom variables to materials rows for higher-density mobile overview.
 - Increased visibility of the materials quantity input with a high-contrast light theme treatment for easier entry.
 - Left-aligned the materials quantity column with placeholder-driven highlighting that emphasizes entered amounts.
+- Introduced an app-shell viewport controller with a single `.materials-scroll` container so the layout tracks the real device viewport on iOS and Android without padding hacks.
 
 ### Fixed
 - Restored saved mentortillaeg and udd selections for workers when loading labor snapshots so totals and worker outputs stay in sync.
 - Slimmed header and navigation controls to reduce vertical space while preserving tap-target sizing.
 - Blocked rubber-band scrolling in the materials list so the page no longer bounces when reaching the top or bottom of the table.
 - Ensured the materials quantity input stays visible on mobile by widening the column, forcing text contrast, and mirroring the value in an overlay display.
+- Eliminated scroll jumps when opening the numeric keypad by locking body scroll and restoring the exact scroll position after closing on iOS Safari and Android Chrome.
