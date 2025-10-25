@@ -17,6 +17,7 @@
 - Introduced an app-shell viewport controller with a single `.materials-scroll` container so the layout tracks the real device viewport on iOS and Android without padding hacks.
 
 ### Fixed
+- Eliminated empty scroll chaining in the materials section so the view no longer bounces or scrolls the body at top or bottom.
 - Restored saved mentortillaeg and udd selections for workers when loading labor snapshots so totals and worker outputs stay in sync.
 - Slimmed header and navigation controls to reduce vertical space while preserving tap-target sizing.
 - Blocked rubber-band scrolling in the materials list so the page no longer bounces when reaching the top or bottom of the table.

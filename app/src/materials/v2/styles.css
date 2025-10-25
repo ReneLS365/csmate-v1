@@ -253,4 +253,5 @@
 .materials-v2__body {
   overscroll-behavior-y: contain;
   -webkit-overflow-scrolling: touch;
+  overflow-y: auto;
 }

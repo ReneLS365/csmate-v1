@@ -1,6 +1,7 @@
 import './src/features/pctcalc/pctcalc.js'
 import { initNumpadBinding } from './src/ui/numpad.init.js'
 import { initNumpadOverlay } from './src/modules/numpadOverlay.js'
+import { initMaterialsScrollLock } from './src/modules/materialsScrollLock.js'
 import { normalizeKey } from './src/lib/string-utils.js'
 import { EXCLUDED_MATERIAL_KEYS, shouldExcludeMaterialEntry } from './src/lib/materials/exclusions.js'
 
@@ -975,6 +976,7 @@ function renderOptaelling() {
     list.appendChild(row);
   });
 
+  initMaterialsScrollLock(container);
   updateTotals(true);
 }
 
