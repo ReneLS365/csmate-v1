@@ -17,6 +17,7 @@
 - Introduced an app-shell viewport controller with a single `.materials-scroll` container so the layout tracks the real device viewport on iOS and Android without padding hacks.
 
 ### Fixed
+- Prevented manual material name fields from redirecting focus to quantity inputs on touch devices while keeping them accessible for input handling.
 - Eliminated empty scroll chaining in the materials section so the view no longer bounces or scrolls the body at top or bottom.
 - Restored saved mentortillaeg and udd selections for workers when loading labor snapshots so totals and worker outputs stay in sync.
 - Slimmed header and navigation controls to reduce vertical space while preserving tap-target sizing.
