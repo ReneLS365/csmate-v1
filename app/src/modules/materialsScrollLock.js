@@ -45,6 +45,8 @@ export function initMaterialsScrollLock (root = document) {
     }
   }
 
+  const canScroll = () => container.scrollHeight > container.clientHeight
+
   const handleTouchStart = () => {
     const max = Math.max(0, container.scrollHeight - container.clientHeight)
     if (container.scrollTop <= 0 && max > 0) {
@@ -55,6 +57,7 @@ export function initMaterialsScrollLock (root = document) {
   }
 
   const handleTouchMove = event => {
+    if (!canScroll()) return
     const atTop = container.scrollTop <= 0
     const atBottom = container.scrollTop + container.clientHeight >= container.scrollHeight
     if (atTop || atBottom) {
@@ -63,6 +66,7 @@ export function initMaterialsScrollLock (root = document) {
   }
 
   const handleWheel = event => {
+    if (!canScroll()) return
     const delta = Math.sign(event.deltaY)
     if (delta === 0) return
     const atTop = container.scrollTop <= 0
