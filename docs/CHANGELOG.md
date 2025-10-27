@@ -7,6 +7,7 @@
 - Automated renderer tests covering mobile material list calculations and input corrections.
 - jsdom layout sanity test ensuring materials rows expose the new mat-zoom and mat-* classes.
 - Vitest spec for the shared material row template verifying DOM structure and recalculation of line totals.
+- Akkord V2 beregner med final projektsum, eksport/import tests og jobType/variant-styret total som single source of truth.
 
 ### Changed
 - Totals pipeline recalculates materials, ekstraarbejde, slæb og projektsum gennem den nye helper så UI og eksport deler samme grundlag.
