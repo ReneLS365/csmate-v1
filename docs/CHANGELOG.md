@@ -23,6 +23,7 @@
 - Unified manual material rows with the shared grid/input template so price fields remain aligned alongside system materials.
 
 ### Fixed
+- Restored tralleløft amount when importing v2 JSON payloads so totals keep the exported extra work value.
 - Eliminated double counting of slæb and tralleløft in akkordsum, timepris og projektsum output samt eksport.
 - Prevented manual material name fields from redirecting focus to quantity inputs on touch devices while keeping them accessible for input handling.
 - Eliminated empty scroll chaining in the materials section so the view no longer bounces or scrolls the body at top or bottom.
