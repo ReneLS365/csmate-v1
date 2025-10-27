@@ -1,0 +1,35 @@
+{
+  "_meta": {
+    "company": "",
+    "template": "default",
+    "currency": "DKK",
+    "source": "",
+    "generated": "",
+    "admin_code": ""
+  },
+  "pay": {
+    "base_wage_hourly": 0,
+    "allowances_per_hour": {},
+    "overtime_multipliers": {
+      "weekday": 1,
+      "weekend": 1
+    }
+  },
+  "roles": {
+    "chef": [
+      "approve",
+      "reject",
+      "send",
+      "edit"
+    ],
+    "formand": [
+      "approve",
+      "reject",
+      "send"
+    ],
+    "arbejder": [
+      "send"
+    ]
+  },
+  "price_table": {}
+}

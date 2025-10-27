@@ -1,8 +1,29 @@
 import ApprovalControls from '@/components/ApprovalControls';
+import TemplateSelect from '@/components/TemplateSelect';
+import AdminGate from '@/components/AdminGate';
+import { getPersistedTemplate, loadTemplate, DEFAULT_TEMPLATE_ID } from '@/lib/templates';
 import { selectComputed } from '@/store/selectors';
 
-export default function ReviewPanel({ state, setState }) {
+export default function ReviewPanel({ state = {}, setState }) {
   const o = selectComputed(state);
+  const persistedTemplate = getPersistedTemplate();
+  const templateId = state?.templateId ?? persistedTemplate ?? DEFAULT_TEMPLATE_ID;
+  const template = loadTemplate(templateId);
+  const isAdmin = Boolean(state?.isAdmin);
+  const canMutate = typeof setState === 'function';
+
+  function patchState(patch) {
+    if (!canMutate) return;
+    setState((prev) => ({ ...(prev ?? {}), ...patch }));
+  }
+
+  function handleTemplateChange(nextId) {
+    patchState({ templateId: nextId, isAdmin: false });
+  }
+
+  function handleAdminChange(nextIsAdmin) {
+    patchState({ isAdmin: Boolean(nextIsAdmin) });
+  }
 
   const fmt2 = (v) => new Intl.NumberFormat('da-DK', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v);
   const pct0 = (v) => new Intl.NumberFormat('da-DK', { maximumFractionDigits: 0 }).format(v) + ' %';
@@ -28,12 +49,13 @@ export default function ReviewPanel({ state, setState }) {
       <div className="review-row review-row--total"><span>FINAL</span><b>{kr(o.project_final)}</b></div>
 
       <div className="review-metadata">
+        <div className="review-row review-row--subtle"><span>Skabelon</span><b>{template.label}</b></div>
         <div className="review-row review-row--subtle"><span>Timer ({o.jobType})</span><b>{t(o.hours)}</b></div>
-        {setState && (
-          <div className="review-controls">
-            <ApprovalControls state={state} setState={setState} />
-          </div>
-        )}
+        <div className="review-controls">
+          <TemplateSelect value={templateId} onChange={handleTemplateChange} disabled={!canMutate} />
+          <AdminGate templateId={templateId} isAdmin={isAdmin} disabled={!canMutate} onAdminChange={handleAdminChange} />
+          {canMutate && <ApprovalControls state={state} setState={setState} />}
+        </div>
       </div>
     </section>
   );
