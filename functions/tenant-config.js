@@ -41,11 +41,17 @@ export const handler = async event => {
   const filePath = path.join(TENANTS_DIR, `${firmId}.json`);
 
   try {
-    const prices = await readJson(filePath);
+    const tenant = await readJson(filePath);
+    const priceTable =
+      tenant && typeof tenant === 'object' && !Array.isArray(tenant) && tenant.price_table &&
+      typeof tenant.price_table === 'object' && !Array.isArray(tenant.price_table)
+        ? tenant.price_table
+        : tenant;
+
     return {
       statusCode: 200,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: firmId, prices })
+      body: JSON.stringify({ id: firmId, prices: priceTable })
     };
   } catch (error) {
     console.error('tenant-config fejl', error);

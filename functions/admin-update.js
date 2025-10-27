@@ -7,6 +7,10 @@ const TENANTS_DIR = path.join(DATA_DIR, 'tenants');
 const MATERIALS_FILE = path.join(DATA_DIR, 'materials.json');
 const MAX_PRICE = 100000;
 
+function isPlainObject(value) {
+  return value && typeof value === 'object' && !Array.isArray(value);
+}
+
 async function readJson(filePath) {
   try {
     const raw = await fs.readFile(filePath, 'utf8');
@@ -153,26 +157,33 @@ async function handleUpdate(body) {
   }
 
   const existing = await readJson(path.join(TENANTS_DIR, `${firmId}.json`));
-  const next = { ...existing };
+  const hasStructuredTable = isPlainObject(existing) && isPlainObject(existing.price_table);
+  const next = hasStructuredTable
+    ? { ...existing, price_table: { ...existing.price_table } }
+    : { ...existing };
+  const target = hasStructuredTable ? next.price_table : next;
   const changed = new Set();
 
   for (const [id, price] of normalizedUpdates.entries()) {
-    next[id] = price;
-    changed.add(id);
+    if (target[id] !== price) {
+      target[id] = price;
+      changed.add(id);
+    }
   }
 
   removals.forEach(id => {
-    if (allowedIds.has(id) && id in next) {
-      delete next[id];
+    if (allowedIds.has(id) && Object.prototype.hasOwnProperty.call(target, id)) {
+      delete target[id];
       changed.add(id);
     }
   });
 
   if (changed.size === 0) {
+    const currentPrices = hasStructuredTable ? existing.price_table || {} : existing;
     return {
       statusCode: 200,
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: firmId, prices: existing })
+      body: JSON.stringify({ id: firmId, prices: currentPrices })
     };
   }
 
@@ -180,7 +191,7 @@ async function handleUpdate(body) {
   return {
     statusCode: 200,
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id: firmId, prices: next })
+    body: JSON.stringify({ id: firmId, prices: target })
   };
 }
 

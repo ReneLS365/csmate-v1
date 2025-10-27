@@ -91,7 +91,8 @@ async function loadTenantOverrides (firmId) {
   const query = new URLSearchParams({ firm: firmId })
   try {
     const data = await fetchJson(`/.netlify/functions/tenant-config?${query.toString()}`)
-    const prices = data?.prices && typeof data.prices === 'object' ? data.prices : {}
+    const priceSource = data?.prices ?? data?.price_table
+    const prices = priceSource && typeof priceSource === 'object' && !Array.isArray(priceSource) ? priceSource : {}
     await idbSet(STORE_OVERRIDES, firmId, prices)
     return prices
   } catch (error) {
