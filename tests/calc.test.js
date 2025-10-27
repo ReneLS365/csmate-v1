@@ -3,11 +3,12 @@ import { describe, it, expect } from 'vitest';
 import { computeTotals, LOCK_SLED_INT } from '../src/lib/calc.js';
 
 describe('computeTotals – heltals slæb og kerneforløb', () => {
-  it('akkordsum/timepris med 7% slæb (afrundet)', () => {
+  it('akkordsum/timepris med 7% slæb og tralleløft medregnet', () => {
     const o = computeTotals({
       materials: 4000.00,
       sledPercent: 7.09125, // -> 7
       extraWork: 188.60,
+      tralleloft: 52.20,
       km: 42.40,
       hours: 16,
       udd1: 0, udd2: 0, mentor: 0
@@ -15,14 +16,17 @@ describe('computeTotals – heltals slæb og kerneforløb', () => {
     expect(LOCK_SLED_INT).toBe(true);
     expect(o.sledPercent).toBe(7);
     expect(o.sledKr).toBe(280.00);
-    expect(o.extraAndKm).toBe(231.00);
-    expect(o.totalAccord).toBe(4511.00);
-    expect(o.hourlyNoAdd).toBe(281.94);
+    expect(o.extraWork).toBe(188.60);
+    expect(o.tralleloft).toBe(52.20);
+    expect(o.km).toBe(42.40);
+    expect(o.extraAndKm).toBe(283.20);
+    expect(o.totalAccord).toBe(4563.20);
+    expect(o.hourlyNoAdd).toBe(285.2);
   });
 
   it('additive tillæg pr. time', () => {
     const o = computeTotals({
-      materials: 1000, sledPercent: 10, extraWork: 0, km: 0, hours: 10,
+      materials: 1000, sledPercent: 10, extraWork: 0, tralleloft: 0, km: 0, hours: 10,
       udd1: 15, udd2: 25, mentor: 10
     });
     expect(o.hourlyNoAdd).toBe(110.00);
@@ -34,7 +38,7 @@ describe('computeTotals – heltals slæb og kerneforløb', () => {
 
   it('0 timer -> projektsum = base (ingen løn)', () => {
     const o = computeTotals({
-      materials: 500, sledPercent: 5, extraWork: 0, km: 0, hours: 0,
+      materials: 500, sledPercent: 5, extraWork: 0, tralleloft: 0, km: 0, hours: 0,
       udd1: 0, udd2: 0, mentor: 0
     });
     expect(o.hourlyNoAdd).toBe(0);
