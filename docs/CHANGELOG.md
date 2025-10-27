@@ -5,6 +5,7 @@
 ### Added
 - Automated renderer tests covering mobile material list calculations and input corrections.
 - jsdom layout sanity test ensuring materials rows expose the new mat-zoom and mat-* classes.
+- Vitest spec for the shared material row template verifying DOM structure and recalculation of line totals.
 
 ### Changed
 - Redesigned the materials list into a compact, scrollable layout without filter overlays for better mobile density.
@@ -16,6 +17,7 @@
 - Left-aligned the materials quantity column with placeholder-driven highlighting that emphasizes entered amounts.
 - Introduced an app-shell viewport controller with a single `.materials-scroll` container so the layout tracks the real device viewport on iOS and Android without padding hacks.
 - Replaced transform-based materials zoom with direct spacing, padding, and font sizing so rows stay compact without leaving gaps on mobile.
+- Unified manual material rows with the shared grid/input template so price fields remain aligned alongside system materials.
 
 ### Fixed
 - Prevented manual material name fields from redirecting focus to quantity inputs on touch devices while keeping them accessible for input handling.

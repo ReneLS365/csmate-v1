@@ -404,12 +404,6 @@
         ? qtyFormatted.replace(',', '.')
         : qtyFormatted;
 
-      const mirror = row.querySelector('.mat-qty-display');
-      if (mirror) {
-        const displayValue = qtyEl.value && qtyEl.value.trim().length ? qtyEl.value.trim() : '0';
-        mirror.textContent = displayValue;
-      }
-
       const hasQty = qty > 0;
       row.toggleAttribute('data-has-qty', hasQty);
       row.dataset.hasQty = hasQty ? 'true' : 'false';
@@ -430,7 +424,13 @@
         priceEl.value = '';
       }
 
-      lineEl.value  = fmtDK.format(line);
+      const formattedLine = fmtDK.format(line);
+      const lineText = `${formattedLine} kr`;
+      if (lineEl instanceof HTMLInputElement) {
+        lineEl.value = lineText;
+      } else {
+        lineEl.textContent = lineText;
+      }
     }
 
     window.parseQty = parseQty;
