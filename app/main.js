@@ -2567,7 +2567,9 @@ function buildCSVPayload(customSagsnummer, options = {}) {
 
   const materialSum = cache && Number.isFinite(cache.materialSum)
     ? cache.materialSum
-    : totalsFallback.samletAkkordsum;
+    : totalsFallback.materialer;
+  const extraSum = totalsFallback.ekstraarbejde;
+  const haulSum = totalsFallback.slaeb;
   const laborSum = cache && Number.isFinite(cache.laborSum)
     ? cache.laborSum
     : totalsFallback.montoerLonMedTillaeg;
@@ -2631,6 +2633,12 @@ function buildCSVPayload(customSagsnummer, options = {}) {
   lines.push('');
   lines.push('Sektion;Total;Beløb');
   lines.push(`Total;Materialesum;${escapeCSV(formatNumberForCSV(materialSum))}`);
+  if (extraSum > 0) {
+    lines.push(`Total;Ekstraarbejde;${escapeCSV(formatNumberForCSV(extraSum))}`);
+  }
+  if (haulSum > 0) {
+    lines.push(`Total;Slæb;${escapeCSV(formatNumberForCSV(haulSum))}`);
+  }
   lines.push(`Total;Lønsum;${escapeCSV(formatNumberForCSV(laborSum))}`);
   lines.push(`Total;Projektsum;${escapeCSV(formatNumberForCSV(projectSum))}`);
 
@@ -2716,7 +2724,9 @@ async function exportPDFBlob(customSagsnummer, options = {}) {
 
   const materialSum = cache && Number.isFinite(cache.materialSum)
     ? cache.materialSum
-    : totalsFallback.samletAkkordsum;
+    : totalsFallback.materialer;
+  const extraSum = totalsFallback.ekstraarbejde;
+  const haulSum = totalsFallback.slaeb;
   const laborSum = cache && Number.isFinite(cache.laborSum)
     ? cache.laborSum
     : totalsFallback.montoerLonMedTillaeg;
@@ -2803,6 +2813,8 @@ async function exportPDFBlob(customSagsnummer, options = {}) {
       <h3>Totals</h3>
       <div class="totals">
         <div><strong>Materialesum</strong><div>${formatCurrency(materialSum)} kr</div></div>
+        ${extraSum > 0 ? `<div><strong>Ekstraarbejde</strong><div>${formatCurrency(extraSum)} kr</div></div>` : ''}
+        ${haulSum > 0 ? `<div><strong>Slæb</strong><div>${formatCurrency(haulSum)} kr</div></div>` : ''}
         <div><strong>Lønsum</strong><div>${formatCurrency(laborSum)} kr</div></div>
         <div><strong>Projektsum</strong><div>${formatCurrency(projectSum)} kr</div></div>
       </div>
