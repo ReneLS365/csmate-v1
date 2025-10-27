@@ -315,3 +315,25 @@ round:rgba(255,255,255,0.03)}
 .materials-list input:focus{outline:2px solid #3b82f6;outline-offset:0}
 
 
+
+.review-panel{display:flex;flex-direction:column;gap:8px;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:var(--pad)}
+.review-row{display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:0.95rem}
+.review-row span{color:var(--muted)}
+.review-row b{font-variant-numeric:tabular-nums;font-weight:600}
+.review-row--total{background:rgba(255,255,255,0.02);padding:10px 12px;border-radius:10px;font-weight:600}
+.review-row--header{margin-top:4px;padding-top:8px;border-top:1px solid var(--border);font-size:0.85rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.04em}
+.review-row--subtle span{color:var(--muted);font-size:0.85rem}
+.review-metadata{display:flex;flex-direction:column;gap:12px;margin-top:8px}
+.review-controls{display:flex;flex-direction:column;gap:8px}
+
+.approval-controls{display:flex;flex-direction:column;gap:8px}
+.approval-controls__header{display:flex;align-items:center;gap:12px}
+.approval-controls__role{color:var(--muted)}
+.approval-controls__actions{display:flex;gap:8px;flex-wrap:wrap}
+.approval-button{background:#34353b;color:var(--text);border:1px solid var(--border);border-radius:10px;padding:10px 14px;font-size:0.95rem;min-height:40px}
+.approval-button:disabled{opacity:0.5;cursor:not-allowed}
+
+.approval-badge{display:inline-flex;align-items:center;justify-content:center;padding:6px 12px;border-radius:999px;border:1px solid var(--border);font-size:0.85rem;font-weight:600;text-transform:capitalize}
+.approval-badge[data-status="afventer"]{background:rgba(255,196,38,0.12);color:#ffd66c;border-color:rgba(255,196,38,0.4)}
+.approval-badge[data-status="godkendt"]{background:rgba(93,201,133,0.18);color:#8adbae;border-color:rgba(93,201,133,0.4)}
+.approval-badge[data-status="afvist"]{background:rgba(214,102,102,0.18);color:#ff9b9b;border-color:rgba(214,102,102,0.4)}

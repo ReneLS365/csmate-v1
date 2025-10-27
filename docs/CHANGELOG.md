@@ -8,6 +8,9 @@
 - jsdom layout sanity test ensuring materials rows expose the new mat-zoom and mat-* classes.
 - Vitest spec for the shared material row template verifying DOM structure and recalculation of line totals.
 - Akkord V2 beregner med final projektsum, eksport/import tests og jobType/variant-styret total som single source of truth.
+- Approvalroller (sjakbajs/kontor) med statusbadges og Vitest-dækkede overgangsregler.
+- IndexedDB autosave modul der fastholder de 20 seneste projekter med testet oprydning.
+- Reviewpanel komponenter og eksportere til E-Komplet v2 bygget på nye moduler med @purpose dokumentation.
 
 ### Changed
 - Totals pipeline recalculates materials, ekstraarbejde, slæb og projektsum gennem den nye helper så UI og eksport deler samme grundlag.
@@ -21,6 +24,8 @@
 - Introduced an app-shell viewport controller with a single `.materials-scroll` container so the layout tracks the real device viewport on iOS and Android without padding hacks.
 - Replaced transform-based materials zoom with direct spacing, padding, and font sizing so rows stay compact without leaving gaps on mobile.
 - Unified manual material rows with the shared grid/input template so price fields remain aligned alongside system materials.
+- Reviewsektionen viser nu tralleløft, km og ekstraarbejde som separate rækker og placerer medarbejdere/timer nederst.
+- Eksport JSON/CSV tilføjer tralleløft og jobtyper for at spejle REVIEW og single source modulerne.
 
 ### Fixed
 - Restored tralleløft amount when importing v2 JSON payloads so totals keep the exported extra work value.
@@ -33,3 +38,4 @@
 - Ensured the materials quantity input stays visible on mobile by widening the column, forcing text contrast, and mirroring the value in an overlay display.
 - Eliminated scroll jumps when opening the numeric keypad by locking body scroll and restoring the exact scroll position after closing on iOS Safari and Android Chrome.
 - Removed overlap between quantity and price inputs in the material list so both remain accessible on the lowest rows across zoom levels.
+- Sikret at eksport/import og review bruger samme tralleløft-beløb så totals matcher på tværs af flows.

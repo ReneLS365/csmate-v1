@@ -1,31 +1,40 @@
-// src/views/Review.jsx
+import ApprovalControls from '@/components/ApprovalControls';
 import { selectComputed } from '@/store/selectors';
 
-export default function ReviewPanel({ state }) {
+export default function ReviewPanel({ state, setState }) {
   const o = selectComputed(state);
 
   const fmt2 = (v) => new Intl.NumberFormat('da-DK', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v);
   const pct0 = (v) => new Intl.NumberFormat('da-DK', { maximumFractionDigits: 0 }).format(v) + ' %';
   const kr = (v) => `${fmt2(v)} kr`;
-  const t  = (v) => `${fmt2(v)} t`;
+  const t = (v) => `${fmt2(v)} t`;
 
   return (
-    <section className="review">
-      <div className="row"><span>1. Materialer</span><b>{kr(o.materials)}</b></div>
-      <div className="row"><span>2. Slæb</span><b>{pct0(o.sledPercent)} ({kr(o.sledKr)})</b></div>
-      <div className="row"><span>3. Ekstra arbejde + km</span><b>{kr(o.extraAndKm)}</b></div>
+    <section className="review-panel">
+      <div className="review-row"><span>1. Materialer</span><b>{kr(o.materials)}</b></div>
+      <div className="review-row"><span>2. Slæb</span><b>{pct0(o.sledPercent)} ({kr(o.sledKr)})</b></div>
+      <div className="review-row"><span>3. Ekstra arbejde</span><b>{kr(o.extraWork)}</b></div>
+      <div className="review-row"><span>4. Tralleløft</span><b>{kr(o.tralleloft)}</b></div>
+      <div className="review-row"><span>5. Km</span><b>{kr(o.km)}</b></div>
 
-      <div className="row total"><span>4. Samlet akkordsum</span><b>{kr(o.totalAccord)}</b></div>
+      <div className="review-row review-row--total"><span>6. Samlet akkordsum</span><b>{kr(o.totalAccord)}</b></div>
 
-      <div className="row"><span>5. Timepris (uden tillæg)</span><b>{fmt2(o.hourlyNoAdd)} kr/t</b></div>
-      <div className="row"><span>7. Timeløn m. UDD1</span><b>{fmt2(o.hourlyUdd1)} kr/t</b></div>
-      <div className="row"><span>8. Timeløn m. UDD2</span><b>{fmt2(o.hourlyUdd2)} kr/t</b></div>
-      <div className="row"><span>9. Timeløn m. UDD2 + Mentor</span><b>{fmt2(o.hourlyUdd2Mentor)} kr/t</b></div>
+      <div className="review-row"><span>7. Timepris (uden tillæg)</span><b>{fmt2(o.hourlyNoAdd)} kr/t</b></div>
+      <div className="review-row"><span>8. Timeløn m. UDD1</span><b>{fmt2(o.hourlyUdd1)} kr/t</b></div>
+      <div className="review-row"><span>9. Timeløn m. UDD2</span><b>{fmt2(o.hourlyUdd2)} kr/t</b></div>
+      <div className="review-row"><span>10. Timeløn m. UDD2 + Mentor</span><b>{fmt2(o.hourlyUdd2Mentor)} kr/t</b></div>
 
-      <div className="row header">10. Samlet projektsum (valgt: {o.jobType}, {o.selectedVariant})</div>
-      <div className="row total"><span>FINAL</span><b>{kr(o.project_final)}</b></div>
+      <div className="review-row review-row--header">11. Samlet projektsum (valgt: {o.jobType}, {o.selectedVariant})</div>
+      <div className="review-row review-row--total"><span>FINAL</span><b>{kr(o.project_final)}</b></div>
 
-      <div className="row subtle"><span>Timer ({o.jobType})</span><b>{t(o.hours)}</b></div>
+      <div className="review-metadata">
+        <div className="review-row review-row--subtle"><span>Timer ({o.jobType})</span><b>{t(o.hours)}</b></div>
+        {setState && (
+          <div className="review-controls">
+            <ApprovalControls state={state} setState={setState} />
+          </div>
+        )}
+      </div>
     </section>
   );
 }
