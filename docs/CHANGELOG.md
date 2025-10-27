@@ -3,6 +3,8 @@
 ## Unreleased
 
 ### Added
+- Persisted tenant template bootstrap with helpers for defaulting to Hulmoses and exposing normalised payloads in the new spa modules.
+- Template selection and admin gate review controls backed by Vitest coverage for happy path and malformed template edge cases.
 - Dansk "CSMate License & Deployment Agreement" med ejerskab, licensvilkår og integrationskrav.
 - JSON template-pack i `templates/` inkl. Hulmose, Øens og Stilladsgruppen + default skeleton klar til import.
 - CLI-script `scripts/codex-generate-template.mjs` der genererer tenantfiler med BOSTA-priser rundet til to decimaler.
