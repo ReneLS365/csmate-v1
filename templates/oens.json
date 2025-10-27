@@ -1,0 +1,50 @@
+{
+  "_meta": {
+    "company": "Øens Stillads A/S",
+    "template": "oens",
+    "currency": "DKK",
+    "source": "BOSTA 2025",
+    "generated": "2025-10-28",
+    "admin_code": "OENS2025"
+  },
+  "pay": {
+    "base_wage_hourly": 192.75,
+    "allowances_per_hour": {
+      "udd1": 15,
+      "udd2": 30,
+      "mentor": 12
+    },
+    "overtime_multipliers": {
+      "weekday": 1.5,
+      "weekend": 2.1
+    }
+  },
+  "roles": {
+    "chef": [
+      "approve",
+      "reject",
+      "send",
+      "edit"
+    ],
+    "formand": [
+      "approve",
+      "reject",
+      "send"
+    ],
+    "arbejder": [
+      "send"
+    ]
+  },
+  "price_table": {
+    "B001": 2.68,
+    "B002": 2.68,
+    "B005": 16.71,
+    "B010": 16.71,
+    "B011": 12.53,
+    "B024": 15.66,
+    "B030": 9.4,
+    "M036": 16.71,
+    "M037": 16.71,
+    "M073": 42.98
+  }
+}

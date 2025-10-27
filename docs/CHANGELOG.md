@@ -3,6 +3,10 @@
 ## Unreleased
 
 ### Added
+- Dansk "CSMate License & Deployment Agreement" med ejerskab, licensvilkår og integrationskrav.
+- JSON template-pack i `templates/` inkl. Hulmose, Øens og Stilladsgruppen + default skeleton klar til import.
+- CLI-script `scripts/codex-generate-template.mjs` der genererer tenantfiler med BOSTA-priser rundet til to decimaler.
+- Hulmoses tenant template med BOSTA 2025 prisoverrides rundet til to decimaler for materialelisten.
 - Deterministic totals calculator module with Vitest coverage enforcing the akkord flow without double counting.
 - Automated renderer tests covering mobile material list calculations and input corrections.
 - jsdom layout sanity test ensuring materials rows expose the new mat-zoom and mat-* classes.
@@ -13,6 +17,7 @@
 - Reviewpanel komponenter og eksportere til E-Komplet v2 bygget på nye moduler med @purpose dokumentation.
 
 ### Changed
+- Hulmoses tenant-data omstruktureret til meta/pay/roles/price_table så templates og app deler samme format.
 - Totals pipeline recalculates materials, ekstraarbejde, slæb og projektsum gennem den nye helper så UI og eksport deler samme grundlag.
 - Redesigned the materials list into a compact, scrollable layout without filter overlays for better mobile density.
 - Hid material list header row visually while keeping it available to screen readers for accessibility.
