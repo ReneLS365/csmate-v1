@@ -7,11 +7,12 @@
 import { nextStateByAction } from '@/modules/approval';
 import ApprovalBadge from './ApprovalBadge';
 
-export default function ApprovalControls({ state, setState }) {
+export default function ApprovalControls({ state, setState, disabled = false }) {
   const role = state?.role ?? 'sjakbajs';
   const status = state?.status ?? 'kladde';
 
   function go(to) {
+    if (disabled) return;
     if (typeof setState === 'function') {
       setState((prev) => nextStateByAction(prev, to));
     }
@@ -29,7 +30,7 @@ export default function ApprovalControls({ state, setState }) {
           <button
             type="button"
             className="approval-button"
-            disabled={status === 'afventer'}
+            disabled={disabled || status === 'afventer'}
             onClick={() => go('afventer')}
           >
             Send til godkendelse
@@ -37,7 +38,7 @@ export default function ApprovalControls({ state, setState }) {
           <button
             type="button"
             className="approval-button"
-            disabled={status === 'kladde'}
+            disabled={disabled || status === 'kladde'}
             onClick={() => go('kladde')}
           >
             Tilbage til kladde
@@ -50,7 +51,7 @@ export default function ApprovalControls({ state, setState }) {
           <button
             type="button"
             className="approval-button"
-            disabled={status !== 'afventer'}
+            disabled={disabled || status !== 'afventer'}
             onClick={() => go('godkendt')}
           >
             Godkend
@@ -58,7 +59,7 @@ export default function ApprovalControls({ state, setState }) {
           <button
             type="button"
             className="approval-button"
-            disabled={status !== 'afventer'}
+            disabled={disabled || status !== 'afventer'}
             onClick={() => go('afvist')}
           >
             Afvis
@@ -66,7 +67,9 @@ export default function ApprovalControls({ state, setState }) {
           <button
             type="button"
             className="approval-button"
-            disabled={!(status === 'godkendt' || status === 'afvist')}
+            disabled={
+              disabled || !(status === 'godkendt' || status === 'afvist')
+            }
             onClick={() => go('afventer')}
           >
             Genåbn
