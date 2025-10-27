@@ -4,6 +4,7 @@ import { initNumpadOverlay } from './src/modules/numpadOverlay.js'
 import { initMaterialsScrollLock } from './src/modules/materialsScrollLock.js'
 import { normalizeKey } from './src/lib/string-utils.js'
 import { EXCLUDED_MATERIAL_KEYS, shouldExcludeMaterialEntry } from './src/lib/materials/exclusions.js'
+import { createMaterialRow } from './src/modules/materialRowTemplate.js'
 
 initNumpadOverlay()
 
@@ -844,136 +845,20 @@ function renderOptaelling() {
   let list = zoomWrapper.querySelector('.materials-list');
   if (!list) {
     list = document.createElement('div');
-    list.className = 'materials-list';
+    list.className = 'materials-list csm-materials-list';
     zoomWrapper.appendChild(list);
   }
+  list.classList.add('csm-materials-list');
 
   Array.from(list.querySelectorAll('.material-row')).forEach(row => row.remove());
 
   items.forEach(item => {
-    const row = document.createElement('div');
-    row.className = `material-row mat-row${item.manual ? ' manual' : ''}`;
-    row.dataset.itemId = item.id;
-    if (item.systemKey) {
-      row.dataset.system = item.systemKey;
-    }
-
-    const sanitizedId = String(item.id).replace(/[^a-zA-Z0-9_-]+/g, '-');
-    const qtyInputId = `qty-${sanitizedId}`;
-
-    const nameLabel = document.createElement('label');
-    nameLabel.className = 'mat-name';
-
-    if (item.manual) {
-      const manualWrapper = document.createElement('div');
-      manualWrapper.className = 'manual-name-wrapper';
-      manualWrapper.title = `ID: ${item.id}`;
-
-      const nameInput = document.createElement('input');
-      nameInput.type = 'text';
-      nameInput.className = 'manual-name';
-      nameInput.dataset.id = item.id;
-      nameInput.placeholder = 'Materiale';
-      nameInput.value = item.name || '';
-      nameInput.setAttribute('aria-label', 'Materialenavn');
-      manualWrapper.appendChild(nameInput);
-
-      nameLabel.appendChild(manualWrapper);
-      nameLabel.classList.add('manual-name-cell');
-    } else {
-      nameLabel.htmlFor = qtyInputId;
-      const systemLabel = item.systemKey ? systemLabelMap.get(item.systemKey) || item.systemKey : '';
-      const badge = systemLabel ? `<span class="system-badge">${systemLabel}</span>` : '';
-      const nameWrapper = document.createElement('div');
-      nameWrapper.className = 'item-name-wrapper';
-      nameWrapper.innerHTML = `
-        <div class="item-name">${item.name}${badge}</div>
-      `;
-      nameWrapper.title = `Varenr. ${item.id}`;
-      nameLabel.appendChild(nameWrapper);
-    }
-
-    const qtyInput = document.createElement('input');
-    qtyInput.type = 'number';
-    qtyInput.className = 'qty mat-qty';
-    qtyInput.dataset.id = item.id;
-    qtyInput.id = qtyInputId;
-    qtyInput.name = `qty[${item.id}]`;
-    qtyInput.inputMode = 'decimal';
-    qtyInput.autocomplete = 'off';
-    qtyInput.step = '0.01';
-    qtyInput.dataset.numpad = 'true';
-    qtyInput.placeholder = '0';
-    qtyInput.setAttribute('aria-label', 'Antal');
-    if (item.manual) {
-      const hasQuantity = item.quantity !== null && item.quantity !== undefined && item.quantity !== '';
-      qtyInput.value = hasQuantity ? String(item.quantity) : '';
-    } else {
-      const qtyValue = item.quantity != null ? item.quantity : 0;
-      qtyInput.value = String(qtyValue);
-    }
-
-    const qtyWrap = document.createElement('div');
-    qtyWrap.className = 'mat-qty-wrap';
-
-    const qtyDisplay = document.createElement('div');
-    qtyDisplay.className = 'mat-qty-display';
-
-    const syncQtyVisibility = () => {
-      const rawValue = qtyInput.value ?? '';
-      const trimmed = rawValue.trim();
-      const qtyValue = toNumber(rawValue);
-      const hasQty = qtyValue > 0;
-
-      qtyDisplay.textContent = trimmed.length ? trimmed : '0';
-      row.toggleAttribute('data-has-qty', hasQty);
-      row.dataset.hasQty = hasQty ? 'true' : 'false';
-    };
-
-    syncQtyVisibility();
-    qtyInput.addEventListener('input', syncQtyVisibility);
-    qtyInput.addEventListener('change', syncQtyVisibility);
-
-    qtyWrap.appendChild(qtyInput);
-    qtyWrap.appendChild(qtyDisplay);
-
-    const priceInput = document.createElement('input');
-    priceInput.type = 'number';
-    priceInput.className = 'price mat-price';
-    priceInput.dataset.id = item.id;
-    priceInput.id = `price-${sanitizedId}`;
-    priceInput.name = `price[${item.id}]`;
-    priceInput.inputMode = 'decimal';
-    priceInput.autocomplete = 'off';
-    priceInput.step = '0.01';
-    priceInput.dataset.numpad = 'true';
-    priceInput.setAttribute('aria-label', 'Enhedspris');
-    const hasPrice = item.price !== null && item.price !== undefined && item.price !== '';
-    const priceValue = hasPrice ? toNumber(item.price) : 0;
-    priceInput.dataset.price = hasPrice ? String(priceValue) : '';
-    if (item.manual) {
-      priceInput.placeholder = 'Enhedspris';
-      priceInput.readOnly = false;
-      priceInput.value = hasPrice ? String(priceValue) : '';
-    } else {
-      const displayPrice = Number.isFinite(priceValue) ? priceValue.toFixed(2) : '0.00';
-      priceInput.readOnly = !admin;
-      priceInput.value = displayPrice;
-    }
-
-    const lineInput = document.createElement('input');
-    lineInput.type = 'text';
-    lineInput.className = 'mat-line item-total mat-sum';
-    lineInput.readOnly = true;
-    lineInput.setAttribute('aria-label', 'Linjetotal');
-    const lineValue = formatCurrency(toNumber(item.price) * toNumber(item.quantity));
-    lineInput.value = `${lineValue} kr`;
-
-    row.appendChild(nameLabel);
-    row.appendChild(qtyWrap);
-    row.appendChild(priceInput);
-    row.appendChild(lineInput);
-
+    const { row } = createMaterialRow(item, {
+      admin,
+      toNumber,
+      formatCurrency,
+      systemLabelMap
+    });
     list.appendChild(row);
   });
 
@@ -1068,12 +953,17 @@ function refreshMaterialRowDisplay(id) {
     priceInput.dataset.price = hasPrice ? String(priceValue) : '';
   }
 
-  const lineInput = row.querySelector('.mat-line');
-  if (lineInput) {
+  const lineOutput = row.querySelector('.mat-line');
+  if (lineOutput) {
     if (typeof window !== 'undefined' && typeof window.updateMaterialLine === 'function') {
       window.updateMaterialLine(row, { formatPrice: true, shouldUpdateTotals: false });
     } else {
-      lineInput.value = `${formatCurrency(toNumber(item.price) * toNumber(item.quantity))} kr`;
+      const formatted = `${formatCurrency(toNumber(item.price) * toNumber(item.quantity))} kr`;
+      if (lineOutput instanceof HTMLInputElement) {
+        lineOutput.value = formatted;
+      } else {
+        lineOutput.textContent = formatted;
+      }
     }
   }
 }

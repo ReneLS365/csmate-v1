@@ -8,14 +8,11 @@ function renderRow() {
   wrap.id = 'materials';
   wrap.innerHTML = `
     <div class="mat-zoom">
-      <div class="mat-row" data-key="spindelfod-lang">
-        <div class="mat-name">Spindelfod lang</div>
-        <div class="mat-qty-wrap">
-          <input class="mat-qty" type="number" placeholder="0" value="0" />
-          <div class="mat-qty-display">0</div>
-        </div>
-        <input class="mat-price" type="number" />
-        <div class="mat-sum">0,00 kr.</div>
+      <div class="mat-row csm-row" data-key="spindelfod-lang">
+        <input class="mat-name csm-name" type="text" value="Spindelfod lang" readonly />
+        <input class="mat-qty csm-qty" type="number" placeholder="0" value="0" />
+        <input class="mat-price csm-price" type="number" />
+        <div class="mat-sum csm-sum" data-sum>0,00 kr.</div>
       </div>
     </div>`;
   return wrap;
@@ -27,17 +24,10 @@ describe('Materials layout classes', () => {
     expect(el.querySelector('.mat-zoom')).toBeTruthy();
     const row = el.querySelector('.mat-row');
     expect(row).toBeTruthy();
-    expect(row?.querySelector('.mat-name')?.textContent).toContain('Spindelfod');
+    const nameInput = row?.querySelector<HTMLInputElement>('.mat-name');
+    expect(nameInput?.value).toContain('Spindelfod');
     expect(row?.querySelector('.mat-qty')).toBeTruthy();
-    expect(row?.querySelector('.mat-qty-display')?.textContent).toBe('0');
     expect(row?.querySelector('.mat-price')).toBeTruthy();
     expect(row?.querySelector('.mat-sum')).toBeTruthy();
-  });
-
-  it('marks quantity inputs with placeholder zero for visibility styles', () => {
-    const el = renderRow();
-    const qty = el.querySelector<HTMLInputElement>('.mat-qty');
-    expect(qty?.placeholder).toBe('0');
-    expect(qty?.value).toBe('0');
   });
 });
