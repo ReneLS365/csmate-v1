@@ -18,11 +18,13 @@ export default function ReviewPanel({ state = {}, setState }) {
   }
 
   function handleTemplateChange(nextId) {
-    patchState({ templateId: nextId, isAdmin: false });
+    const nextTemplate = loadTemplate(nextId);
+    patchState({ templateId: nextTemplate.id, template: nextTemplate, isAdmin: false, role: 'sjakbajs' });
   }
 
   function handleAdminChange(nextIsAdmin) {
-    patchState({ isAdmin: Boolean(nextIsAdmin) });
+    const unlocked = Boolean(nextIsAdmin);
+    patchState({ isAdmin: unlocked, role: unlocked ? 'chef' : 'sjakbajs' });
   }
 
   const fmt2 = (v) => new Intl.NumberFormat('da-DK', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v);

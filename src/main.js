@@ -12,11 +12,18 @@ export function createInitialState(options = {}) {
   const preferred = typeof options.templateId === 'string' ? options.templateId : defaults.templateId;
   const templateId = preferred ?? persisted ?? DEFAULT_TEMPLATE_ID;
   const template = loadTemplate(templateId);
+  const defaultIsAdmin = typeof defaults.isAdmin === 'boolean' ? defaults.isAdmin : false;
+  const baseRole = typeof defaults.role === 'string' && defaults.role.trim().length > 0
+    ? defaults.role
+    : defaultIsAdmin
+      ? 'chef'
+      : 'sjakbajs';
   const baseState = {
     ...defaults,
     templateId: template.id,
     template,
-    isAdmin: typeof defaults.isAdmin === 'boolean' ? defaults.isAdmin : false
+    isAdmin: defaultIsAdmin,
+    role: baseRole
   };
   return baseState;
 }

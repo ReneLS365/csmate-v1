@@ -1,28 +1,52 @@
 import { describe, it, expect } from 'vitest';
 import { canTransition, nextStateByAction } from '../src/lib/approval.js';
+import { hasPerm } from '../src/lib/approval-perms.js';
+import { loadTemplate } from '../src/lib/templates.js';
+
+function cloneTemplate(template) {
+  return JSON.parse(JSON.stringify(template));
+}
 
 describe('Approval flow', () => {
-  it('sjakbajs må kun kladde <-> afventer', () => {
-    expect(canTransition('sjakbajs', 'kladde', 'afventer')).toBe(true);
-    expect(canTransition('sjakbajs', 'afventer', 'kladde')).toBe(true);
-    expect(canTransition('sjakbajs', 'afventer', 'godkendt')).toBe(false);
+  const defaultTemplate = loadTemplate('default');
+  const hulmosesTemplate = loadTemplate('hulmoses');
+
+  it('arbejder må kun sende videre og tilbage under default skabelon', () => {
+    const state = { role: 'arbejder', status: 'kladde', template: defaultTemplate, approvalLog: [] };
+    expect(hasPerm(state, 'send')).toBe(true);
+    expect(hasPerm(state, 'approve')).toBe(false);
+    expect(canTransition(state, 'kladde', 'afventer')).toBe(true);
+    expect(canTransition(state, 'afventer', 'godkendt')).toBe(false);
+    const awaiting = nextStateByAction(state, 'afventer');
+    expect(awaiting.status).toBe('afventer');
+    expect(awaiting.approvalLog?.length).toBe(1);
   });
 
-  it('kontor håndterer godkend/afvis og genåbn', () => {
-    expect(canTransition('kontor', 'afventer', 'godkendt')).toBe(true);
-    expect(canTransition('kontor', 'afventer', 'afvist')).toBe(true);
-    expect(canTransition('kontor', 'godkendt', 'afventer')).toBe(true);
-    expect(canTransition('kontor', 'afvist', 'afventer')).toBe(true);
+  it('chef kan godkende og afvise i hulmoses skabelonen', () => {
+    const state = { role: 'chef', status: 'afventer', template: hulmosesTemplate, approvalLog: [] };
+    expect(hasPerm(state, 'approve')).toBe(true);
+    expect(hasPerm(state, 'reject')).toBe(true);
+    expect(canTransition(state, 'afventer', 'godkendt')).toBe(true);
+    expect(canTransition(state, 'afventer', 'afvist')).toBe(true);
+    const approved = nextStateByAction(state, 'godkendt');
+    expect(approved.status).toBe('godkendt');
+    const reopened = nextStateByAction(approved, 'afventer');
+    expect(reopened.status).toBe('afventer');
+    expect(reopened.approvalLog?.length).toBe(2);
   });
 
-  it('nextStateByAction logger gyldige hop', () => {
-    const s1 = { role: 'sjakbajs', status: 'kladde', approvalLog: [] };
-    const s2 = nextStateByAction(s1, 'afventer');
-    expect(s2.status).toBe('afventer');
-    expect(s2.approvalLog?.length).toBe(1);
-    const entry = s2.approvalLog[0];
-    expect(entry.from).toBe('kladde');
-    expect(entry.to).toBe('afventer');
-    expect(entry.by).toBe('sjakbajs');
+  it('blokerer godkendelse når rollen mangler tilladelsen', () => {
+    const limited = cloneTemplate(defaultTemplate);
+    limited.roles.formand = ['send'];
+    const state = { role: 'formand', status: 'afventer', template: limited };
+    expect(hasPerm(state, 'approve')).toBe(false);
+    expect(canTransition(state, 'afventer', 'godkendt')).toBe(false);
+  });
+
+  it('falder tilbage til legacy-regler når template mangler roller', () => {
+    const state = { role: 'sjakbajs', status: 'kladde' };
+    expect(hasPerm(state, 'send')).toBe(true);
+    expect(canTransition(state, 'kladde', 'afventer')).toBe(true);
+    expect(canTransition(state, 'afventer', 'godkendt')).toBe(false);
   });
 });

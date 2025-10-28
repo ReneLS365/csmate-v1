@@ -19,6 +19,7 @@
 - Reviewpanel komponenter og eksportere til E-Komplet v2 bygget på nye moduler med @purpose dokumentation.
 
 ### Changed
+- Approvalflow styres nu af skabelonens rolle-tilladelser med AdminGate-opgradering til chef ved oplåsning.
 - Hulmoses tenant-data omstruktureret til meta/pay/roles/price_table så templates og app deler samme format.
 - Totals pipeline recalculates materials, ekstraarbejde, slæb og projektsum gennem den nye helper så UI og eksport deler samme grundlag.
 - Redesigned the materials list into a compact, scrollable layout without filter overlays for better mobile density.
