@@ -39,6 +39,14 @@ test.describe('CSMate release smoke', () => {
     });
     await page.goto('/', { waitUntil: 'networkidle' });
 
+    const materialsNav = page.locator('header nav button[data-section="optaelling"]');
+    if (await materialsNav.isVisible()) {
+      await materialsNav.click();
+    }
+
+    const materialsSection = page.locator('#optaellingSection');
+    await expect(materialsSection).toBeVisible();
+
     await expect(page.locator('#app header .ttl')).toHaveText(/akkordseddel/i);
 
     const manifestOK = await page.evaluate(async () => {

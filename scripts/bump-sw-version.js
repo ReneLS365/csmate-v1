@@ -19,7 +19,8 @@ export function bumpServiceWorkerVersion (options = {}) {
   }
 
   const cachePattern = /const CACHE_VERSION = ['"].+?['"];?/
-  if (!cachePattern.test(source)) {
+  const cacheReferencePattern = /const CACHE_VERSION = VERSION;?/
+  if (!cachePattern.test(source) && !cacheReferencePattern.test(source)) {
     throw new Error('Could not find CACHE_VERSION constant in service worker.')
   }
 
@@ -27,9 +28,20 @@ export function bumpServiceWorkerVersion (options = {}) {
   const isoStamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\..+/, '')
   const version = `v${isoStamp}${commitRef ? `-${commitRef}` : ''}`
 
-  const updated = source
-    .replace(versionPattern, `const VERSION = '${version}';`)
-    .replace(cachePattern, `const CACHE_VERSION = '${version}';`)
+  const versionHasSemicolon = /const VERSION = ['"].+?['"];/.test(source)
+  const cacheHasSemicolon = cachePattern.test(source) && /const CACHE_VERSION = ['"].+?['"];/.test(source)
+
+  let updated = source.replace(
+    versionPattern,
+    `const VERSION = '${version}'${versionHasSemicolon ? ';' : ''}`
+  )
+
+  if (cachePattern.test(source)) {
+    updated = updated.replace(
+      cachePattern,
+      `const CACHE_VERSION = '${version}'${cacheHasSemicolon ? ';' : ''}`
+    )
+  }
 
   if (updated !== source) {
     writeFileSync(swPath, updated)
