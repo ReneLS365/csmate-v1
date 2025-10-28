@@ -86,11 +86,29 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          CHROME_BIN=$(node -e "try{console.log(require('playwright-core').chromium.executablePath())}catch(e){process.exit(1)}") || true
-          if [ -z "${CHROME_BIN:-}" ] || [ ! -x "$CHROME_BIN" ]; then
-            CHROME_BIN=$(node -e "try{console.log(require('playwright').chromium.executablePath())}catch(e){process.exit(1)}") || true
+
+          resolve_with_node() {
+            local module="$1"
+            node -e "try{const path=require('${module}').chromium.executablePath();if(path){console.log(path);}else{process.exit(1);}}catch(e){process.exit(1);}" 2>/dev/null
+          }
+
+          CHROME_BIN=""
+
+          if output=$(resolve_with_node playwright-core); then
+            if [ -n "$output" ] && [ -x "$output" ]; then
+              CHROME_BIN="$output"
+            fi
           fi
-          if [ -z "${CHROME_BIN:-}" ] || [ ! -x "$CHROME_BIN" ]; then
+
+          if [ -z "$CHROME_BIN" ]; then
+            if output=$(resolve_with_node playwright); then
+              if [ -n "$output" ] && [ -x "$output" ]; then
+                CHROME_BIN="$output"
+              fi
+            fi
+          fi
+
+          if [ -z "$CHROME_BIN" ]; then
             for p in /ms-playwright/chromium-*/chrome-linux/chrome \
                      /ms-playwright/chromium-*/chrome-linux/chromium \
                      /ms-playwright/chromium-*/chrome-linux/chrome-wrapper; do
@@ -100,13 +118,16 @@ jobs:
               fi
             done
           fi
-          if [ -z "${CHROME_BIN:-}" ] || [ ! -x "$CHROME_BIN" ]; then
+
+          if [ -z "$CHROME_BIN" ]; then
             CHROME_BIN=$(command -v chromium || true)
           fi
-          if [ -z "${CHROME_BIN:-}" ] || [ ! -x "$CHROME_BIN" ]; then
+
+          if [ -z "$CHROME_BIN" ] || [ ! -x "$CHROME_BIN" ]; then
             echo "Could not resolve Chromium executable"
             exit 1
           fi
+
           echo "CHROME_PATH=$CHROME_BIN" >> "$GITHUB_ENV"
           "$CHROME_BIN" --version || true
       - name: Start server
@@ -116,6 +137,7 @@ jobs:
       - name: Run Lighthouse CI (collect only)
         env:
           CHROME_PATH: ${{ env.CHROME_PATH }}
+          LHCI_CHROME_FLAGS: --no-sandbox --headless=new
         run: npx lhci collect --url=http://127.0.0.1:4173 --numberOfRuns=1 --output-dir=.lighthouse
       - name: Upload Lighthouse artifacts
         uses: actions/upload-artifact@v4
