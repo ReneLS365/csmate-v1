@@ -4,7 +4,7 @@
  * @outputs Procenttillæg som tal med to decimaler uden afrundingstab (0 hvis ingen tillæg).
  */
 
-import { round2 } from '@/modules/calc';
+import { round2 } from '@/lib/calc.js';
 
 function toNumber(value, fallback = 0) {
   const n = Number(value);

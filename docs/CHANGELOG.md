@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- Vitest coverage for the new accord calculator including tralleløft edge cases.
+
+### Changed
+- Migrated akkordberegneren til `computeAccord` med decimal-slæb, km-info og tralleløft som egen ekstra-linje.
+- Review-oversigten viser nu detaljeret ekstraarbejde med (info) for km og tralleløft samt nye timepris-varianter.
+- Eksport/Import (JSON/CSV/EK) udstiller de nye feltnavne (`materialsKr`, `kmQty`, `trolleyLiftQty` m.fl.) og matcher UI-totaler.
+
+### Fixed
+- Runde-trip mellem eksport og import bevarer nu præcise ekstraarbejde- og timeprisberegninger uden dobbeltregning.
+
 ## 1.0.6 - 2025-10-28
 
 ### Added
