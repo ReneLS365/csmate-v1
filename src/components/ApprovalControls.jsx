@@ -5,11 +5,17 @@
  */
 
 import { nextStateByAction } from '@/modules/approval';
+import { hasPerm } from '@/lib/approval-perms';
 import ApprovalBadge from './ApprovalBadge';
 
 export default function ApprovalControls({ state, setState, disabled = false }) {
   const role = state?.role ?? 'sjakbajs';
   const status = state?.status ?? 'kladde';
+
+  const canSend = hasPerm(state, 'send');
+  const canApprove = hasPerm(state, 'approve');
+  const canReject = hasPerm(state, 'reject');
+  const canReopen = canApprove || canReject;
 
   function go(to) {
     if (disabled) return;
@@ -25,7 +31,7 @@ export default function ApprovalControls({ state, setState, disabled = false }) 
         <small className="approval-controls__role">Rolle: <b>{role}</b></small>
       </div>
 
-      {role === 'sjakbajs' && (
+      {canSend && (
         <div className="approval-controls__actions">
           <button
             type="button"
@@ -46,34 +52,40 @@ export default function ApprovalControls({ state, setState, disabled = false }) 
         </div>
       )}
 
-      {role === 'kontor' && (
+      {(canApprove || canReject) && (
         <div className="approval-controls__actions">
-          <button
-            type="button"
-            className="approval-button"
-            disabled={disabled || status !== 'afventer'}
-            onClick={() => go('godkendt')}
-          >
-            Godkend
-          </button>
-          <button
-            type="button"
-            className="approval-button"
-            disabled={disabled || status !== 'afventer'}
-            onClick={() => go('afvist')}
-          >
-            Afvis
-          </button>
-          <button
-            type="button"
-            className="approval-button"
-            disabled={
-              disabled || !(status === 'godkendt' || status === 'afvist')
-            }
-            onClick={() => go('afventer')}
-          >
-            Genåbn
-          </button>
+          {canApprove && (
+            <button
+              type="button"
+              className="approval-button"
+              disabled={disabled || status !== 'afventer'}
+              onClick={() => go('godkendt')}
+            >
+              Godkend
+            </button>
+          )}
+          {canReject && (
+            <button
+              type="button"
+              className="approval-button"
+              disabled={disabled || status !== 'afventer'}
+              onClick={() => go('afvist')}
+            >
+              Afvis
+            </button>
+          )}
+          {canReopen && (
+            <button
+              type="button"
+              className="approval-button"
+              disabled={
+                disabled || !['godkendt', 'afvist'].includes(status)
+              }
+              onClick={() => go('afventer')}
+            >
+              Genåbn
+            </button>
+          )}
         </div>
       )}
     </div>
