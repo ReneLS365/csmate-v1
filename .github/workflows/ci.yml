@@ -5,8 +5,12 @@ on:
     branches: [ main ]
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
   build-unit:
+    timeout-minutes: 10
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -35,6 +39,7 @@ jobs:
           path: CI_SUMMARY.md
 
   e2e:
+    timeout-minutes: 10
     runs-on: ubuntu-latest
     container: mcr.microsoft.com/playwright:v1.47.2-jammy
     needs: build-unit
@@ -58,8 +63,14 @@ jobs:
           name: playwright-report
           path: playwright-report
           if-no-files-found: error
+      - name: Debug server (if failed)
+        if: failure()
+        run: |
+          ss -tlpn | head -n 50 || true
+          ps aux | grep http-server || true
 
   lighthouse:
+    timeout-minutes: 10
     runs-on: ubuntu-latest
     container: mcr.microsoft.com/playwright:v1.47.2-jammy
     needs: e2e
@@ -71,15 +82,40 @@ jobs:
       - run: npm ci
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
-      - name: Expose CHROME_PATH for LHCI
+      - name: Expose CHROME_PATH for LHCI (robust)
         shell: bash
         run: |
-          echo "CHROME_PATH=$(node -e \"console.log(require('playwright-core').chromium.executablePath())\")" >> $GITHUB_ENV
+          set -euo pipefail
+          CHROME_BIN=$(node -e "try{console.log(require('playwright-core').chromium.executablePath())}catch(e){process.exit(1)}") || true
+          if [ -z "${CHROME_BIN:-}" ] || [ ! -x "$CHROME_BIN" ]; then
+            CHROME_BIN=$(node -e "try{console.log(require('playwright').chromium.executablePath())}catch(e){process.exit(1)}") || true
+          fi
+          if [ -z "${CHROME_BIN:-}" ] || [ ! -x "$CHROME_BIN" ]; then
+            for p in /ms-playwright/chromium-*/chrome-linux/chrome \
+                     /ms-playwright/chromium-*/chrome-linux/chromium \
+                     /ms-playwright/chromium-*/chrome-linux/chrome-wrapper; do
+              if [ -x "$p" ]; then
+                CHROME_BIN="$p"
+                break
+              fi
+            done
+          fi
+          if [ -z "${CHROME_BIN:-}" ] || [ ! -x "$CHROME_BIN" ]; then
+            CHROME_BIN=$(command -v chromium || true)
+          fi
+          if [ -z "${CHROME_BIN:-}" ] || [ ! -x "$CHROME_BIN" ]; then
+            echo "Could not resolve Chromium executable"
+            exit 1
+          fi
+          echo "CHROME_PATH=$CHROME_BIN" >> "$GITHUB_ENV"
+          "$CHROME_BIN" --version || true
       - name: Start server
         run: npm run serve:ci &
       - name: Wait for server
         run: npx wait-on http://127.0.0.1:4173
-      - name: Run Lighthouse CI (collect only, artifacts saved)
+      - name: Run Lighthouse CI (collect only)
+        env:
+          CHROME_PATH: ${{ env.CHROME_PATH }}
         run: npx lhci collect --url=http://127.0.0.1:4173 --numberOfRuns=1 --output-dir=.lighthouse
       - name: Upload Lighthouse artifacts
         uses: actions/upload-artifact@v4
@@ -87,3 +123,8 @@ jobs:
           name: lighthouse-report
           path: .lighthouse
           if-no-files-found: error
+      - name: Debug server (if failed)
+        if: failure()
+        run: |
+          ss -tlpn | head -n 50 || true
+          ps aux | grep http-server || true
