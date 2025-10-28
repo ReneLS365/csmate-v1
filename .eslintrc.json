@@ -9,6 +9,12 @@
   "rules": {
     "semi": ["error", "never"],
     "comma-dangle": ["error", "never"],
-    "no-void": "off"
+    "no-void": "off",
+    "no-unused-vars": [
+      "error",
+      { "args": "after-used", "argsIgnorePattern": "^_", "ignoreRestSiblings": true }
+    ],
+    "no-implicit-globals": "error",
+    "prefer-const": ["error", { "destructuring": "all" }]
   }
 }

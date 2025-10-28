@@ -1,0 +1,49 @@
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> csmate@1.0.0 test
+> vitest run
+
+
+ RUN  v1.6.1 /workspace/csmate-v1
+
+ ✓ tests/renderer.spec.ts  (10 tests) 211ms
+ ✓ tests/materials-scroll-lock.test.js  (3 tests) 22ms
+ ✓ tests/populate-workers.test.js  (1 test) 382ms
+stderr | tests/populate-workers.test.js > populateWorkersFromLabor > restores mentortillæg and udd selections and refreshes worker output
+Kunne ikke indlæse fallback dataset.js TypeError: Failed to parse URL from ./dataset.js
+    at node:internal/deps/undici/undici:13510:13 {
+  [cause]: TypeError: Invalid URL: ./dataset.js
+      at new URLImpl (/workspace/csmate-v1/node_modules/whatwg-url/lib/URL-impl.js:20:13)
+      at Object.exports.setup (/workspace/csmate-v1/node_modules/whatwg-url/lib/URL.js:54:12)
+      at new URL (/workspace/csmate-v1/node_modules/whatwg-url/lib/URL.js:115:22)
+      at new Request (node:internal/deps/undici/undici:9586:25)
+      at fetch (node:internal/deps/undici/undici:10315:25)
+      at fetch (node:internal/deps/undici/undici:13508:10)
+      at fetch (node:internal/bootstrap/web/exposed-window-or-worker:75:12)
+      at tryDatasetFallback (/workspace/csmate-v1/app/main.js:688:12)
+      at /workspace/csmate-v1/app/main.js:734:14
+}
+
+ ✓ tests/materials.spec.js  (2 tests) 124ms
+ ✓ tests/materials.layout.test.ts  (1 test) 20ms
+ ✓ tests/db.test.js  (1 test) 7ms
+ ✓ tests/hulmoses-template.spec.ts  (5 tests) 12ms
+ ✓ tests/e-komplet.roundtrip.test.js  (3 tests) 7ms
+ ✓ tests/templates.module.test.js  (3 tests) 4ms
+ ✓ tests/approval.flow.test.js  (4 tests) 4ms
+ ✓ tests/calc-core.test.js  (8 tests) 5ms
+ ✓ tests/calc.test.js  (3 tests) 3ms
+ ✓ tests/totals.test.js  (3 tests) 3ms
+ ✓ tests/tenant.spec.ts  (2 tests) 187ms
+ ✓ tests/e-komplet.validate.test.js  (2 tests) 5ms
+ ✓ tests/export.final.test.js  (2 tests) 3ms
+ ✓ tests/export.v2.shape.test.js  (1 test) 3ms
+ ✓ tests/material-exclusions.test.js  (3 tests) 3ms
+ ✓ tests/import.v2.test.js  (2 tests) 3ms
+ ✓ tests/numpad.eval.test.js  (5 tests) 5ms
+
+ Test Files  20 passed (20)
+      Tests  64 passed (64)
+   Start at  00:50:23
+   Duration  12.26s (transform 573ms, setup 2ms, collect 664ms, tests 1.01s, environment 2.95s, prepare 2.02s)
+

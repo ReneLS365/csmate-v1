@@ -3,7 +3,7 @@ import { parseCsv, applyMapping } from '../lib/e-komplet/import.js'
 import { validateRows } from '../lib/e-komplet/validate.js'
 import { CSV_HEADERS } from '../lib/e-komplet/schema.js'
 
-export async function initialiseDiagnostics ({ calc, panel, numpad, root = document.body }) {
+export async function initialiseDiagnostics ({ calc, panel: _panel, numpad: _numpad, root = document.body }) {
   const params = new URLSearchParams(window.location.search)
   const debugEnabled = params.get('debug') === '1' || window.__DEBUG === true
   if (!debugEnabled) return

@@ -1,6 +1,21 @@
 # Changelog
 
-## Unreleased
+## 1.0.1 - 2025-10-28
+
+### Added
+- Playwright PWA smoke suite covering approvals, exports (CSV/PDF/ZIP) and IndexedDB retention for the latest 20 projekter.
+- GitHub Actions pipeline installs Playwright, serves the dist build and runs coverage + e2e for every push/PR.
+
+### Changed
+- Build step kopierer nu `app/` til `dist/` og Netlify public folder er peget på `dist` for rene releases.
+- Service worker bruger versioneret cache med stale-while-revalidate for statics og network-first for data, inkl. hård purge ved nye versioner.
+
+### Fixed
+- Materialelisten fastholder venstrestillet antal-felt uden overlap på manuelle rækker og stopper tom scrolling i bunden.
+- Tralleløft valideres i review/eksport-flowet så ekstra arbejde og totaler altid matcher i CSV og PDF.
+- IndexedDB autosave bekræftet til kun at gemme de 20 seneste projekter via release smoke-testen.
+
+## 1.0.0
 
 ### Added
 - Persisted tenant template bootstrap with helpers for defaulting to Hulmoses and exposing normalised payloads in the new spa modules.

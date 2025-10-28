@@ -16,4 +16,17 @@ jobs:
           node-version: "20"
           cache: "npm"
       - run: npm ci
-      - run: npm run ci
+      - run: npm run lint
+      - run: npm run test -- --coverage
+      - run: npm run build
+      - name: Start preview server
+        run: |
+          npm run serve:dist &
+          echo "SERVER_PID=$!" >> "$GITHUB_ENV"
+          npx wait-on http://127.0.0.1:4173
+      - run: npx playwright install --with-deps
+      - run: npm run e2e
+      - name: Stop preview server
+        if: env.SERVER_PID
+        run: |
+          kill $SERVER_PID || true
