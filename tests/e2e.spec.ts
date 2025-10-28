@@ -29,7 +29,7 @@ test.describe('CSMate release smoke', () => {
   }
 
   test('full release workflow', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('about:blank');
     await page.evaluate(() => {
       try {
         indexedDB.deleteDatabase('csmate');
@@ -37,7 +37,7 @@ test.describe('CSMate release smoke', () => {
         console.warn('Unable to reset IndexedDB', error);
       }
     });
-    await page.reload();
+    await page.goto('/', { waitUntil: 'networkidle' });
 
     await expect(page.locator('#app header .ttl')).toHaveText(/akkordseddel/i);
 
