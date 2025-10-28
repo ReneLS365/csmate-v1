@@ -38,32 +38,38 @@ function assertPriceTableMatches(priceTable: Record<string, number> | undefined,
 }
 
 describe('tenant templates', () => {
-  it('hulmoses tenant matches base material price list to two decimals', async () => {
+  it('hulmose tenant matches base material price list to two decimals', async () => {
     const materials: Material[] = await readJson(path.join('app', 'data', 'materials.json'));
-    const template: Template = await readJson(path.join('app', 'data', 'tenants', 'hulmoses.json'));
+    const template: Template = await readJson(path.join('app', 'data', 'tenants', 'hulmose.json'));
 
     const meta = template._meta ?? {};
     expect(meta.company).toBe('Hulmose Stilladser ApS');
     expect(meta.admin_code).toBe('StilAce');
-    expect(meta.source).toContain('BOSTA 2025');
+    expect(meta.source).toContain('HP3 Provinsen v50');
 
-    expect(template.pay?.base_wage_hourly).toBeCloseTo(187.5, 6);
+    expect(template.pay?.base_wage_hourly).toBeCloseTo(147, 6);
     expect(template.pay?.allowances_per_hour).toMatchObject({
-      udd1: 14,
-      udd2: 28,
-      mentor: 10
+      udd1: 42.98,
+      udd2: 49.38,
+      mentor: 22.26
+    });
+
+    expect(template.transport_rules).toMatchObject({
+      included_distance_m: 15,
+      tiers: expect.any(Array)
     });
 
     expect(template.roles?.chef).toEqual(['approve', 'reject', 'send', 'edit']);
+    expect(template.roles?.kontor).toEqual(['approve', 'reject', 'send', 'edit', 'administer']);
     expect(template.roles?.formand).toEqual(['approve', 'reject', 'send']);
     expect(template.roles?.arbejder).toEqual(['send']);
 
     assertPriceTableMatches(template.price_table, materials);
   });
 
-  it('exports hulmoses template 1:1 for distribution', async () => {
-    const tenant: Template = await readJson(path.join('app', 'data', 'tenants', 'hulmoses.json'));
-    const exported: Template = await readJson(path.join('templates', 'hulmoses.json'));
+  it('exports hulmose template 1:1 for distribution', async () => {
+    const tenant: Template = await readJson(path.join('app', 'data', 'tenants', 'hulmose.json'));
+    const exported: Template = await readJson(path.join('templates', 'hulmose.json'));
     expect(exported).toEqual(tenant);
   });
 

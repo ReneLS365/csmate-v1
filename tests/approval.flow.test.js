@@ -9,7 +9,7 @@ function cloneTemplate(template) {
 
 describe('Approval flow', () => {
   const defaultTemplate = loadTemplate('default');
-  const hulmosesTemplate = loadTemplate('hulmoses');
+  const hulmoseTemplate = loadTemplate('hulmose');
 
   it('arbejder må kun sende videre og tilbage under default skabelon', () => {
     const state = { role: 'arbejder', status: 'kladde', template: defaultTemplate, approvalLog: [] };
@@ -22,8 +22,8 @@ describe('Approval flow', () => {
     expect(awaiting.approvalLog?.length).toBe(1);
   });
 
-  it('chef kan godkende og afvise i hulmoses skabelonen', () => {
-    const state = { role: 'chef', status: 'afventer', template: hulmosesTemplate, approvalLog: [] };
+  it('chef kan godkende og afvise i hulmose skabelonen', () => {
+    const state = { role: 'chef', status: 'afventer', template: hulmoseTemplate, approvalLog: [] };
     expect(hasPerm(state, 'approve')).toBe(true);
     expect(hasPerm(state, 'reject')).toBe(true);
     expect(canTransition(state, 'afventer', 'godkendt')).toBe(true);
@@ -33,6 +33,15 @@ describe('Approval flow', () => {
     const reopened = nextStateByAction(approved, 'afventer');
     expect(reopened.status).toBe('afventer');
     expect(reopened.approvalLog?.length).toBe(2);
+  });
+
+  it('kontor-rollen har udvidede rettigheder i hulmose skabelonen', () => {
+    const state = { role: 'kontor', status: 'afventer', template: hulmoseTemplate, approvalLog: [] };
+    expect(hasPerm(state, 'approve')).toBe(true);
+    expect(hasPerm(state, 'reject')).toBe(true);
+    expect(hasPerm(state, 'send')).toBe(true);
+    expect(hasPerm(state, 'edit')).toBe(true);
+    expect(hasPerm(state, 'administer')).toBe(true);
   });
 
   it('blokerer godkendelse når rollen mangler tilladelsen', () => {

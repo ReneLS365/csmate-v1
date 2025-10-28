@@ -11,7 +11,7 @@
 3. Licensen giver alene adgang til at anvende Systemet i Firmaets drift og integrationer med godkendte tredjepartssystemer.
 
 ## 3. Deployment-licenser
-1. Hver template (fx `hulmoses`, `oens`, `stilladsgruppen`) repræsenterer én deployment-licens knyttet til et specifikt CVR-nummer.
+1. Hver template (fx `hulmose`, `oens`, `stilladsgruppen`) repræsenterer én deployment-licens knyttet til et specifikt CVR-nummer.
 2. Re-deployment til andre enheder kræver skriftlig accept fra Udvikleren.
 3. Firmaet skal holde sin admin-kode fortrolig (eksempel: `StilAce`) og må ikke dele kode eller template med andre virksomheder.
 

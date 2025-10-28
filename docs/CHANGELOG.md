@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.5 - 2025-12-12
+
+### Added
+- Hulmose codex med kildehenvisninger, lønstruktur, transportregler og testkrav.
+
+### Changed
+- Hulmose tenant opdateret med HP3 Provinsen v50 data, udvidede kontor-roller samt transportregler og systemreferencer.
+
+### Fixed
+- Tests og template-helpers bruger nu `hulmose` som standard-id og validerer de nye rettigheder.
+
 ## 1.0.4 - 2025-10-28
 
 ### Added
