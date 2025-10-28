@@ -2,18 +2,124 @@ name: CI
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main ]
   pull_request:
-    branches: [ main, master ]
+
+permissions:
+  contents: read
 
 jobs:
-  build-test:
+  build-unit:
+    timeout-minutes: 10
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
-          cache: "npm"
+          node-version: 20
+          cache: 'npm'
       - run: npm ci
-      - run: npm run ci
+      - run: npm run lint --if-present
+      - run: npm run test --if-present
+      - run: npm run build --if-present
+      - name: CI summary
+        run: node scripts/ci-summary.js
+      - name: Upload unit artifacts (if any)
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-and-build
+          path: |
+            coverage
+            dist
+          if-no-files-found: ignore
+      - name: Upload summary
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-summary
+          path: CI_SUMMARY.md
+
+  e2e:
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    container: mcr.microsoft.com/playwright:v1.47.2-jammy
+    needs: build-unit
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+      - name: Start server
+        run: npm run serve:ci &
+      - name: Wait for server
+        run: npx wait-on http://127.0.0.1:4173
+      - name: Run E2E
+        run: npm run e2e
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report
+          if-no-files-found: error
+      - name: Debug server (if failed)
+        if: failure()
+        run: |
+          ss -tlpn | head -n 50 || true
+          ps aux | grep http-server || true
+
+  lighthouse:
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.47.2-jammy
+      options: --ipc=host --shm-size=1g
+    needs: e2e
+    timeout-minutes: 10
+    env:
+      NODE_ENV: test
+      CHROME_PATH: ${{ env.CHROME_PATH }}
+      LIGHTHOUSE_CHROMIUM_FLAGS: --no-sandbox --disable-setuid-sandbox --headless=new --disable-gpu --disable-dev-shm-usage
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+
+      - name: Install Playwright Chromium (with deps)
+        run: npx playwright install --with-deps chromium
+
+      - name: Resolve CHROME_PATH for LHCI
+        shell: bash
+        run: |
+          set -euo pipefail
+          CHROME_BIN=$(node -e "console.log(require('playwright-core').chromium.executablePath())")
+          echo "CHROME_PATH=$CHROME_BIN" >> "$GITHUB_ENV"
+          echo "Resolved Chrome path: $CHROME_BIN"
+          "$CHROME_BIN" --version || true
+
+      - name: Start server
+        run: npm run serve:ci &
+      - name: Wait for server
+        run: npx wait-on http://127.0.0.1:4173
+
+      - name: Print LHCI config (debug)
+        run: |
+          node -e "console.log('CHROME_PATH:', process.env.CHROME_PATH)"
+          node -e "console.log(require('./.lighthouserc.cjs'))"
+
+      - name: Run Lighthouse CI (collect via config)
+        run: |
+          npx lhci collect --config=.lighthouserc.cjs || {
+            echo "::error::Lighthouse failed, dumping logs"
+            cat /tmp/lighthouse*/chrome-err.log || true
+            exit 1
+          }
+
+      - name: Upload Lighthouse artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-report
+          path: .lighthouse
+          if-no-files-found: error

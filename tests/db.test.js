@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { saveProject, listProjects, pruneToMax } from '../src/lib/db.js';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { saveProject, listProjects, pruneToMax, getProject } from '../src/lib/db.js';
 
 function setupFakeIndexedDB() {
   const store = { data: new Map() };
@@ -162,28 +162,80 @@ function setupFakeIndexedDB() {
   };
 }
 
-describe('IndexedDB – 20 seneste projekter', () => {
+describe('IndexedDB persistence og retention', () => {
   let cleanup;
 
-  beforeAll(async () => {
+  beforeEach(() => {
     cleanup = setupFakeIndexedDB();
+  });
+
+  afterEach(() => {
+    cleanup?.();
+    cleanup = undefined;
+  });
+
+  it('gemmer, henter og merger eksisterende projekter', async () => {
+    await saveProject({
+      id: 'merge-1',
+      state: {
+        id: 'merge-1',
+        jobType: 'montage',
+        selectedVariant: 'noAdd',
+        materialsSum: 4200,
+        workers: [
+          { name: 'A', hours: 7, hourlyWithAllowances: 250 },
+          { name: 'B', hours: 6.5, hourlyWithAllowances: 255 }
+        ]
+      },
+      updatedAt: 1000
+    });
+
+    let stored = await getProject('merge-1');
+    expect(stored?.payload?.materialsSum).toBe(4200);
+    expect(stored?.payload?.workers).toHaveLength(2);
+
+    await saveProject({
+      id: 'merge-1',
+      state: {
+        extraWorkKr: 188.6,
+        workers: [
+          { hourlyWithAllowances: 260 },
+          { hours: 7 }
+        ]
+      },
+      updatedAt: 2000
+    });
+
+    stored = await getProject('merge-1');
+    expect(stored?.updatedAt).toBe(2000);
+    expect(stored?.payload?.materialsSum).toBe(4200);
+    expect(stored?.payload?.extraWorkKr).toBe(188.6);
+    expect(stored?.payload?.workers).toHaveLength(2);
+    expect(stored?.payload?.workers?.[0]).toMatchObject({ hours: 7, hourlyWithAllowances: 260 });
+    expect(stored?.payload?.workers?.[1]).toMatchObject({ hours: 7, hourlyWithAllowances: 255 });
+  });
+
+  it('pruner og sorterer seneste 20 projekter', async () => {
     const now = Date.now();
     for (let i = 0; i < 25; i += 1) {
-      await saveProject({ id: 't' + i, state: { id: 't' + i, jobType: 'montage', selectedVariant: 'noAdd' }, updatedAt: now + i });
+      await saveProject({
+        id: 'case-' + i,
+        state: { id: 'case-' + i, jobType: 'montage', selectedVariant: 'noAdd' },
+        updatedAt: now + i
+      });
     }
-  });
 
-  afterAll(() => {
-    cleanup?.();
-  });
-
-  it('pruner ned til maks 20', async () => {
     const removed = await pruneToMax(20);
     expect(removed).toBeGreaterThanOrEqual(0);
-    const rows = await listProjects(100);
+
+    const rows = await listProjects(50);
     expect(rows.length).toBeLessThanOrEqual(20);
-    if (rows.length > 1) {
-      expect(rows[0].updatedAt >= rows[rows.length - 1].updatedAt).toBe(true);
+    const updates = rows.map((row) => row.updatedAt);
+    const sorted = [...updates].sort((a, b) => b - a);
+    expect(updates).toEqual(sorted);
+    if (rows.length === 20) {
+      expect(rows[0].id).toBe('case-24');
+      expect(rows[rows.length - 1].id).toBe('case-5');
     }
   });
 });

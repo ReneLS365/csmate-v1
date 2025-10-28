@@ -8,6 +8,54 @@ const DB_NAME = 'csmate';
 const DB_VERSION = 1;
 const STORE = 'projects';
 
+function clone(value) {
+  return value == null ? value : JSON.parse(JSON.stringify(value));
+}
+
+function mergeWorkers(existingWorkers, nextWorkers) {
+  const base = Array.isArray(existingWorkers) ? existingWorkers : [];
+  const patch = Array.isArray(nextWorkers) ? nextWorkers : [];
+  if (patch.length === 0) return base.map(clone);
+
+  const length = Math.max(base.length, patch.length);
+  const merged = [];
+  for (let index = 0; index < length; index += 1) {
+    const prev = base[index];
+    const next = patch[index];
+    if (next == null && prev == null) continue;
+    if (prev == null) {
+      merged.push(clone(next));
+      continue;
+    }
+    if (next == null) {
+      merged.push(clone(prev));
+      continue;
+    }
+    merged.push({ ...clone(prev), ...clone(next) });
+  }
+  return merged;
+}
+
+function mergePayload(existingPayload, nextState) {
+  const base = existingPayload && typeof existingPayload === 'object' ? existingPayload : {};
+  const patch = nextState && typeof nextState === 'object' ? nextState : {};
+  const merged = { ...clone(base), ...clone(patch) };
+
+  if ('workers' in base || 'workers' in patch) {
+    merged.workers = mergeWorkers(base.workers, patch.workers);
+  }
+
+  if (Array.isArray(base.materialLines) && !Array.isArray(patch.materialLines)) {
+    merged.materialLines = base.materialLines.map(clone);
+  }
+
+  if (Array.isArray(patch.materialLines)) {
+    merged.materialLines = patch.materialLines.map(clone);
+  }
+
+  return merged;
+}
+
 function openDB() {
   return new Promise((resolve, reject) => {
     const req = indexedDB.open(DB_NAME, DB_VERSION);
@@ -68,17 +116,33 @@ async function tx(storeMode, fn) {
 
 export async function saveProject(p) {
   const now = Date.now();
+  const id = String(p.id ?? (p.state?.id ?? 'anon'));
+  const incomingState = p.state ?? {};
+  let existing;
+  try {
+    existing = await getProject(id);
+  } catch (error) {
+    existing = null;
+  }
+
+  const mergedPayload = mergePayload(existing?.payload, incomingState);
+  const jobType = incomingState.jobType ?? mergedPayload.jobType ?? existing?.jobType ?? 'montage';
+  const selectedVariant = incomingState.selectedVariant ?? mergedPayload.selectedVariant ?? existing?.selectedVariant ?? 'noAdd';
+  const updatedAt = p.updatedAt ?? now;
+
   const doc = {
-    id: String(p.id ?? (p.state?.id ?? 'anon')),
+    ...(existing ? clone(existing) : {}),
+    id,
     version: 2,
-    updatedAt: p.updatedAt ?? now,
-    jobType: p.state?.jobType ?? 'montage',
-    selectedVariant: p.state?.selectedVariant ?? 'noAdd',
-    payload: { ...p.state }
+    updatedAt,
+    jobType,
+    selectedVariant,
+    payload: mergedPayload
   };
+
   await tx('readwrite', (s) => s.put(doc));
   await pruneToMax(20);
-  return doc.id;
+  return id;
 }
 
 export async function getProject(id) {

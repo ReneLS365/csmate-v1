@@ -1,6 +1,50 @@
 # Changelog
 
-## Unreleased
+## 1.0.4 - 2025-10-28
+
+### Added
+- Lighthouse CI config locking Chromium path and sandbox flags for reliable GitHub Actions runs.
+
+### Fixed
+- GitHub Actions Lighthouse stage now honours forced `--no-sandbox` flags when running as root in the Playwright container.
+
+## 1.0.3 - 2025-10-28
+
+### Added
+- Playwright smoke test and CI documentation ensuring Chromium E2E and Lighthouse steps run with official containers.
+- CI summary artifact generated on every run for quick verification without opening job logs.
+
+### Changed
+- GitHub Actions pipeline split into build, E2E, and Lighthouse jobs using Playwright's Jammy container for stable Chromium deps.
+- Local tooling scripts now include static servers for development and CI parity without touching app logic or UI.
+
+## 1.0.2 - 2025-10-28
+
+### Added
+- Vitest dækning for review-layout orden, CSV-eksportfelter og IndexedDB merge-flow inkl. 20-projekters retention.
+
+### Changed
+- Reviewpanelet gengiver sektioner via delt layout-helper så materialer, ekstraarbejde og timer altid ligger i korrekt rækkefølge.
+
+### Fixed
+- IndexedDB gemmer nu seneste data via last-write-wins merge uden at smide tidligere felter eller medarbejdere.
+
+## 1.0.1 - 2025-10-28
+
+### Added
+- Playwright PWA smoke suite covering approvals, exports (CSV/PDF/ZIP) and IndexedDB retention for the latest 20 projekter.
+- GitHub Actions pipeline installs Playwright, serves the dist build and runs coverage + e2e for every push/PR.
+
+### Changed
+- Build step kopierer nu `app/` til `dist/` og Netlify public folder er peget på `dist` for rene releases.
+- Service worker bruger versioneret cache med stale-while-revalidate for statics og network-first for data, inkl. hård purge ved nye versioner.
+
+### Fixed
+- Materialelisten fastholder venstrestillet antal-felt uden overlap på manuelle rækker og stopper tom scrolling i bunden.
+- Tralleløft valideres i review/eksport-flowet så ekstra arbejde og totaler altid matcher i CSV og PDF.
+- IndexedDB autosave bekræftet til kun at gemme de 20 seneste projekter via release smoke-testen.
+
+## 1.0.0
 
 ### Added
 - Persisted tenant template bootstrap with helpers for defaulting to Hulmoses and exposing normalised payloads in the new spa modules.

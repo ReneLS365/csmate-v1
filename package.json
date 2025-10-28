@@ -1,22 +1,32 @@
 {
   "name": "csmate",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "scripts": {
-    "build": "node scripts/bump-sw-version.js",
+    "build": "node scripts/build.js",
     "test": "vitest run",
-    "lint": "eslint \"app/src/**/*.js\"",
+    "lint": "eslint \"app/src/**/*.js\" \"scripts/**/*.js\"",
     "bump-sw": "node scripts/bump-sw-version.js",
-    "ci": "npm run lint && npm run test && npm run build"
+    "serve:dist": "http-server dist -p 4173 -s",
+    "serve": "http-server -p 4173 -c-1 .",
+    "serve:ci": "http-server -p 4173 -c-1 . >/dev/null 2>&1",
+    "e2e": "playwright test --project=chromium",
+    "e2e:headed": "playwright test --headed --project=chromium",
+    "ci": "npm run lint && npm run test -- --coverage && npm run build"
   },
   "devDependencies": {
-    "netlify-plugin-minify-html": "^0.3.1",
+    "@lhci/cli": "^0.13.0",
+    "@playwright/test": "^1.47.2",
     "@vitest/coverage-v8": "^1.6.1",
     "eslint": "^8.57.0",
     "eslint-config-standard": "^17.1.0",
     "eslint-plugin-import": "^2.29.1",
     "eslint-plugin-n": "^16.6.2",
     "eslint-plugin-promise": "^6.1.1",
+    "http-server": "^14.1.1",
+    "start-server-and-test": "^2.0.3",
+    "netlify-plugin-minify-html": "^0.3.1",
+    "wait-on": "^8.0.2",
     "jsdom": "^27.0.0",
     "vitest": "^1.4.0"
   },
