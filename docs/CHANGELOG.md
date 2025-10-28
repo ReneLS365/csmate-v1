@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.0.2 - 2025-10-28
+
+### Added
+- Vitest dækning for review-layout orden, CSV-eksportfelter og IndexedDB merge-flow inkl. 20-projekters retention.
+
+### Changed
+- Reviewpanelet gengiver sektioner via delt layout-helper så materialer, ekstraarbejde og timer altid ligger i korrekt rækkefølge.
+
+### Fixed
+- IndexedDB gemmer nu seneste data via last-write-wins merge uden at smide tidligere felter eller medarbejdere.
+
 ## 1.0.1 - 2025-10-28
 
 ### Added

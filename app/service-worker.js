@@ -1,6 +1,6 @@
 /* CSMate Service Worker – cache busting hard mode */
-const VERSION = 'v20251028T010254'; // replaced automatically during build
-const CACHE_VERSION = 'v20251028T010254'; // replaced automatically during build
+const VERSION = 'v20251028T062130'; // replaced automatically during build
+const CACHE_VERSION = 'v20251028T062130'; // replaced automatically during build
 const CACHE_PREFIX = 'csmate';
 const CACHE_NAME = `${CACHE_PREFIX}-${CACHE_VERSION}`;
 const PRECACHE = [

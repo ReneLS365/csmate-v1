@@ -3,6 +3,7 @@ import TemplateSelect from '@/components/TemplateSelect';
 import AdminGate from '@/components/AdminGate';
 import { getPersistedTemplate, loadTemplate, DEFAULT_TEMPLATE_ID } from '@/lib/templates';
 import { selectComputed } from '@/store/selectors';
+import { createReviewLayout } from '@/modules/review-sections';
 
 export default function ReviewPanel({ state = {}, setState }) {
   const o = selectComputed(state);
@@ -11,6 +12,7 @@ export default function ReviewPanel({ state = {}, setState }) {
   const template = loadTemplate(templateId);
   const isAdmin = Boolean(state?.isAdmin);
   const canMutate = typeof setState === 'function';
+  const workers = Array.isArray(state?.workers) ? state.workers : [];
 
   function patchState(patch) {
     if (!canMutate) return;
@@ -32,27 +34,57 @@ export default function ReviewPanel({ state = {}, setState }) {
   const kr = (v) => `${fmt2(v)} kr`;
   const t = (v) => `${fmt2(v)} t`;
 
+  const layout = createReviewLayout({
+    computed: o,
+    workers,
+    templateLabel: template.label,
+    jobType: o.jobType,
+    variant: o.selectedVariant
+  });
+
+  function formatRowValue(row) {
+    switch (row.format) {
+      case 'currency':
+        return kr(row.value ?? 0);
+      case 'sled':
+        return `${pct0(row.value?.percent ?? 0)} (${kr(row.value?.amount ?? 0)})`;
+      case 'hourly':
+        return `${fmt2(row.value ?? 0)} kr/t`;
+      case 'team': {
+        const workersCount = Number(row.value?.workersCount) || 0;
+        const hoursText = t(row.value?.hours ?? 0);
+        if (!workersCount) return hoursText;
+        const label = workersCount === 1 ? '1 medarbejder' : `${workersCount} medarbejdere`;
+        return `${label} · ${hoursText}`;
+      }
+      case 'text':
+        return String(row.value ?? '');
+      default:
+        return '';
+    }
+  }
+
+  function renderRow(row) {
+    const classes = ['review-row'];
+    if (row.format === 'header') classes.push('review-row--header');
+    if (row.subtle) classes.push('review-row--subtle');
+    if (row.emphasize) classes.push('review-row--total');
+    return (
+      <div key={row.id} className={classes.join(' ')}>
+        <span>{row.label}</span>
+        {row.format !== 'header' && <b>{formatRowValue(row)}</b>}
+      </div>
+    );
+  }
+
   return (
     <section className="review-panel">
-      <div className="review-row"><span>1. Materialer</span><b>{kr(o.materials)}</b></div>
-      <div className="review-row"><span>2. Slæb</span><b>{pct0(o.sledPercent)} ({kr(o.sledKr)})</b></div>
-      <div className="review-row"><span>3. Ekstra arbejde</span><b>{kr(o.extraWork)}</b></div>
-      <div className="review-row"><span>4. Tralleløft</span><b>{kr(o.tralleloft)}</b></div>
-      <div className="review-row"><span>5. Km</span><b>{kr(o.km)}</b></div>
-
-      <div className="review-row review-row--total"><span>6. Samlet akkordsum</span><b>{kr(o.totalAccord)}</b></div>
-
-      <div className="review-row"><span>7. Timepris (uden tillæg)</span><b>{fmt2(o.hourlyNoAdd)} kr/t</b></div>
-      <div className="review-row"><span>8. Timeløn m. UDD1</span><b>{fmt2(o.hourlyUdd1)} kr/t</b></div>
-      <div className="review-row"><span>9. Timeløn m. UDD2</span><b>{fmt2(o.hourlyUdd2)} kr/t</b></div>
-      <div className="review-row"><span>10. Timeløn m. UDD2 + Mentor</span><b>{fmt2(o.hourlyUdd2Mentor)} kr/t</b></div>
-
-      <div className="review-row review-row--header">11. Samlet projektsum (valgt: {o.jobType}, {o.selectedVariant})</div>
-      <div className="review-row review-row--total"><span>FINAL</span><b>{kr(o.project_final)}</b></div>
+      {layout.summary.map(renderRow)}
+      {layout.hourly.map(renderRow)}
+      {layout.project.map(renderRow)}
 
       <div className="review-metadata">
-        <div className="review-row review-row--subtle"><span>Skabelon</span><b>{template.label}</b></div>
-        <div className="review-row review-row--subtle"><span>Timer ({o.jobType})</span><b>{t(o.hours)}</b></div>
+        {layout.metadata.map(renderRow)}
         <div className="review-controls">
           <TemplateSelect value={templateId} onChange={handleTemplateChange} disabled={!canMutate} />
           <AdminGate templateId={templateId} isAdmin={isAdmin} disabled={!canMutate} onAdminChange={handleAdminChange} />
