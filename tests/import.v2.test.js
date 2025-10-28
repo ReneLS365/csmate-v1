@@ -39,4 +39,19 @@ describe('importJSON schema migration', () => {
     expect(state.kmRate).toBe(2.12);
     expect(state.kmQty).toBeCloseTo(50, 2);
   });
+
+  it('bevarer km beløb når ældre payload mangler kmRate', () => {
+    const payload = {
+      version: 1,
+      materials: 300,
+      sledPercent: 5,
+      km: 175.5
+    };
+
+    const state = importJSON(payload);
+    expect(state.kmRate).toBe(0);
+    expect(state.kmQty).toBe(0);
+    expect(state.kmKr).toBe(175.5);
+    expect(state.kmInfo).toEqual({ total: 175.5 });
+  });
 });

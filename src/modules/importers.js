@@ -68,11 +68,28 @@ export function importJSON(payload) {
 
   if (version < 3) {
     state.trolleyLiftEntries = state.trolleyLiftEntries ?? undefined;
-    state.kmQty = toNumber(payload?.km ?? 0, 0);
-    state.kmRate = toNumber(payload?.kmRate ?? state.kmRate, 0);
-    if (state.kmRate > 0) {
-      state.kmQty = toNumber((payload?.km ?? 0) / state.kmRate, state.kmQty);
+
+    const legacyKmAmount = toNumber(payload?.kmKr ?? payload?.km, 0);
+    const legacyKmRate = toNumber(payload?.kmRate, 0);
+    const legacyKmQty = Number(payload?.kmQty);
+
+    if (legacyKmRate > 0) {
+      state.kmRate = legacyKmRate;
+      if (Number.isFinite(legacyKmQty)) {
+        state.kmQty = legacyKmQty;
+      } else if (legacyKmAmount !== 0) {
+        state.kmQty = toNumber(legacyKmAmount / legacyKmRate, state.kmQty);
+      }
+    } else {
+      if (Number.isFinite(legacyKmQty)) {
+        state.kmQty = legacyKmQty;
+      }
+      if (legacyKmAmount !== 0) {
+        state.kmKr = legacyKmAmount;
+        state.kmInfo = { total: legacyKmAmount };
+      }
     }
+
     state.holesQty = state.holesQty || 0;
     state.closeHoleQty = state.closeHoleQty || 0;
     state.concreteQty = state.concreteQty || 0;

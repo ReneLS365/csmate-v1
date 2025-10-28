@@ -74,4 +74,18 @@ describe('review layout ordering', () => {
     const teamRow = layout.metadata.find((row) => row.id === 'team');
     expect(teamRow?.value?.hours).toBeCloseTo(10.5, 5);
   });
+
+  it('beholder km total fra legacy payload uden kmRate', () => {
+    const computed = deriveTotals({
+      totals: { materials: 0 },
+      materialsSum: 0,
+      kmKr: 312.75,
+      kmQty: 0,
+      kmRate: 0
+    });
+
+    expect(computed.kmKr).toBe(312.75);
+    expect(computed.extraWorkKr).toBe(312.75);
+    expect(computed.extrasBreakdown.km.total).toBe(312.75);
+  });
 });

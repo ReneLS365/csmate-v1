@@ -14,7 +14,8 @@ export function computeAccord(input = {}) {
   const sledKr = round2(materials * (Number(input.sledPercent) || 0));
   const kmQty = Number(input.kmQty) || 0;
   const kmRate = Number(input.kmRate) || 0;
-  const kmKr = round2(kmQty * kmRate);
+  const kmKrOverride = Number(input.kmKr);
+  const kmKr = Number.isFinite(kmKrOverride) ? round2(kmKrOverride) : round2(kmQty * kmRate);
 
   const extras = Array.isArray(input.extras) ? input.extras : [];
   const extrasOtherKr = round2(

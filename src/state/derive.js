@@ -66,8 +66,31 @@ export function deriveTotals(state = {}) {
   const sledPercentRaw = state?.sledPercent ?? state?.sledPercentDecimal ?? 0;
   const sledPercent = normalisePercent(sledPercentRaw);
 
-  const kmQty = toNumber(state?.kmQty ?? state?.km, 0);
+  const kmQtyRaw = toNumber(state?.kmQty ?? state?.km, 0);
   const kmRate = toNumber(state?.kmRate, toNumber(state?.kmSats ?? state?.kmRateDefault, 0));
+
+  const kmInfo = state?.kmInfo;
+  const kmCostFallbacks = [
+    state?.kmKr,
+    typeof kmInfo === 'object' ? kmInfo?.total ?? kmInfo?.kr ?? kmInfo?.amount : undefined,
+    typeof kmInfo === 'number' ? kmInfo : undefined
+  ];
+
+  let kmQty = kmQtyRaw;
+  let kmKrOverride;
+
+  for (const candidate of kmCostFallbacks) {
+    const value = Number(candidate);
+    if (!Number.isFinite(value)) continue;
+    if (kmRate > 0) {
+      if (kmQty === 0 && value !== 0) {
+        kmQty = toNumber(value / kmRate, kmQty);
+      }
+    } else {
+      kmKrOverride = value;
+    }
+    break;
+  }
 
   const holePrice = state?.holePrice ?? state?.holesUnitPrice;
   const closeHolePrice = state?.closeHolePrice ?? state?.closeHoleUnitPrice;
@@ -134,6 +157,7 @@ export function deriveTotals(state = {}) {
     sledPercent,
     kmQty,
     kmRate,
+    kmKr: kmKrOverride,
     extras: extrasArray,
     hoursTotal,
     udd1Add: toNumber(state?.addOns?.udd1 ?? state?.udd1Add ?? state?.udd1KrPerHour, 0),
