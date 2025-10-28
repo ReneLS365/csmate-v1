@@ -70,83 +70,54 @@ jobs:
           ps aux | grep http-server || true
 
   lighthouse:
-    timeout-minutes: 10
     runs-on: ubuntu-latest
     container: mcr.microsoft.com/playwright:v1.47.2-jammy
     needs: e2e
+    timeout-minutes: 10
+
+    env:
+      LHCI_CHROME_FLAGS: --no-sandbox --headless=new --disable-gpu --disable-dev-shm-usage
+      NODE_ENV: test
+
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
       - run: npm ci
+
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
-      - name: Expose CHROME_PATH for LHCI (robust)
+
+      - name: Resolve CHROME_PATH for LHCI
         shell: bash
         run: |
           set -euo pipefail
-
-          resolve_with_node() {
-            local module="$1"
-            node -e "try{const path=require('${module}').chromium.executablePath();if(path){console.log(path);}else{process.exit(1);}}catch(e){process.exit(1);}" 2>/dev/null
-          }
-
-          CHROME_BIN=""
-
-          if output=$(resolve_with_node playwright-core); then
-            if [ -n "$output" ] && [ -x "$output" ]; then
-              CHROME_BIN="$output"
-            fi
-          fi
-
-          if [ -z "$CHROME_BIN" ]; then
-            if output=$(resolve_with_node playwright); then
-              if [ -n "$output" ] && [ -x "$output" ]; then
-                CHROME_BIN="$output"
-              fi
-            fi
-          fi
-
-          if [ -z "$CHROME_BIN" ]; then
-            for p in /ms-playwright/chromium-*/chrome-linux/chrome \
-                     /ms-playwright/chromium-*/chrome-linux/chromium \
-                     /ms-playwright/chromium-*/chrome-linux/chrome-wrapper; do
-              if [ -x "$p" ]; then
-                CHROME_BIN="$p"
-                break
-              fi
-            done
-          fi
-
-          if [ -z "$CHROME_BIN" ]; then
-            CHROME_BIN=$(command -v chromium || true)
-          fi
-
-          if [ -z "$CHROME_BIN" ] || [ ! -x "$CHROME_BIN" ]; then
-            echo "Could not resolve Chromium executable"
-            exit 1
-          fi
-
+          CHROME_BIN=$(node -e "console.log(require('playwright-core').chromium.executablePath())")
           echo "CHROME_PATH=$CHROME_BIN" >> "$GITHUB_ENV"
+          echo "Resolved Chrome path: $CHROME_BIN"
           "$CHROME_BIN" --version || true
+
       - name: Start server
         run: npm run serve:ci &
       - name: Wait for server
         run: npx wait-on http://127.0.0.1:4173
+
       - name: Run Lighthouse CI (collect only)
         env:
           CHROME_PATH: ${{ env.CHROME_PATH }}
-          LHCI_CHROME_FLAGS: --no-sandbox --headless=new
-        run: npx lhci collect --url=http://127.0.0.1:4173 --numberOfRuns=1 --output-dir=.lighthouse
+          LHCI_CHROME_FLAGS: ${{ env.LHCI_CHROME_FLAGS }}
+        run: |
+          echo "Using Chrome path: $CHROME_PATH"
+          npx lhci collect --url=http://127.0.0.1:4173 --numberOfRuns=1 --output-dir=.lighthouse || {
+            echo "::error::Lighthouse failed, dumping logs";
+            cat /tmp/lighthouse*/chrome-err.log || true;
+            exit 1;
+          }
+
       - name: Upload Lighthouse artifacts
         uses: actions/upload-artifact@v4
         with:
           name: lighthouse-report
           path: .lighthouse
           if-no-files-found: error
-      - name: Debug server (if failed)
-        if: failure()
-        run: |
-          ss -tlpn | head -n 50 || true
-          ps aux | grep http-server || true
