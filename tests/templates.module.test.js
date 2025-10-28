@@ -24,17 +24,23 @@ function createStorage() {
 }
 
 describe('template helpers', () => {
-  it('loads hulmoses template and persists selection state', () => {
+  it('loads hulmose template og persisterer valg', () => {
     const storage = createStorage();
-    const template = loadTemplate('hulmoses');
+    const template = loadTemplate('hulmose');
 
-    expect(template.id).toBe('hulmoses');
+    expect(template.id).toBe('hulmose');
     expect(template.label).toContain('Hulmose');
     expect(template._meta?.admin_code).toBe('StilAce');
 
-    const persistedId = persistTemplateSelection('hulmoses', storage);
-    expect(persistedId).toBe('hulmoses');
-    expect(getPersistedTemplate(storage)).toBe('hulmoses');
+    const persistedId = persistTemplateSelection('hulmose', storage);
+    expect(persistedId).toBe('hulmose');
+    expect(getPersistedTemplate(storage)).toBe('hulmose');
+  });
+
+  it('falder tilbage til hulmose når ældre hulmoses-id anvendes', () => {
+    const template = loadTemplate('hulmoses');
+    expect(template.id).toBe('hulmose');
+    expect(template._meta?.template).toBe('hulmose');
   });
 
   it('normalises malformed template payloads defensively', () => {

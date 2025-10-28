@@ -5,14 +5,15 @@
  */
 
 import defaultTemplate from '@/templates/default.json' assert { type: 'json' };
-import hulmosesTemplate from '@/templates/hulmoses.json' assert { type: 'json' };
+import hulmoseTemplate from '@/templates/hulmose.json' assert { type: 'json' };
 
 const STATIC_TEMPLATES = {
   default: defaultTemplate,
-  hulmoses: hulmosesTemplate
+  hulmose: hulmoseTemplate,
+  hulmoses: hulmoseTemplate
 };
 
-export const DEFAULT_TEMPLATE_ID = 'hulmoses';
+export const DEFAULT_TEMPLATE_ID = 'hulmose';
 const STORAGE_KEY = 'csmate.selectedTemplate';
 
 const memoryStorage = (() => {
