@@ -40,20 +40,19 @@ describe('E-Komplet export/import roundtrip', () => {
   it('emits the expanded EK header and formatted row', () => {
     const state = {
       id: 'PR-42',
-      jobType: 'montage',
-      selectedVariant: 'noAdd',
+      totals: { materials: 12000 },
       materialsSum: 12000,
-      sledPercent: 7,
-      extraWorkKr: 300,
-      tralleloftKr: 0,
-      kmKr: 0,
-      hours: 40,
+      sledPercent: 0.07,
+      kmQty: 0,
+      kmRate: 0,
+      hoursMontage: 40,
+      addOns: { udd1: 0, udd2: 0, mentor: 0 },
       pay: { base_wage_hourly: 185.5 }
     }
 
     const csv = exportEKCSV(state)
     const cols = csv.split(';')
-    expect(EK_HEADER).toBe('project_id;job_type;variant;hours;base_wage;hourly_no_add;overskud_pr_time;overskud_total;project_final')
+    expect(EK_HEADER).toBe('project_id;job_type;variant;hours;base_wage;hourly_no_add;overskud_pr_time;overskud_total;accord_sum')
     expect(cols).toHaveLength(9)
     expect(cols[0]).toBe('PR-42')
     expect(cols[1]).toBe('montage')
@@ -75,14 +74,13 @@ describe('E-Komplet export/import roundtrip', () => {
   it('clamps overskud values when hourly rates fall below the base wage', () => {
     const state = {
       id: 'PR-43',
-      jobType: 'montage',
-      selectedVariant: 'noAdd',
+      totals: { materials: 4000 },
       materialsSum: 4000,
-      sledPercent: 7,
-      extraWorkKr: 0,
-      tralleloftKr: 0,
-      kmKr: 0,
-      hours: 32,
+      sledPercent: 0.07,
+      kmQty: 0,
+      kmRate: 0,
+      hoursMontage: 32,
+      addOns: { udd1: 0, udd2: 0, mentor: 0 },
       pay: { base_wage_hourly: 999 }
     }
 

@@ -4,71 +4,104 @@
  * @outputs JSON payload for persistence and CSV row strings for Excel/E-Komplet compatibility.
  */
 
-import { toCalcInput } from '@/modules/selectors';
-import { computeTotals, projectByVariant } from '@/modules/calc';
+import { deriveTotals } from '@/state/derive.js';
+import { round2 } from '@/lib/calc.js';
 
-export function exportJSON(state) {
-  const o = computeTotals(toCalcInput(state));
-  const selectedVariant = state?.selectedVariant ?? 'noAdd';
-  const jobType = state?.jobType ?? 'montage';
-  const project_final = projectByVariant(o, selectedVariant);
-
-  return {
-    version: 2,
-    materials: o.materials,
-    sledPercent: o.sledPercent,
-    sledKr: o.sledKr,
-    extraWork: o.extraWork,
-    tralleloft: o.tralleloft,
-    km: o.km,
-    extraAndKm: o.extraAndKm,
-    totalAccord: o.totalAccord,
-    hourlyNoAdd: o.hourlyNoAdd,
-    hourlyUdd1: o.hourlyUdd1,
-    hourlyUdd2: o.hourlyUdd2,
-    hourlyUdd2Mentor: o.hourlyUdd2Mentor,
-    project_noAdd: o.project_noAdd,
-    project_udd1: o.project_udd1,
-    project_udd2: o.project_udd2,
-    project_udd2Mentor: o.project_udd2Mentor,
-    project_final,
-    selectedVariant,
-    jobType,
-    hours: o.hours,
-    kmInfo: state?.kmKr ?? 0,
-    tralleløftInfo: state?.tralleloftKr ?? state?.tralleløftKr ?? 0
-  };
+function formatNumber(value) {
+  return round2(value ?? 0);
 }
 
-export const CSV_HEADER_APPEND =
-  'materials;sled_percent;sled_kr;extra_work;tralleløft;km;extra_and_km;total_accord;hourly_no_add;hourly_udd1;hourly_udd2;hourly_udd2_mentor;project_final;hours;km_info;tralleløft_info;job_type;variant';
+function buildExportPayload(state) {
+  const totals = deriveTotals(state);
+  const breakdown = totals.extrasBreakdown ?? {};
+  const holes = breakdown.holes ?? { qty: 0, unitPrice: 0, total: 0 };
+  const closeHole = breakdown.closeHole ?? { qty: 0, unitPrice: 0, total: 0 };
+  const concrete = breakdown.concreteDrill ?? { qty: 0, unitPrice: 0, total: 0 };
+  const foldingRail = breakdown.foldingRail ?? { qty: 0, unitPrice: 0, total: 0 };
+  const trolleyLift = breakdown.trolleyLift ?? { qty: 0, unitPrice: 0, total: 0 };
+  const extrasOtherKr = breakdown.extrasOtherKr ?? 0;
+
+  const payload = {
+    version: 3,
+    materialsKr: formatNumber(totals.materialsKr),
+    sledPercent: formatNumber(totals.sledPercent),
+    sledKr: formatNumber(totals.sledKr),
+    kmQty: formatNumber(totals.kmQty),
+    kmRate: formatNumber(totals.kmRate),
+    kmKr: formatNumber(totals.kmKr),
+    holesQty: formatNumber(holes.qty),
+    holePrice: formatNumber(holes.unitPrice),
+    closeHoleQty: formatNumber(closeHole.qty),
+    closeHolePrice: formatNumber(closeHole.unitPrice),
+    concreteQty: formatNumber(concrete.qty),
+    concretePrice: formatNumber(concrete.unitPrice),
+    foldingRailQty: formatNumber(foldingRail.qty),
+    foldingRailPrice: formatNumber(foldingRail.unitPrice),
+    trolleyLiftQty: formatNumber(trolleyLift.qty),
+    trolleyLiftPrice: formatNumber(trolleyLift.unitPrice),
+    extrasOtherKr: formatNumber(extrasOtherKr),
+    extraWorkKr: formatNumber(totals.extraWorkKr),
+    accordSumKr: formatNumber(totals.accordSumKr),
+    hoursTotal: formatNumber(totals.hours),
+    hourlyNoAdd: formatNumber(totals.hourlyNoAdd),
+    hourlyUdd1: formatNumber(totals.hourlyUdd1),
+    hourlyUdd2: formatNumber(totals.hourlyUdd2),
+    hourlyUdd2Mentor: formatNumber(totals.hourlyUdd2Mentor),
+    selectedVariant: state?.selectedVariant ?? 'noAdd',
+    jobType: totals.jobType ?? state?.jobType ?? 'montage',
+    trolleyLiftEntries: trolleyLift.entries ?? [],
+    udd1Add: formatNumber(state?.addOns?.udd1 ?? state?.udd1Add ?? state?.udd1KrPerHour),
+    udd2Add: formatNumber(state?.addOns?.udd2 ?? state?.udd2Add ?? state?.udd2KrPerHour),
+    mentorAdd: formatNumber(state?.addOns?.mentor ?? state?.mentorAdd ?? state?.mentorKrPerHour)
+  };
+
+  return payload;
+}
+
+export function exportJSON(state) {
+  return buildExportPayload(state);
+}
+
+export const CSV_HEADER_APPEND = 'materials_kr;sled_percent;sled_kr;km_qty;km_rate;km_kr;holes_qty;hole_price;close_hole_qty;close_hole_price;concrete_qty;concrete_price;folding_rail_qty;folding_rail_price;trolley_lift_qty;trolley_lift_price;extras_other_kr;extra_work_kr;accord_sum_kr;hours_total;hourly_no_add;hourly_udd1;hourly_udd2;hourly_udd2_mentor;selected_variant;job_type';
+
+function formatCSVValue(value) {
+  if (typeof value === 'number' && Number.isFinite(value)) {
+    return value.toFixed(2).replace('.', ',');
+  }
+  if (value == null) return '';
+  return String(value).replace('.', ',');
+}
 
 export function exportCSVRow(state) {
-  const input = toCalcInput(state);
-  const o = computeTotals(input);
-  const variant = state?.selectedVariant ?? 'noAdd';
-  const jobType = state?.jobType ?? 'montage';
-  const project_final = projectByVariant(o, variant);
-
-  const vals = [
-    o.materials,
-    o.sledPercent,
-    o.sledKr,
-    o.extraWork,
-    o.tralleloft,
-    o.km,
-    o.extraAndKm,
-    o.totalAccord,
-    o.hourlyNoAdd,
-    o.hourlyUdd1,
-    o.hourlyUdd2,
-    o.hourlyUdd2Mentor,
-    project_final,
-    o.hours,
-    state?.kmKr ?? 0,
-    state?.tralleloftKr ?? state?.tralleløftKr ?? 0,
-    jobType,
-    variant
+  const payload = buildExportPayload(state);
+  const values = [
+    payload.materialsKr,
+    payload.sledPercent,
+    payload.sledKr,
+    payload.kmQty,
+    payload.kmRate,
+    payload.kmKr,
+    payload.holesQty,
+    payload.holePrice,
+    payload.closeHoleQty,
+    payload.closeHolePrice,
+    payload.concreteQty,
+    payload.concretePrice,
+    payload.foldingRailQty,
+    payload.foldingRailPrice,
+    payload.trolleyLiftQty,
+    payload.trolleyLiftPrice,
+    payload.extrasOtherKr,
+    payload.extraWorkKr,
+    payload.accordSumKr,
+    payload.hoursTotal,
+    payload.hourlyNoAdd,
+    payload.hourlyUdd1,
+    payload.hourlyUdd2,
+    payload.hourlyUdd2Mentor,
+    payload.selectedVariant,
+    payload.jobType
   ];
-  return vals.map(v => String(v).replace('.', ',')).join(';');
+
+  return values.map(formatCSVValue).join(';');
 }

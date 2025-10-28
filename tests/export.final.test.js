@@ -2,29 +2,34 @@
 import { describe, it, expect } from 'vitest';
 import { exportJSON } from '../src/lib/exporters.js';
 
-describe('project_final vælges korrekt efter jobType + variant', () => {
+describe('exportJSON felter og jobtype', () => {
   const base = {
-    materialsSum: 4000,
-    sledPercent: 7,
-    extraWorkKr: 188.60,
-    tralleloftKr: 52.20,
-    kmKr: 42.40,
-    hoursMontage: 16,
-    hoursDemontage: 12,   // test forskel i timer
-    udd1KrPerHour: 10,
-    udd2KrPerHour: 20,
-    mentorKrPerHour: 5
+    totals: { materials: 1000 },
+    materialsSum: 1000,
+    sledPercent: 0.07,
+    kmQty: 280,
+    kmRate: 2.12,
+    holesQty: 20,
+    holePrice: 4.7,
+    hoursMontage: 14,
+    hoursDemontage: 20,
+    addOns: { udd1: 10, udd2: 20, mentor: 5 },
+    selectedVariant: 'udd2',
+    jobType: 'montage'
   };
 
-  it('montage + noAdd', () => {
-    const out = exportJSON({ ...base, jobType: 'montage', selectedVariant: 'noAdd' });
-    expect(out.project_final).toBe(out.project_noAdd);
+  it('montage bruger montage-timer og bevarer variant', () => {
+    const out = exportJSON(base);
+    expect(out.version).toBe(3);
+    expect(out.hoursTotal).toBe(14);
     expect(out.jobType).toBe('montage');
+    expect(out.selectedVariant).toBe('udd2');
+    expect(out.hourlyUdd2).toBeCloseTo(out.hourlyNoAdd + 20, 2);
   });
 
-  it('demontage + udd2Mentor', () => {
-    const out = exportJSON({ ...base, jobType: 'demontage', selectedVariant: 'udd2Mentor' });
-    expect(out.project_final).toBe(out.project_udd2Mentor);
+  it('demontage bruger demontage-timer', () => {
+    const out = exportJSON({ ...base, jobType: 'demontage' });
+    expect(out.hoursTotal).toBe(20);
     expect(out.jobType).toBe('demontage');
   });
 });

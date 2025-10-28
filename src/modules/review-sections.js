@@ -20,6 +20,112 @@ function normaliseWorkers(workers) {
   });
 }
 
+function buildBreakdownRows(computed) {
+  const rows = [];
+  const breakdown = computed?.extrasBreakdown ?? {};
+
+  rows.push({
+    id: 'extra-sled',
+    label: '   Slæb',
+    value: coerceNumber(computed?.sledKr),
+    format: 'breakdown',
+    subtle: true,
+    info: { type: 'percent', percent: coerceNumber(breakdown?.sled?.percent) }
+  });
+
+  rows.push({
+    id: 'extra-km',
+    label: '   Kilometer',
+    value: coerceNumber(computed?.kmKr),
+    format: 'breakdown',
+    subtle: true,
+    info: {
+      type: 'qtyPrice',
+      qty: coerceNumber(breakdown?.km?.qty),
+      unitPrice: coerceNumber(breakdown?.km?.unitPrice),
+      unitLabel: 'km'
+    }
+  });
+
+  rows.push({
+    id: 'extra-holes',
+    label: '   Boring af huller',
+    value: coerceNumber(breakdown?.holes?.total),
+    format: 'breakdown',
+    subtle: true,
+    info: {
+      type: 'qtyPrice',
+      qty: coerceNumber(breakdown?.holes?.qty),
+      unitPrice: coerceNumber(breakdown?.holes?.unitPrice)
+    }
+  });
+
+  rows.push({
+    id: 'extra-close-hole',
+    label: '   Luk af hul',
+    value: coerceNumber(breakdown?.closeHole?.total),
+    format: 'breakdown',
+    subtle: true,
+    info: {
+      type: 'qtyPrice',
+      qty: coerceNumber(breakdown?.closeHole?.qty),
+      unitPrice: coerceNumber(breakdown?.closeHole?.unitPrice)
+    }
+  });
+
+  rows.push({
+    id: 'extra-concrete',
+    label: '   Boring i beton',
+    value: coerceNumber(breakdown?.concreteDrill?.total),
+    format: 'breakdown',
+    subtle: true,
+    info: {
+      type: 'qtyPrice',
+      qty: coerceNumber(breakdown?.concreteDrill?.qty),
+      unitPrice: coerceNumber(breakdown?.concreteDrill?.unitPrice)
+    }
+  });
+
+  rows.push({
+    id: 'extra-folding-rail',
+    label: '   Opslåeligt rækværk',
+    value: coerceNumber(breakdown?.foldingRail?.total),
+    format: 'breakdown',
+    subtle: true,
+    info: {
+      type: 'qtyPrice',
+      qty: coerceNumber(breakdown?.foldingRail?.qty),
+      unitPrice: coerceNumber(breakdown?.foldingRail?.unitPrice)
+    }
+  });
+
+  rows.push({
+    id: 'extra-trolley',
+    label: '   Tralleløft',
+    value: coerceNumber(breakdown?.trolleyLift?.total),
+    format: 'breakdown',
+    subtle: true,
+    info: {
+      type: 'trolley',
+      qty: coerceNumber(breakdown?.trolleyLift?.qty),
+      entries: Array.isArray(breakdown?.trolleyLift?.entries) ? breakdown.trolleyLift.entries : []
+    }
+  });
+
+  const extrasOther = coerceNumber(breakdown?.extrasOtherKr);
+  if (extrasOther > 0) {
+    rows.push({
+      id: 'extra-other',
+      label: '   Øvrige ekstraarbejde',
+      value: extrasOther,
+      format: 'currency',
+      subtle: true
+    });
+  }
+
+  return rows;
+}
+
 export function createReviewLayout(options = {}) {
   const computed = options.computed && typeof options.computed === 'object' ? options.computed : {};
   const workers = normaliseWorkers(options.workers);
@@ -33,35 +139,26 @@ export function createReviewLayout(options = {}) {
   const workersCount = workers.length;
 
   const summary = [
-    { id: 'materials', label: '1. Materialer', value: coerceNumber(computed.materials), format: 'currency' },
-    {
-      id: 'sled',
-      label: '2. Slæb',
-      value: { percent: coerceNumber(computed.sledPercent), amount: coerceNumber(computed.sledKr) },
-      format: 'sled'
-    },
-    { id: 'extraWork', label: '3. Ekstra arbejde', value: coerceNumber(computed.extraWork), format: 'currency' },
-    { id: 'tralleloft', label: '4. Tralleløft', value: coerceNumber(computed.tralleloft), format: 'currency' },
-    { id: 'km', label: '5. Km', value: coerceNumber(computed.km), format: 'currency' },
-    { id: 'totalAccord', label: '6. Samlet akkordsum', value: coerceNumber(computed.totalAccord), format: 'currency', emphasize: true }
+    { id: 'materials', label: '1. Materialer', value: coerceNumber(computed.materialsKr ?? computed.materials), format: 'currency' },
+    { id: 'extraWork', label: '2. Ekstra arbejde', value: coerceNumber(computed.extraWorkKr ?? computed.extraWork), format: 'currency' },
+    ...buildBreakdownRows(computed),
+    { id: 'accordSum', label: '3. Samlet akkordsum', value: coerceNumber(computed.accordSumKr ?? computed.totalAccord), format: 'currency', emphasize: true },
+    { id: 'hours', label: '4. Timer', value: coerceNumber(totalHours), format: 'hours' },
+    { id: 'hourlyNoAdd', label: '5. Timepris (uden tillæg)', value: coerceNumber(computed.hourlyNoAdd), format: 'hourly' }
   ];
 
   const hourly = [
-    { id: 'hourlyNoAdd', label: '7. Timepris (uden tillæg)', value: coerceNumber(computed.hourlyNoAdd), format: 'hourly' },
-    { id: 'hourlyUdd1', label: '8. Timeløn m. UDD1', value: coerceNumber(computed.hourlyUdd1), format: 'hourly' },
-    { id: 'hourlyUdd2', label: '9. Timeløn m. UDD2', value: coerceNumber(computed.hourlyUdd2), format: 'hourly' },
+    { id: 'hourlyUdd1', label: '6. Timeløn m. UDD1', value: coerceNumber(computed.hourlyUdd1), format: 'hourly' },
+    { id: 'hourlyUdd2', label: '7. Timeløn m. UDD2', value: coerceNumber(computed.hourlyUdd2), format: 'hourly' },
     {
       id: 'hourlyUdd2Mentor',
-      label: '10. Timeløn m. UDD2 + Mentor',
+      label: '8. Timeløn m. UDD2 + Mentor',
       value: coerceNumber(computed.hourlyUdd2Mentor),
       format: 'hourly'
     }
   ];
 
-  const project = [
-    { id: 'projectHeader', label: `11. Samlet projektsum (valgt: ${jobType}, ${variant})`, format: 'header' },
-    { id: 'projectFinal', label: 'FINAL', value: coerceNumber(computed.project_final), format: 'currency', emphasize: true }
-  ];
+  const project = [];
 
   const metadata = [
     { id: 'template', label: 'Skabelon', value: templateLabel, format: 'text', subtle: true },
@@ -71,7 +168,9 @@ export function createReviewLayout(options = {}) {
       value: { workersCount, hours: totalHours },
       format: 'team',
       subtle: true
-    }
+    },
+    { id: 'jobType', label: 'Jobtype', value: jobType, format: 'text', subtle: true },
+    { id: 'variant', label: 'Variant', value: variant, format: 'text', subtle: true }
   ];
 
   return { summary, hourly, project, metadata };

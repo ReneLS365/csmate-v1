@@ -1,45 +1,84 @@
 /**
  * @purpose Hydrate saved accord payloads into the latest state schema with sensible defaults.
- * @inputs JSON payloads from export v1/v2 including sled percent and tralleløft data.
+ * @inputs JSON payloads from export v1/v2/v3 including sled percent and tralleløft data.
  * @outputs Normalised state ready for application store consumption.
  */
 
-import { DEFAULT_SLED_INT } from '@/modules/calc';
+function normalisePercent(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return 0;
+  if (n >= 0 && n <= 1) return n;
+  return n / 100;
+}
 
-function restoreOldState(payload) {
-  return { ...payload };
+function toNumber(value, fallback = 0) {
+  const n = Number(value);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function ensureAddOns(payload) {
+  const addOns = payload?.addOns && typeof payload.addOns === 'object' ? payload.addOns : {};
+  return {
+    udd1: toNumber(payload?.udd1Add ?? payload?.udd1KrPerHour ?? addOns.udd1, 0),
+    udd2: toNumber(payload?.udd2Add ?? payload?.udd2KrPerHour ?? addOns.udd2, 0),
+    mentor: toNumber(payload?.mentorAdd ?? payload?.mentorKrPerHour ?? addOns.mentor, 0)
+  };
+}
+
+function ensureTrolleyEntries(payload) {
+  if (Array.isArray(payload?.trolleyLiftEntries)) {
+    return payload.trolleyLiftEntries.map((entry) => ({
+      qty: toNumber(entry?.qty, 0),
+      unitPrice: toNumber(entry?.unitPrice, 0)
+    }));
+  }
+  return undefined;
 }
 
 export function importJSON(payload) {
-  const v = Number(payload?.version || 1);
-  const state = restoreOldState(payload);
+  const version = Number(payload?.version ?? 1);
+  const materials = toNumber(payload?.materialsKr ?? payload?.materials, 0);
+  const sledPercent = normalisePercent(payload?.sledPercent ?? payload?.sledPercentDecimal ?? payload?.sledPercentInt);
+  const kmRate = toNumber(payload?.kmRate, 0);
+  const kmQty = toNumber(payload?.kmQty, kmRate > 0 ? (toNumber(payload?.kmKr ?? payload?.km, 0) / kmRate) : 0);
 
-  if (v < 2) {
-    if (state.sledPercent == null) state.sledPercent = DEFAULT_SLED_INT;
-    if (state.tralleløftKr == null && state.tralleloftKr == null) state.tralleløftKr = 0;
+  const state = {
+    jobType: payload?.jobType ?? 'montage',
+    selectedVariant: payload?.selectedVariant ?? 'noAdd',
+    materialsSum: materials,
+    totals: { materials },
+    sledPercent,
+    kmQty,
+    kmRate,
+    holePrice: toNumber(payload?.holePrice, 0),
+    holesQty: toNumber(payload?.holesQty ?? payload?.holes, 0),
+    closeHolePrice: toNumber(payload?.closeHolePrice, 0),
+    closeHoleQty: toNumber(payload?.closeHoleQty ?? payload?.lukAfHulAntal, 0),
+    concretePrice: toNumber(payload?.concretePrice, 0),
+    concreteQty: toNumber(payload?.concreteQty ?? payload?.boringBetonAntal, 0),
+    foldingRailPrice: toNumber(payload?.foldingRailPrice, 0),
+    foldingRailQty: toNumber(payload?.foldingRailQty ?? payload?.opskydeligtAntal, 0),
+    trolleyLiftPrice: toNumber(payload?.trolleyLiftPrice, 0),
+    trolleyLiftQty: toNumber(payload?.trolleyLiftQty, 0),
+    trolleyLiftEntries: ensureTrolleyEntries(payload),
+    extrasOtherKr: toNumber(payload?.extrasOtherKr, 0),
+    hoursTotal: toNumber(payload?.hoursTotal ?? payload?.hours, 0),
+    addOns: ensureAddOns(payload)
+  };
+
+  if (version < 3) {
+    state.trolleyLiftEntries = state.trolleyLiftEntries ?? undefined;
+    state.kmQty = toNumber(payload?.km ?? 0, 0);
+    state.kmRate = toNumber(payload?.kmRate ?? state.kmRate, 0);
+    if (state.kmRate > 0) {
+      state.kmQty = toNumber((payload?.km ?? 0) / state.kmRate, state.kmQty);
+    }
+    state.holesQty = state.holesQty || 0;
+    state.closeHoleQty = state.closeHoleQty || 0;
+    state.concreteQty = state.concreteQty || 0;
+    state.foldingRailQty = state.foldingRailQty || 0;
+    state.trolleyLiftQty = state.trolleyLiftQty || 0;
   }
-
-  const tralleløftInfo =
-    payload?.tralleløftInfo ??
-    payload?.tralleloftInfo ??
-    state?.tralleløftInfo ??
-    state?.tralleloftInfo;
-
-  const hasPrimaryLift = state.tralleløftKr != null;
-  const hasAsciiLift = state.tralleloftKr != null;
-
-  if (!hasPrimaryLift && !hasAsciiLift && tralleløftInfo != null) {
-    state.tralleløftKr = tralleløftInfo;
-    state.tralleloftKr = tralleløftInfo;
-  } else if (!hasPrimaryLift && hasAsciiLift) {
-    state.tralleløftKr = state.tralleloftKr;
-  }
-
-  const n = Math.round(Number(state.sledPercent ?? DEFAULT_SLED_INT));
-  state.sledPercent = Number.isFinite(n) ? n : DEFAULT_SLED_INT;
-
-  state.jobType = state.jobType ?? 'montage';
-  state.selectedVariant = state.selectedVariant ?? 'noAdd';
 
   return state;
 }

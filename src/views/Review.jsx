@@ -46,6 +46,36 @@ export default function ReviewPanel({ state = {}, setState }) {
     switch (row.format) {
       case 'currency':
         return kr(row.value ?? 0);
+      case 'breakdown': {
+        const amountText = kr(row.value ?? 0);
+        const info = row.info;
+        if (!info) return amountText;
+        let infoText = '';
+        switch (info.type) {
+          case 'percent':
+            infoText = pct0(info.percent ?? 0);
+            break;
+          case 'qtyPrice': {
+            const qtyLabel = info.unitLabel ? `${fmt2(info.qty ?? 0)} ${info.unitLabel}` : fmt2(info.qty ?? 0);
+            infoText = `${qtyLabel} × ${kr(info.unitPrice ?? 0)}`;
+            break;
+          }
+          case 'trolley': {
+            const qtyText = info.qty ? `${fmt2(info.qty)} løft` : '';
+            const entryText = Array.isArray(info.entries)
+              ? info.entries
+                .filter((entry) => entry && Number(entry.qty) > 0)
+                .map((entry) => `${fmt2(entry.qty)} × ${kr(entry.unitPrice ?? 0)}`)
+                .join(' · ')
+              : '';
+            infoText = [qtyText, entryText].filter(Boolean).join(' · ');
+            break;
+          }
+          default:
+            infoText = '';
+        }
+        return infoText ? `${amountText} (${infoText})` : amountText;
+      }
       case 'sled':
         return `${pct0(row.value?.percent ?? 0)} (${kr(row.value?.amount ?? 0)})`;
       case 'hourly':
@@ -57,6 +87,8 @@ export default function ReviewPanel({ state = {}, setState }) {
         const label = workersCount === 1 ? '1 medarbejder' : `${workersCount} medarbejdere`;
         return `${label} · ${hoursText}`;
       }
+      case 'hours':
+        return t(row.value ?? 0);
       case 'text':
         return String(row.value ?? '');
       default:

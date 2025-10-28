@@ -1,1 +1,2 @@
-export { toCalcInput, selectComputed } from '@/modules/selectors';
+export { selectComputed } from '@/modules/selectors';
+export { deriveTotals } from '@/state/derive.js';
