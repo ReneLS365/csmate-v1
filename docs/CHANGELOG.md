@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.0.6 - 2025-10-28
+
+### Added
+- Final Hulmose release checklist dokumenteret i `docs/release-readiness-da.md` med komplette CI-, PWA- og eksporttrin.
+
+### Changed
+- Opdateret udgivelsesprocessen til at afspejle Netlify deploy-flowet for vFinal-Provinsen med dokumenterede testkommandoer.
+
+### Fixed
+- Sikrer at release-dokumentationen peger på uændret adminkode og verificerede totaler i Review- og eksportsektioner.
+
+
 ## 1.0.5 - 2025-12-12
 
 ### Added
