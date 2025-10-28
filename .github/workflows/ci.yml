@@ -71,7 +71,9 @@ jobs:
 
   lighthouse:
     runs-on: ubuntu-latest
-    container: mcr.microsoft.com/playwright:v1.47.2-jammy
+    container:
+      image: mcr.microsoft.com/playwright:v1.47.2-jammy
+      options: --ipc=host --shm-size=1g
     needs: e2e
     timeout-minutes: 10
 
@@ -103,17 +105,22 @@ jobs:
       - name: Wait for server
         run: npx wait-on http://127.0.0.1:4173
 
-      - name: Run Lighthouse CI (collect only)
+      - name: Run Lighthouse CI (collect only, force flags)
         env:
           CHROME_PATH: ${{ env.CHROME_PATH }}
           LHCI_CHROME_FLAGS: ${{ env.LHCI_CHROME_FLAGS }}
         run: |
           echo "Using Chrome path: $CHROME_PATH"
-          npx lhci collect --url=http://127.0.0.1:4173 --numberOfRuns=1 --output-dir=.lighthouse || {
-            echo "::error::Lighthouse failed, dumping logs";
-            cat /tmp/lighthouse*/chrome-err.log || true;
-            exit 1;
-          }
+          npx lhci collect \
+            --url=http://127.0.0.1:4173 \
+            --numberOfRuns=1 \
+            --output-dir=.lighthouse \
+            --chromePath="$CHROME_PATH" \
+            --chromeFlags="--no-sandbox --headless=new --disable-gpu --disable-dev-shm-usage" || {
+              echo "::error::Lighthouse failed, dumping logs"
+              cat /tmp/lighthouse*/chrome-err.log || true
+              exit 1
+            }
 
       - name: Upload Lighthouse artifacts
         uses: actions/upload-artifact@v4
