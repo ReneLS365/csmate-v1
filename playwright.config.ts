@@ -1,19 +1,17 @@
 import { defineConfig } from '@playwright/test';
 
 export default defineConfig({
-  testDir: './tests',
-  testMatch: /e2e\.spec\.(ts|js)/,
-  retries: process.env.CI ? 2 : 0,
-  timeout: 90_000,
+  testDir: 'tests/e2e',
+  timeout: 30_000,
   use: {
-    baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://localhost:4173',
-    trace: 'on-first-retry',
-    screenshot: 'only-on-failure',
-    video: 'retain-on-failure'
+    baseURL: process.env.BASE_URL || 'http://127.0.0.1:4173',
+    headless: true
   },
   reporter: [
     ['list'],
-    ['html', { open: 'never', outputFolder: '.artifacts/playwright-report' }]
+    ['html', { outputFolder: 'playwright-report', open: 'never' }]
   ],
-  outputDir: '.artifacts/playwright-results'
+  projects: [
+    { name: 'chromium', use: { browserName: 'chromium' } }
+  ]
 });

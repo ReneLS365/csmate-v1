@@ -8,7 +8,7 @@ const __dirname = dirname(__filename);
 export default defineConfig({
   test: {
     environment: 'node',
-    exclude: ['tests/e2e.spec.ts'],
+    exclude: ['tests/e2e.spec.ts', 'tests/e2e/**'],
     include: ['tests/**/*.{test,spec}.{js,ts}']
   },
   resolve: {

@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.0.3 - 2025-10-28
+
+### Added
+- Playwright smoke test and CI documentation ensuring Chromium E2E and Lighthouse steps run with official containers.
+- CI summary artifact generated on every run for quick verification without opening job logs.
+
+### Changed
+- GitHub Actions pipeline split into build, E2E, and Lighthouse jobs using Playwright's Jammy container for stable Chromium deps.
+- Local tooling scripts now include static servers for development and CI parity without touching app logic or UI.
+
 ## 1.0.2 - 2025-10-28
 
 ### Added
