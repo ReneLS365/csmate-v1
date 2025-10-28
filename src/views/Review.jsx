@@ -54,9 +54,7 @@ export default function ReviewPanel({ state = {}, setState }) {
         <div className="review-controls">
           <TemplateSelect value={templateId} onChange={handleTemplateChange} disabled={!canMutate} />
           <AdminGate templateId={templateId} isAdmin={isAdmin} disabled={!canMutate} onAdminChange={handleAdminChange} />
-          {canMutate && (
-            <ApprovalControls state={state} setState={setState} disabled={!isAdmin} />
-          )}
+          {canMutate && <ApprovalControls state={state} setState={setState} />}
         </div>
       </div>
     </section>
