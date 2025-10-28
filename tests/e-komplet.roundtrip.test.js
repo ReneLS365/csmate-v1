@@ -3,6 +3,8 @@ import { buildEKompletRows, rowsToCsv } from '../app/src/lib/e-komplet/export.js
 import { parseCsv, applyMapping } from '../app/src/lib/e-komplet/import.js'
 import { validateRows } from '../app/src/lib/e-komplet/validate.js'
 import { CSV_HEADERS } from '../app/src/lib/e-komplet/schema.js'
+import { EK_HEADER, exportEKCSV } from '../src/lib/exporters-ek.js'
+import { selectComputed } from '../src/modules/selectors.js'
 
 describe('E-Komplet export/import roundtrip', () => {
   it('keeps core fields identical', async () => {
@@ -33,5 +35,60 @@ describe('E-Komplet export/import roundtrip', () => {
     const names = mapped.filter(row => row.Type === 'TIME').map(row => row.EmployeeName)
     expect(names).toContain('Anna')
     expect(names).toContain('Bo')
+  })
+
+  it('emits the expanded EK header and formatted row', () => {
+    const state = {
+      id: 'PR-42',
+      jobType: 'montage',
+      selectedVariant: 'noAdd',
+      materialsSum: 12000,
+      sledPercent: 7,
+      extraWorkKr: 300,
+      tralleloftKr: 0,
+      kmKr: 0,
+      hours: 40,
+      pay: { base_wage_hourly: 185.5 }
+    }
+
+    const csv = exportEKCSV(state)
+    const cols = csv.split(';')
+    expect(EK_HEADER).toBe('project_id;job_type;variant;hours;base_wage;hourly_no_add;overskud_pr_time;overskud_total;project_final')
+    expect(cols).toHaveLength(9)
+    expect(cols[0]).toBe('PR-42')
+    expect(cols[1]).toBe('montage')
+    expect(cols[2]).toBe('noAdd')
+    expect(cols[3]).toBe('40,00')
+    expect(cols[4]).toBe('185,50')
+
+    const computed = selectComputed(state)
+    const hourlyNoAdd = computed.hourlyNoAdd.toFixed(2).replace('.', ',')
+    const overskudPerTime = Math.max(computed.hourlyNoAdd - state.pay.base_wage_hourly, 0).toFixed(2).replace('.', ',')
+    const overskudTotal = Math.max(computed.hourlyNoAdd - state.pay.base_wage_hourly, 0) * computed.hours
+
+    expect(cols[5]).toBe(hourlyNoAdd)
+    expect(cols[6]).toBe(overskudPerTime)
+    expect(cols[7]).toBe(overskudTotal.toFixed(2).replace('.', ','))
+    expect(cols[8]).toMatch(/\d+,\d{2}/)
+  })
+
+  it('clamps overskud values when hourly rates fall below the base wage', () => {
+    const state = {
+      id: 'PR-43',
+      jobType: 'montage',
+      selectedVariant: 'noAdd',
+      materialsSum: 4000,
+      sledPercent: 7,
+      extraWorkKr: 0,
+      tralleloftKr: 0,
+      kmKr: 0,
+      hours: 32,
+      pay: { base_wage_hourly: 999 }
+    }
+
+    const csv = exportEKCSV(state)
+    const cols = csv.split(';')
+    expect(cols[6]).toBe('0,00')
+    expect(cols[7]).toBe('0,00')
   })
 })
