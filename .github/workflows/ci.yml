@@ -76,11 +76,10 @@ jobs:
       options: --ipc=host --shm-size=1g
     needs: e2e
     timeout-minutes: 10
-
     env:
-      LHCI_CHROME_FLAGS: --no-sandbox --headless=new --disable-gpu --disable-dev-shm-usage
       NODE_ENV: test
-
+      CHROME_PATH: ${{ env.CHROME_PATH }}
+      LIGHTHOUSE_CHROMIUM_FLAGS: --no-sandbox --disable-setuid-sandbox --headless=new --disable-gpu --disable-dev-shm-usage
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -88,7 +87,7 @@ jobs:
           node-version: 20
       - run: npm ci
 
-      - name: Install Playwright Chromium
+      - name: Install Playwright Chromium (with deps)
         run: npx playwright install --with-deps chromium
 
       - name: Resolve CHROME_PATH for LHCI
@@ -105,22 +104,18 @@ jobs:
       - name: Wait for server
         run: npx wait-on http://127.0.0.1:4173
 
-      - name: Run Lighthouse CI (collect only, force flags)
-        env:
-          CHROME_PATH: ${{ env.CHROME_PATH }}
-          LHCI_CHROME_FLAGS: ${{ env.LHCI_CHROME_FLAGS }}
+      - name: Print LHCI config (debug)
         run: |
-          echo "Using Chrome path: $CHROME_PATH"
-          npx lhci collect \
-            --url=http://127.0.0.1:4173 \
-            --numberOfRuns=1 \
-            --output-dir=.lighthouse \
-            --chromePath="$CHROME_PATH" \
-            --chromeFlags="--no-sandbox --headless=new --disable-gpu --disable-dev-shm-usage" || {
-              echo "::error::Lighthouse failed, dumping logs"
-              cat /tmp/lighthouse*/chrome-err.log || true
-              exit 1
-            }
+          node -e "console.log('CHROME_PATH:', process.env.CHROME_PATH)"
+          node -e "console.log(require('./.lighthouserc.cjs'))"
+
+      - name: Run Lighthouse CI (collect via config)
+        run: |
+          npx lhci collect --config=.lighthouserc.cjs || {
+            echo "::error::Lighthouse failed, dumping logs"
+            cat /tmp/lighthouse*/chrome-err.log || true
+            exit 1
+          }
 
       - name: Upload Lighthouse artifacts
         uses: actions/upload-artifact@v4

@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.0.4 - 2025-10-28
+
+### Added
+- Lighthouse CI config locking Chromium path and sandbox flags for reliable GitHub Actions runs.
+
+### Fixed
+- GitHub Actions Lighthouse stage now honours forced `--no-sandbox` flags when running as root in the Playwright container.
+
 ## 1.0.3 - 2025-10-28
 
 ### Added
