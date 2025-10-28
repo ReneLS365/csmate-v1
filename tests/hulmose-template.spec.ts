@@ -73,6 +73,13 @@ describe('tenant templates', () => {
     expect(exported).toEqual(tenant);
   });
 
+  it('publishes hulmose template snapshot under data/templates for downloads', async () => {
+    const tenant: Template = await readJson(path.join('app', 'data', 'tenants', 'hulmose.json'));
+    const published: Template = await readJson(path.join('data', 'templates', 'hulmose.json'));
+
+    expect(published).toEqual(tenant);
+  });
+
   it.each([
     'templates/oens.json',
     'templates/stilladsgruppen.json'

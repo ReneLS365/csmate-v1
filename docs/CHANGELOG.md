@@ -4,6 +4,7 @@
 
 ### Added
 - Hulmose codex med kildehenvisninger, lønstruktur, transportregler og testkrav.
+- Distribueret hulmose-template i `data/templates/` så prislisten kan downloades med komplet `price_table` direkte fra appen.
 
 ### Changed
 - Hulmose tenant opdateret med HP3 Provinsen v50 data, udvidede kontor-roller samt transportregler og systemreferencer.

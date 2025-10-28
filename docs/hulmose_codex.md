@@ -9,7 +9,7 @@ Denne codex beskriver den opdaterede tenant-konfiguration for Hulmose Stilladser
 - **Systemreference**: BOSTA70, HAKI, MODEX, Alfix VARIO.
 
 ## Placering i repo
-- JSON-konfiguration: `app/data/tenants/hulmose.json` (kopieret til `src/templates/hulmose.json` og `templates/hulmose.json` for distribution).
+- JSON-konfiguration: `app/data/tenants/hulmose.json` (kopieret til `src/templates/hulmose.json`, `templates/hulmose.json` og `data/templates/hulmose.json` for distribution).
 - Standardvalg i applikationen: `DEFAULT_TEMPLATE_ID = 'hulmose'` i `src/modules/templates.js`.
 
 ## Roller og rettigheder
