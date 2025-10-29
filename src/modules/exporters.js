@@ -6,6 +6,7 @@
 
 import { deriveTotals } from '@/state/derive.js';
 import { round2 } from '@/lib/calc.js';
+import { loadSession } from '@/lib/storage.js';
 
 function formatNumber(value) {
   return round2(value ?? 0);
@@ -19,10 +20,13 @@ function buildExportPayload(state) {
   const concrete = breakdown.concreteDrill ?? { qty: 0, unitPrice: 0, total: 0 };
   const foldingRail = breakdown.foldingRail ?? { qty: 0, unitPrice: 0, total: 0 };
   const trolleyLift = breakdown.trolleyLift ?? { qty: 0, unitPrice: 0, total: 0 };
-  const extrasOtherKr = breakdown.extrasOtherKr ?? 0;
+  const extrasOtherKr = formatNumber(totals.extrasOtherKr);
 
+  const session = loadSession() ?? {};
   const payload = {
     version: 3,
+    user: session?.user?.username ?? session?.user?.email ?? '',
+    role: session?.role ?? 'guest',
     materialsKr: formatNumber(totals.materialsKr),
     sledPercent: formatNumber(totals.sledPercent),
     sledKr: formatNumber(totals.sledKr),
@@ -39,7 +43,7 @@ function buildExportPayload(state) {
     foldingRailPrice: formatNumber(foldingRail.unitPrice),
     trolleyLiftQty: formatNumber(trolleyLift.qty),
     trolleyLiftPrice: formatNumber(trolleyLift.unitPrice),
-    extrasOtherKr: formatNumber(extrasOtherKr),
+    extrasOtherKr,
     extraWorkKr: formatNumber(totals.extraWorkKr),
     accordSumKr: formatNumber(totals.accordSumKr),
     hoursTotal: formatNumber(totals.hours),
@@ -49,7 +53,6 @@ function buildExportPayload(state) {
     hourlyUdd2Mentor: formatNumber(totals.hourlyUdd2Mentor),
     selectedVariant: state?.selectedVariant ?? 'noAdd',
     jobType: totals.jobType ?? state?.jobType ?? 'montage',
-    trolleyLiftEntries: trolleyLift.entries ?? [],
     udd1Add: formatNumber(state?.addOns?.udd1 ?? state?.udd1Add ?? state?.udd1KrPerHour),
     udd2Add: formatNumber(state?.addOns?.udd2 ?? state?.udd2Add ?? state?.udd2KrPerHour),
     mentorAdd: formatNumber(state?.addOns?.mentor ?? state?.mentorAdd ?? state?.mentorKrPerHour)

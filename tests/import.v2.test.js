@@ -2,8 +2,8 @@
 import { describe, it, expect } from 'vitest';
 import { importJSON } from '../src/lib/importers.js';
 
-describe('importJSON schema migration', () => {
-  it('normaliserer v3 payload direkte', () => {
+describe('importJSON schema v3', () => {
+  it('mapper eksportfelter direkte til state', () => {
     const payload = {
       version: 3,
       materialsKr: 1000,
@@ -12,7 +12,21 @@ describe('importJSON schema migration', () => {
       kmRate: 2.12,
       holesQty: 20,
       holePrice: 4.7,
-      trolleyLiftEntries: [{ qty: 6, unitPrice: 0.35 }]
+      closeHoleQty: 4,
+      closeHolePrice: 3.45,
+      concreteQty: 2,
+      concretePrice: 11.49,
+      foldingRailQty: 1,
+      foldingRailPrice: 9.67,
+      trolleyLiftQty: 10,
+      trolleyLiftPrice: 0.5,
+      extrasOtherKr: 12.5,
+      hoursTotal: 14,
+      selectedVariant: 'udd2',
+      jobType: 'montage',
+      udd1Add: 1,
+      udd2Add: 2,
+      mentorAdd: 3
     };
 
     const state = importJSON(payload);
@@ -21,37 +35,23 @@ describe('importJSON schema migration', () => {
     expect(state.kmQty).toBe(280);
     expect(state.kmRate).toBe(2.12);
     expect(state.holesQty).toBe(20);
-    expect(state.trolleyLiftEntries).toEqual([{ qty: 6, unitPrice: 0.35 }]);
+    expect(state.trolleyLiftQty).toBe(10);
+    expect(state.trolleyLiftPrice).toBe(0.5);
+    expect(state.extrasOtherKr).toBe(12.5);
+    expect(state.hoursTotal).toBe(14);
+    expect(state.selectedVariant).toBe('udd2');
+    expect(state.addOns).toEqual({ udd1: 1, udd2: 2, mentor: 3 });
   });
 
-  it('konverterer ældre payload med procent og km beløb', () => {
-    const payload = {
-      version: 2,
-      materials: 500,
-      sledPercent: 7,
-      km: 106,
-      kmRate: 2.12
-    };
-
-    const state = importJSON(payload);
-    expect(state.materialsSum).toBe(500);
-    expect(state.sledPercent).toBeCloseTo(0.07, 5);
-    expect(state.kmRate).toBe(2.12);
-    expect(state.kmQty).toBeCloseTo(50, 2);
-  });
-
-  it('bevarer km beløb når ældre payload mangler kmRate', () => {
-    const payload = {
-      version: 1,
-      materials: 300,
-      sledPercent: 5,
-      km: 175.5
-    };
-
-    const state = importJSON(payload);
-    expect(state.kmRate).toBe(0);
+  it('falder tilbage til 0 når felter mangler', () => {
+    const state = importJSON({});
+    expect(state.materialsSum).toBe(0);
+    expect(state.sledPercent).toBe(0);
     expect(state.kmQty).toBe(0);
-    expect(state.kmKr).toBe(175.5);
-    expect(state.kmInfo).toEqual({ total: 175.5 });
+    expect(state.kmRate).toBe(0);
+    expect(state.holesQty).toBe(0);
+    expect(state.trolleyLiftQty).toBe(0);
+    expect(state.hoursTotal).toBe(0);
+    expect(state.addOns).toEqual({ udd1: 0, udd2: 0, mentor: 0 });
   });
 });

@@ -1,6 +1,11 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { deriveTotals } from '../src/state/derive.js';
 import { createReviewLayout } from '../src/modules/review-sections.js';
+import { saveSession, clearSession } from '../src/lib/storage.js';
+
+beforeEach(() => {
+  clearSession();
+});
 
 describe('review layout ordering', () => {
   it('viser materialer, ekstraarbejde og breakdown i rækkefølge', () => {
@@ -17,6 +22,8 @@ describe('review layout ordering', () => {
       hoursMontage: 14,
       addOns: { udd1: 10, udd2: 20, mentor: 5 }
     });
+
+    saveSession({ user: { username: 'admin@hulmose.dk' }, role: 'admin' });
 
     const layout = createReviewLayout({
       computed,
@@ -59,7 +66,9 @@ describe('review layout ordering', () => {
     const teamRow = layout.metadata.find((row) => row.id === 'team');
     expect(teamRow?.value?.workersCount).toBe(2);
     expect(teamRow?.value?.hours).toBeCloseTo(14, 5);
-    expect(layout.metadata.map((row) => row.id)).toEqual(['template', 'team', 'jobType', 'variant']);
+    expect(layout.metadata.map((row) => row.id)).toEqual(['user', 'template', 'team', 'jobType', 'variant']);
+    const userRow = layout.metadata.find((row) => row.id === 'user');
+    expect(userRow?.value).toBe('admin@hulmose.dk (admin)');
   });
 
   it('falder tilbage til summerede timer når computed mangler værdi', () => {
@@ -75,17 +84,25 @@ describe('review layout ordering', () => {
     expect(teamRow?.value?.hours).toBeCloseTo(10.5, 5);
   });
 
-  it('beholder km total fra legacy payload uden kmRate', () => {
+  it('viser km og tralleløft info i breakdown', () => {
     const computed = deriveTotals({
       totals: { materials: 0 },
       materialsSum: 0,
-      kmKr: 312.75,
-      kmQty: 0,
-      kmRate: 0
+      kmQty: 12.5,
+      kmRate: 3.25,
+      trolleyLiftQty: 8,
+      trolleyLiftPrice: 0.5
     });
 
-    expect(computed.kmKr).toBe(312.75);
-    expect(computed.extraWorkKr).toBe(312.75);
-    expect(computed.extrasBreakdown.km.total).toBe(312.75);
+    expect(computed.kmKr).toBeCloseTo(40.63, 2);
+    expect(computed.extrasBreakdown.km).toEqual({ qty: 12.5, unitPrice: 3.25, total: 40.63 });
+    expect(computed.extrasBreakdown.trolleyLift).toEqual({ qty: 8, unitPrice: 0.5, total: 4 });
+
+    const layout = createReviewLayout({ computed });
+    const kmRow = layout.summary.find((row) => row.id === 'extra-km');
+    expect(kmRow?.info).toMatchObject({ qty: 12.5, unitPrice: 3.25, unitLabel: 'km' });
+
+    const trolleyRow = layout.summary.find((row) => row.id === 'extra-trolley');
+    expect(trolleyRow?.info).toMatchObject({ qty: 8, unitPrice: 0.5, unitLabel: 'løft' });
   });
 });

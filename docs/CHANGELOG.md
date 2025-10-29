@@ -3,15 +3,18 @@
 ## Unreleased
 
 ### Added
+- Adminpanel til Hulmose med SSO-konfiguration, rollemapping og nød-adgang direkte i `src/admin`.
 - Vitest coverage for the new accord calculator including tralleløft edge cases.
 
 ### Changed
-- Migrated akkordberegneren til `computeAccord` med decimal-slæb, km-info og tralleløft som egen ekstra-linje.
-- Review-oversigten viser nu detaljeret ekstraarbejde med (info) for km og tralleløft samt nye timepris-varianter.
-- Eksport/Import (JSON/CSV/EK) udstiller de nye feltnavne (`materialsKr`, `kmQty`, `trolleyLiftQty` m.fl.) og matcher UI-totaler.
+- Eksportpayloads inkluderer nu bruger/rolle fra aktiv session og Review viser brugeren øverst i metadata.
+- Akkordberegneren følger nu den endelige Codex-formel med slæb, km og tralleløft som direkte ekstraarbejde i `computeAccord`.
+- Oversigten viser km- og tralleløft-antal i (info) med tydelige `qty × pris`-linjer og fastholder rækkefølgen Materialer → Ekstra → Timer.
+- Eksport/Import (JSON/CSV/EK) eksponerer præcis samme felter (`materialsKr`, `kmQty`, `trolleyLiftQty` m.fl.) som beregneren og UI'et.
 
 ### Fixed
 - Runde-trip mellem eksport og import bevarer nu præcise ekstraarbejde- og timeprisberegninger uden dobbeltregning.
+- Importen sætter manglende felter til nulværdier og sikrer at km/tralleløft altid indlæses med gyldige tal til beregneren.
 
 ## 1.0.6 - 2025-10-28
 
@@ -118,6 +121,7 @@
 - Eksport JSON/CSV tilføjer tralleløft og jobtyper for at spejle REVIEW og single source modulerne.
 
 ### Fixed
+- Blokeret rolle-guard for at godkende uautoriserede brugere ved at kræve gyldig session/id-token før worker-tilgang gives.
 - Restored tralleløft amount when importing v2 JSON payloads so totals keep the exported extra work value.
 - Eliminated double counting of slæb and tralleløft in akkordsum, timepris og projektsum output samt eksport.
 - Prevented manual material name fields from redirecting focus to quantity inputs on touch devices while keeping them accessible for input handling.

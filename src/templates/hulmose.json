@@ -6,7 +6,12 @@
     "source": "HP3 Provinsen v50 + Hvidbog",
     "generated": "2025-03-01",
     "admin_code": "StilAce",
-    "systems": ["BOSTA70", "HAKI", "MODEX", "Alfix VARIO"]
+    "systems": [
+      "BOSTA70",
+      "HAKI",
+      "MODEX",
+      "Alfix VARIO"
+    ]
   },
   "pay": {
     "base_wage_hourly": 147,
@@ -38,10 +43,27 @@
     "notes": "HP3 Provinsen v50 transportafsnit A6-A11"
   },
   "roles": {
-    "chef": ["approve", "reject", "send", "edit"],
-    "kontor": ["approve", "reject", "send", "edit", "administer"],
-    "formand": ["approve", "reject", "send"],
-    "arbejder": ["send"]
+    "chef": [
+      "approve",
+      "reject",
+      "send",
+      "edit"
+    ],
+    "kontor": [
+      "approve",
+      "reject",
+      "send",
+      "edit",
+      "administer"
+    ],
+    "formand": [
+      "approve",
+      "reject",
+      "send"
+    ],
+    "arbejder": [
+      "send"
+    ]
   },
   "price_table": {
     "B001": 2.68,
