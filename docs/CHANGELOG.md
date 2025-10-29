@@ -12,6 +12,7 @@
 - Akkordberegneren følger nu den endelige Codex-formel med slæb, km og tralleløft som direkte ekstraarbejde i `computeAccord`.
 - Oversigten viser km- og tralleløft-antal i (info) med tydelige `qty × pris`-linjer og fastholder rækkefølgen Materialer → Ekstra → Timer.
 - Eksport/Import (JSON/CSV/EK) eksponerer præcis samme felter (`materialsKr`, `kmQty`, `trolleyLiftQty` m.fl.) som beregneren og UI'et.
+- Dokumenteret PWA service worker version `v20251029T143523` fra seneste build.
 
 ### Fixed
 - Runde-trip mellem eksport og import bevarer nu præcise ekstraarbejde- og timeprisberegninger uden dobbeltregning.
