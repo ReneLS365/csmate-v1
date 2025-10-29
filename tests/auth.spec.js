@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { mapRoleFromClaims, attachRoleToSession, can } from '../src/auth/guards.js';
+import { mapRoleFromClaims, attachRoleToSession, can, requireRole } from '../src/auth/guards.js';
 import { saveSession, clearSession, loadSession } from '../src/lib/storage.js';
 import { ConfigSchema } from '../src/lib/schema.js';
 
@@ -55,5 +55,18 @@ describe('auth guards', () => {
     saveSession({ role: 'foreman' });
     expect(can('approve', config)).toBe(true);
     expect(can('admin-only', config)).toBe(false);
+  });
+
+  it('requireRole returnerer false uden session', () => {
+    const config = cloneConfig();
+    clearSession();
+    expect(requireRole('worker', config)).toBe(false);
+  });
+
+  it('requireRole accepterer rolle fra id_token når session findes', () => {
+    const config = cloneConfig();
+    const idToken = createIdToken({ roles: ['csmate_foreman'] });
+    saveSession({ idToken });
+    expect(requireRole('foreman', config)).toBe(true);
   });
 });

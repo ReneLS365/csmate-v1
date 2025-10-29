@@ -121,6 +121,7 @@
 - Eksport JSON/CSV tilføjer tralleløft og jobtyper for at spejle REVIEW og single source modulerne.
 
 ### Fixed
+- Blokeret rolle-guard for at godkende uautoriserede brugere ved at kræve gyldig session/id-token før worker-tilgang gives.
 - Restored tralleløft amount when importing v2 JSON payloads so totals keep the exported extra work value.
 - Eliminated double counting of slæb and tralleløft in akkordsum, timepris og projektsum output samt eksport.
 - Prevented manual material name fields from redirecting focus to quantity inputs on touch devices while keeping them accessible for input handling.

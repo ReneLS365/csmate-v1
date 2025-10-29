@@ -85,7 +85,15 @@ export function attachRoleToSession(config) {
 export function requireRole(requiredRole, config) {
   if (requiredRole === 'any') return true;
   const session = loadSession();
-  const role = session?.role || mapRoleFromClaims(decodeJwtPayload(session?.idToken), config);
+  if (!session) return false;
+
+  let role = session.role;
+  if (!role) {
+    const token = session.idToken;
+    if (!token) return false;
+    role = mapRoleFromClaims(decodeJwtPayload(token), config);
+  }
+
   if (!role) return false;
   if (role === 'admin') return true;
   return role === requiredRole;
