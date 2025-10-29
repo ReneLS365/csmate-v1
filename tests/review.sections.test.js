@@ -49,10 +49,11 @@ describe('review layout ordering', () => {
       'extra-trolley',
       'accordSum',
       'hours',
-      'hourlyNoAdd'
+      'team'
     ]);
 
     expect(layout.hourly.map((row) => row.id)).toEqual([
+      'hourlyNoAdd',
       'hourlyUdd1',
       'hourlyUdd2',
       'hourlyUdd2Mentor'
@@ -63,10 +64,10 @@ describe('review layout ordering', () => {
     const templateRow = layout.metadata.find((row) => row.id === 'template');
     expect(templateRow?.value).toBe('Standard');
 
-    const teamRow = layout.metadata.find((row) => row.id === 'team');
+    const teamRow = layout.summary.find((row) => row.id === 'team');
     expect(teamRow?.value?.workersCount).toBe(2);
     expect(teamRow?.value?.hours).toBeCloseTo(14, 5);
-    expect(layout.metadata.map((row) => row.id)).toEqual(['user', 'template', 'team', 'jobType', 'variant']);
+    expect(layout.metadata.map((row) => row.id)).toEqual(['user', 'template', 'jobType', 'variant']);
     const userRow = layout.metadata.find((row) => row.id === 'user');
     expect(userRow?.value).toBe('admin@hulmose.dk (admin)');
   });
@@ -80,7 +81,7 @@ describe('review layout ordering', () => {
       ]
     });
 
-    const teamRow = layout.metadata.find((row) => row.id === 'team');
+    const teamRow = layout.summary.find((row) => row.id === 'team');
     expect(teamRow?.value?.hours).toBeCloseTo(10.5, 5);
   });
 

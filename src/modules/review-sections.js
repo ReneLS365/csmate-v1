@@ -150,15 +150,21 @@ export function createReviewLayout(options = {}) {
     ...buildBreakdownRows(computed),
     { id: 'accordSum', label: '3. Samlet akkordsum', value: coerceNumber(computed.accordSumKr ?? computed.totalAccord), format: 'currency', emphasize: true },
     { id: 'hours', label: '4. Timer', value: coerceNumber(totalHours), format: 'hours' },
-    { id: 'hourlyNoAdd', label: '5. Timepris (uden tillæg)', value: coerceNumber(computed.hourlyNoAdd), format: 'hourly' }
+    {
+      id: 'team',
+      label: '5. Medarbejdere & timer',
+      value: { workersCount, hours: totalHours },
+      format: 'team'
+    }
   ];
 
   const hourly = [
-    { id: 'hourlyUdd1', label: '6. Timeløn m. UDD1', value: coerceNumber(computed.hourlyUdd1), format: 'hourly' },
-    { id: 'hourlyUdd2', label: '7. Timeløn m. UDD2', value: coerceNumber(computed.hourlyUdd2), format: 'hourly' },
+    { id: 'hourlyNoAdd', label: '6. Timepris (uden tillæg)', value: coerceNumber(computed.hourlyNoAdd), format: 'hourly' },
+    { id: 'hourlyUdd1', label: '7. Timeløn m. UDD1', value: coerceNumber(computed.hourlyUdd1), format: 'hourly' },
+    { id: 'hourlyUdd2', label: '8. Timeløn m. UDD2', value: coerceNumber(computed.hourlyUdd2), format: 'hourly' },
     {
       id: 'hourlyUdd2Mentor',
-      label: '8. Timeløn m. UDD2 + Mentor',
+      label: '9. Timeløn m. UDD2 + Mentor',
       value: coerceNumber(computed.hourlyUdd2Mentor),
       format: 'hourly'
     }
@@ -169,13 +175,6 @@ export function createReviewLayout(options = {}) {
   const metadata = [
     { id: 'user', label: 'Bruger', value: `${userName} (${userRole})`, format: 'text', subtle: true },
     { id: 'template', label: 'Skabelon', value: templateLabel, format: 'text', subtle: true },
-    {
-      id: 'team',
-      label: 'Medarbejdere & timer',
-      value: { workersCount, hours: totalHours },
-      format: 'team',
-      subtle: true
-    },
     { id: 'jobType', label: 'Jobtype', value: jobType, format: 'text', subtle: true },
     { id: 'variant', label: 'Variant', value: variant, format: 'text', subtle: true }
   ];
