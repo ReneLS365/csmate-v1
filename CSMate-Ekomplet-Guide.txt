@@ -1,0 +1,259 @@
+# CSMate – E-Komplet Integration & Admin Guide
+# --------------------------------------------
+# Denne fil genereres automatisk og skal ligge i projektets rodmappe.
+# Formål: At forklare hvordan E-Komplet login, roller, firma-templates
+# og admin-menu fungerer i den nye CSMate-opsætning.
+
+===============================================================
+1. FORMÅL
+===============================================================
+CSMate kan nu integreres direkte med E-Komplet’s login-system (OIDC).
+Det betyder, at brugere logger ind med deres E-Komplet-konto, og at
+CSMate automatisk tildeler roller og firma-skabeloner (templates)
+baseret på data i det ID-token E-Komplet sender.
+
+Systemet er bygget, så ét CSMate-miljø kan bruges af mange firmaer
+på én gang (multi-tenant), eller ét firma kan køre sit eget miljø
+(single-tenant).
+
+===============================================================
+2. LOGIN OG ROLLER
+===============================================================
+
+---------------------------------------------
+A) Login
+---------------------------------------------
+- CSMate bruger OpenID Connect (OIDC) via E-Komplet.
+- OIDC-data sættes i Admin → Login/SSO.
+
+Felter:
+  • Provider: ekomplet
+  • Authority: URL fra E-Komplet (fx https://id.ekomplet.dk)
+  • ClientId: udstedt af E-Komplet
+  • RedirectUri: auto-udfyldt
+  • Scopes: openid profile email offline_access
+
+Login-flow:
+1. Bruger klikker “Log ind via E-Komplet”.
+2. Brugeren logger ind på E-Komplet.
+3. CSMate modtager id_token (JWT) med claims.
+4. Rolle og firma bestemmes ud fra disse claims.
+5. Session gemmes lokalt i IndexedDB/localStorage.
+
+---------------------------------------------
+B) JWT Claims fra E-Komplet (eksempel)
+---------------------------------------------
+{
+  "sub": "user-123",
+  "email": "mikkel@hulmose.dk",
+  "preferred_username": "mikkel",
+  "org_id": "hulmose",
+  "roles": ["csmate_foreman"]
+}
+
+CSMate læser:
+  - org_id  → bruges til at vælge template/firma.
+  - roles[] → bruges til at vælge lokal rolle.
+  - email   → bruges til domænemapping hvis aktiveret.
+
+---------------------------------------------
+C) Rollemapping (i Admin → Login/SSO)
+---------------------------------------------
+Eksempel på regler:
+  roles contains csmate_admin   → admin
+  roles contains csmate_foreman → foreman
+  roles contains csmate_worker  → worker
+  fallback                      → worker
+
+Domænemapping (valgfrit):
+  hulmose.dk → foreman
+
+---------------------------------------------
+D) Lokale roller og rettigheder
+---------------------------------------------
+admin    → Alt (inkl. Admin-menu, skabeloner, satser)
+foreman  → Godkende, redigere medarbejdere, eksport
+worker   → Opret/indtast materiale, se beregninger
+guest    → Læseadgang, ingen ændringer
+
+===============================================================
+3. FIRMAER (TEMPLATES)
+===============================================================
+
+---------------------------------------------
+A) Hvad er en template
+---------------------------------------------
+En template (fx hulmose.json) indeholder:
+  - Firma-id og navn
+  - Alle priser og satser (km, slæb, ekstraarbejde)
+  - Løn-tillæg (udd1, udd2, mentor)
+  - Materialeliste med pris og vægt
+  - Branding og juridisk tekst
+  - Eksportindstillinger (E-Komplet CSV, m.m.)
+
+---------------------------------------------
+B) Hvor ligger de
+---------------------------------------------
+/src/templates/hulmose.json
+/src/templates/default.json
+
+---------------------------------------------
+C) Hvordan vælges de
+---------------------------------------------
+Når en bruger logger ind, læses org_id fra E-Komplet.
+CSMate loader automatisk template, hvis filen findes:
+  company.id === org_id
+
+Eksempel:
+  org_id = hulmose → loader hulmose.json
+
+Hvis template ikke findes → default.json bruges.
+
+---------------------------------------------
+D) Hvordan laver man en ny template
+---------------------------------------------
+1. Gå i Admin → Skabeloner.
+2. Vælg “Eksport template” for at tage en kopi.
+3. Redigér JSON-filen med nye priser/materialer.
+4. Gem den som /src/templates/firmanavn.json.
+5. Genstart app – den vil kunne vælges automatisk.
+
+===============================================================
+4. ADMIN-MENU (OVERSIGT)
+===============================================================
+
+Faner i admin-menuen:
+
+1. **Virksomhed & adgang**
+   - Skift lokal admin-kode (bcrypt af StilAce)
+   - Se firmaoplysninger
+
+2. **Login/SSO**
+   - OIDC-felter
+   - Rollemapping + domain rules
+   - Test login
+
+3. **Priser & satser**
+   - kmRate, sledPercent
+
+4. **Ekstraarbejde**
+   - holePrice, closeHolePrice, concretePrice,
+     foldingRailPrice, trolleyLiftPrice
+
+5. **Løn & tillæg**
+   - udd1, udd2, mentor
+
+6. **Materialer**
+   - Tabel over alle materialer (id, navn, pris, vægt)
+   - Rediger pris direkte
+   - Import/eksport CSV
+
+7. **Workflow**
+   - Slå godkendelsesflow til/fra (kladde/afventer/godkendt)
+
+8. **Eksport/Import**
+   - Indstil E-Komplet format (CSV/JSON)
+   - Download jobs eller templates
+
+9. **Skabeloner**
+   - Reset til Hulmose
+   - Import/Eksport template
+
+10. **Log & versioner**
+    - Audit-log (alle ændringer)
+    - Genskab tidligere version
+
+===============================================================
+5. E-KOMPLET & ADGANGSKODER
+===============================================================
+
+---------------------------------------------
+A) Hvem får client-ID / adgang
+---------------------------------------------
+E-Komplet udsteder et clientId og en OIDC-authority pr. partner
+(f.eks. Hulmose Stilladser).
+
+Dette gøres via deres kundeservice/tekniske afdeling.
+Når det er udstedt, kan CSMate-admin kopiere data ind i
+Admin → Login/SSO.
+
+---------------------------------------------
+B) Firmaer med flere brugere
+---------------------------------------------
+E-Komplet’s IdP tildeler hver bruger:
+  - Firma (org_id)
+  - Roller (csmate_admin / foreman / worker)
+
+Der kan også tildeles midlertidige roller via Admin-menuens
+domain rules (baseret på email-domæne).
+
+---------------------------------------------
+C) Nødadgang
+---------------------------------------------
+Hvis E-Komplet login er nede:
+  - Vælg “local” provider
+  - Log ind med kode “StilAce”
+  - Skift konfiguration efter behov
+  - Når IdP er oppe, skift tilbage til ekomplet
+
+===============================================================
+6. BEREGNING OG EKSPORT
+===============================================================
+
+Udregning:
+  Materialer + Ekstraarbejde(slæb + km + huller + luk af hul +
+  boring i beton + opslåeligt rækværk + tralleløft)
+  = Akkordsum
+  Akkordsum / Timer = Timepris uden tillæg
+  + Udd1/Udd2/Mentor → Timepris med tillæg
+
+Eksport til E-Komplet:
+  - CSV/JSON med alle felter og brugerens email/rolle.
+  - Eksport tilladt kun for foreman/admin.
+
+===============================================================
+7. MULTI-TENANT vs SINGLE-TENANT
+===============================================================
+
+Single-tenant:
+  - Ét firma pr. deploy (fx hulmose.csmate.app)
+  - Simpelt, ingen org_id-håndtering
+
+Multi-tenant:
+  - Ét deploy, flere firmaer
+  - E-Komplet sender org_id per bruger
+  - CSMate loader korrekt template
+  - Kræver at org_id matches company.id i template
+
+===============================================================
+8. FEJLFINDING
+===============================================================
+
+• Bruger bliver worker:
+  → Tjek roles-claim i JWT + rækkefølge i rollemapping.
+
+• Forkert template loader:
+  → Tjek org_id-claim + at template med det navn findes.
+
+• Kan ikke åbne admin:
+  → Brug StilAce nød-login.
+
+• Eksport afvises:
+  → status != godkendt, eller rolle mangler “export” i matrix.
+
+===============================================================
+9. KONTAKTPUNKTER
+===============================================================
+
+Udvikler / ejerskab:
+  René Løwe Sørensen
+
+E-Komplet integration:
+  kontakt@ekomplet.dk  (for OIDC, clientId, claims)
+
+===============================================================
+10. VERSIONSNOTAT
+===============================================================
+v2.0 – Integreret E-Komplet login, rollemapping, multi-tenant support
+v1.0 – Oprindelig admin-menu, templates og akkordberegning
+===============================================================
