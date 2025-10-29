@@ -2,6 +2,8 @@
 
 Denne udgivelsestjekliste dokumenterer den endelige Hulmose-build ("vFinal-Provinsen") og kan bruges direkte i PR-beskrivelser eller automatiserede Codex-scripts.
 
+> For en kondenseret end-to-end QA-gennemgang: se `docs/final-review-checklist.md`.
+
 ---
 
 ## 🧠 Testing & QA Plan (`npm run ci`)
@@ -146,5 +148,7 @@ npm run ci
 
 ## 🤝 Overdragelse
 
-- Klar til salg og e-komplet-integration – hele koden leveres samlet.
+- Klar til salg og E-Komplet-integration – hele koden leveres samlet.
+- Pakke og del: seneste E-Komplet CSV + `CSMate-Ekomplet-Guide.txt` + link til `docs/final-review-checklist.md`.
+- Bekræft `templates/<tenant>.json` mapping felter (kolonnenavne, løn/akkord) matcher kundens E-Komplet skabelon.
 
