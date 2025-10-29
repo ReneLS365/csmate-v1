@@ -7,6 +7,7 @@ import {
   getPersistedTemplate
 } from '@/modules/templates';
 import { createInitialState } from '@/main.js';
+import { sha256Hex } from '@/lib/sha256.js';
 
 function createStorage() {
   const store = new Map();
@@ -24,13 +25,14 @@ function createStorage() {
 }
 
 describe('template helpers', () => {
-  it('loads hulmose template og persisterer valg', () => {
+  it('loads hulmose template og persisterer valg', async () => {
     const storage = createStorage();
     const template = loadTemplate('hulmose');
 
     expect(template.id).toBe('hulmose');
     expect(template.label).toContain('Hulmose');
-    expect(template._meta?.admin_code).toBe('StilAce');
+    const expectedHash = await sha256Hex('hulmose-2025-admin');
+    expect(template._meta?.admin_code).toBe(expectedHash);
 
     const persistedId = persistTemplateSelection('hulmose', storage);
     expect(persistedId).toBe('hulmose');

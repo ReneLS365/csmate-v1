@@ -5,20 +5,32 @@
  */
 
 import { loadTemplate } from '@/lib/templates';
+import { sha256Hex, constantTimeEquals } from '@/lib/sha256.js';
 
 export default function AdminGate({ templateId, isAdmin = false, disabled = false, onAdminChange }) {
   const template = loadTemplate(templateId);
-  const adminCode = template?._meta?.admin_code ?? '';
+  const adminCode = typeof template?._meta?.admin_code === 'string' ? template._meta.admin_code : '';
+  const isHashed = /^[a-f0-9]{64}$/i.test(adminCode);
   const company = template?._meta?.company || template?.label || templateId;
 
-  function handleSubmit(event) {
+  async function matchesAdminCode(input) {
+    if (!input) return false;
+    if (isHashed) {
+      const hash = await sha256Hex(input);
+      if (!hash) return false;
+      return constantTimeEquals(hash, adminCode);
+    }
+    return input === adminCode;
+  }
+
+  async function handleSubmit(event) {
     event.preventDefault();
     if (disabled || isAdmin) return;
     const form = event.currentTarget;
     const formData = new FormData(form);
     const code = String(formData.get('adminCode') ?? '').trim();
     form.reset();
-    if (code && code === adminCode && typeof onAdminChange === 'function') {
+    if (await matchesAdminCode(code) && typeof onAdminChange === 'function') {
       onAdminChange(true);
     }
   }

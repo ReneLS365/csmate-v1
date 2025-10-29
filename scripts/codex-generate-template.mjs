@@ -8,6 +8,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
+import { createHash } from 'node:crypto';
 
 const usage = `\nUsage: node scripts/codex-generate-template.mjs [options]\n\nOptions:\n  --company <name>          Company name (required)\n  --template <id>           Template identifier (required)\n  --admin <code>            Admin code for price editing (required)\n  --base-wage <number>      Base hourly wage (required)\n  --allowance <k:v>         Allowance entry per hour (repeatable)\n  --role <name:perm,...>    Role permissions comma separated (repeatable)\n  --currency <code>         Currency code (default: DKK)\n  --source <text>           Price source label (default: BOSTA 2025)\n  --generated <date>        Date stamp YYYY-MM-DD (default: today)\n  --out <file>              Write output to file instead of stdout\n  --help                    Show this message\n`;
 
@@ -65,6 +66,13 @@ function ensureRequired(args, keys) {
   }
 }
 
+function hashAdminCode(code) {
+  if (typeof code !== 'string' || !code) {
+    throw new Error('Missing required option --admin');
+  }
+  return createHash('sha256').update(code, 'utf8').digest('hex');
+}
+
 function toPlainObject(map) {
   return Object.fromEntries([...map.entries()].map(([k, v]) => [k, v]));
 }
@@ -102,7 +110,7 @@ async function main() {
       currency: args.currency ?? 'DKK',
       source: args.source ?? 'BOSTA 2025',
       generated: args.generated ?? new Date().toISOString().slice(0, 10),
-      admin_code: args.admin
+      admin_code: hashAdminCode(args.admin)
     },
     pay: {
       base_wage_hourly: Number(args.baseWage),

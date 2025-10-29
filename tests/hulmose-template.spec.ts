@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
+import { sha256Hex } from '@/lib/sha256.js';
 
 type Material = { id: string; price: number };
 type Template = {
@@ -44,7 +45,8 @@ describe('tenant templates', () => {
 
     const meta = template._meta ?? {};
     expect(meta.company).toBe('Hulmose Stilladser ApS');
-    expect(meta.admin_code).toBe('StilAce');
+    const expectedHash = await sha256Hex('hulmose-2025-admin');
+    expect(meta.admin_code).toBe(expectedHash);
     expect(meta.source).toContain('HP3 Provinsen v50');
 
     expect(template.pay?.base_wage_hourly).toBeCloseTo(147, 6);

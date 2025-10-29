@@ -5,7 +5,7 @@
     "currency": "DKK",
     "source": "HP3 Provinsen v50 + Hvidbog",
     "generated": "2025-03-01",
-    "admin_code": "StilAce",
+    "admin_code": "3fd932ed5c3da33973a205e2b111718537bd089e6516eb077cbc6176b5b6db0d",
     "systems": ["BOSTA70", "HAKI", "MODEX", "Alfix VARIO"]
   },
   "pay": {
