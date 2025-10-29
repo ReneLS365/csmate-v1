@@ -11,11 +11,12 @@ export function round2(n) {
 export function computeAccord(input = {}) {
   const materials = Number(input.materialsSum) || 0;
 
-  const sledKr = round2(materials * (Number(input.sledPercent) || 0));
+  const sledPercent = Number(input.sledPercent) || 0;
+  const sledKr = round2(materials * sledPercent);
+
   const kmQty = Number(input.kmQty) || 0;
   const kmRate = Number(input.kmRate) || 0;
-  const kmKrOverride = Number(input.kmKr);
-  const kmKr = Number.isFinite(kmKrOverride) ? round2(kmKrOverride) : round2(kmQty * kmRate);
+  const kmKr = round2(kmQty * kmRate);
 
   const extras = Array.isArray(input.extras) ? input.extras : [];
   const extrasOtherKr = round2(

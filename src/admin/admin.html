@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="da">
+  <head>
+    <meta charset="utf-8">
+    <title>CSMate Admin</title>
+    <link rel="stylesheet" href="./admin.css">
+  </head>
+  <body>
+    <main class="admin-shell">
+      <header class="admin-header">
+        <h1>CSMate admin</h1>
+        <p class="admin-subtitle">Konfigurer Hulmose-standard og E-Komplet login.</p>
+      </header>
+      <section id="login-gate" class="admin-gate hidden">
+        <p>For at ændre indstillinger skal du logge ind som administrator via E-Komplet.</p>
+        <button id="loginBtn" type="button" class="btn">Log ind via E-Komplet</button>
+      </section>
+      <form id="configForm" class="admin-form hidden">
+        <fieldset>
+          <legend>Autentificering</legend>
+          <label class="field">
+            <span>Login-provider</span>
+            <select id="provider" name="provider">
+              <option value="ekomplet">E-Komplet</option>
+              <option value="local">Lokal</option>
+            </select>
+          </label>
+          <label class="field">
+            <span>Authority URL</span>
+            <input id="authority" name="authority" type="url" autocomplete="off" required>
+          </label>
+          <label class="field">
+            <span>Client ID</span>
+            <input id="clientId" name="clientId" type="text" autocomplete="off" required>
+          </label>
+          <label class="field">
+            <span>Redirect URI</span>
+            <input id="redirectUri" name="redirectUri" type="url" readonly>
+          </label>
+          <label class="field">
+            <span>Post logout redirect URI</span>
+            <input id="postLogoutRedirectUri" name="postLogoutRedirectUri" type="url" readonly>
+          </label>
+          <label class="field">
+            <span>Scopes</span>
+            <input id="scopes" name="scopes" type="text" autocomplete="off">
+          </label>
+          <div class="field">
+            <span>Rollemapping (claim → rolle)</span>
+            <div id="roleRules" class="list"></div>
+            <button id="addRoleRule" type="button" class="btn secondary">Tilføj regel</button>
+          </div>
+          <div class="field">
+            <span>Domænemapping</span>
+            <div id="domainRules" class="list"></div>
+            <button id="addDomainRule" type="button" class="btn secondary">Tilføj domæne</button>
+          </div>
+          <div class="field">
+            <span>Nød-adgang (bcrypt hash)</span>
+            <input id="codeHash" name="codeHash" type="text" autocomplete="off" placeholder="bcrypt hash af StilAce">
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>Skabelon & branding</legend>
+          <label class="field">
+            <span>Firmanavn</span>
+            <input id="companyName" name="companyName" type="text" autocomplete="organization">
+          </label>
+          <label class="field">
+            <span>App-navn</span>
+            <input id="appName" name="appName" type="text" autocomplete="off">
+          </label>
+          <label class="field">
+            <span>Legal tekst</span>
+            <input id="legal" name="legal" type="text" autocomplete="off">
+          </label>
+        </fieldset>
+        <div class="actions">
+          <button type="submit" class="btn primary">Gem indstillinger</button>
+          <button type="button" id="testLogin" class="btn">Test SSO</button>
+        </div>
+        <p id="saveStatus" class="status hidden">Gemte ændringer.</p>
+      </form>
+    </main>
+    <script type="module" src="./admin.js"></script>
+  </body>
+</html>

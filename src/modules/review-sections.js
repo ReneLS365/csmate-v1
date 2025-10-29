@@ -4,6 +4,8 @@
  * @outputs Structured arrays describing review summary, hourly rates, project totals and metadata rows.
  */
 
+import { loadSession } from '@/lib/storage.js';
+
 function coerceNumber(value, fallback = 0) {
   const n = Number(value);
   return Number.isFinite(n) ? n : fallback;
@@ -106,9 +108,10 @@ function buildBreakdownRows(computed) {
     format: 'breakdown',
     subtle: true,
     info: {
-      type: 'trolley',
+      type: 'qtyPrice',
       qty: coerceNumber(breakdown?.trolleyLift?.qty),
-      entries: Array.isArray(breakdown?.trolleyLift?.entries) ? breakdown.trolleyLift.entries : []
+      unitPrice: coerceNumber(breakdown?.trolleyLift?.unitPrice),
+      unitLabel: 'løft'
     }
   });
 
@@ -132,6 +135,9 @@ export function createReviewLayout(options = {}) {
   const templateLabel = typeof options.templateLabel === 'string' ? options.templateLabel : '';
   const jobType = typeof options.jobType === 'string' ? options.jobType : 'montage';
   const variant = typeof options.variant === 'string' ? options.variant : 'noAdd';
+  const session = loadSession() ?? {};
+  const userName = session?.user?.username || session?.user?.email || 'Ukendt bruger';
+  const userRole = session?.role || 'guest';
 
   const hoursFromComputed = coerceNumber(computed.hours, NaN);
   const fallbackHours = workers.reduce((sum, worker) => sum + coerceNumber(worker.hours), 0);
@@ -161,6 +167,7 @@ export function createReviewLayout(options = {}) {
   const project = [];
 
   const metadata = [
+    { id: 'user', label: 'Bruger', value: `${userName} (${userRole})`, format: 'text', subtle: true },
     { id: 'template', label: 'Skabelon', value: templateLabel, format: 'text', subtle: true },
     {
       id: 'team',
