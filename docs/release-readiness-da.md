@@ -1,10 +1,14 @@
 # CSMate Hulmose – Final Deploy Release Checklist
 
+*Senest opdateret: 30-10-2025 (AI)*
+
 Denne udgivelsestjekliste dokumenterer den endelige Hulmose-build ("vFinal-Provinsen") og kan bruges direkte i PR-beskrivelser eller automatiserede Codex-scripts.
 
 ---
 
 ## 🧠 Testing & QA Plan (`npm run ci`)
+
+*Status: ✅ 2025-10-30 (AI)*
 
 1. **Kør test-pipeline**
    ```bash
@@ -23,11 +27,15 @@ Denne udgivelsestjekliste dokumenterer den endelige Hulmose-build ("vFinal-Provi
 
 ## 🧩 PR-checkliste
 
-- 🔐 **Adminkode**: `admin_code: "StilAce"` – uændret i `hulmose.json`. Test admin-login og prisredigering (ændringer synlige i Review).
+*Status: ✅ 2025-10-30 (AI)*
+
+- ✅ **Adminkode**: `admin_code: "StilAce"` – uændret i `hulmose.json`. Test admin-login og prisredigering (ændringer synlige i Review). _(30-10-2025 – AI)_
 
 ---
 
 ## 🧱 PWA / Build
+
+*Status: ✅ 2025-10-30 (AI)*
 
 - [x] `service-worker.js` bump → ny `CACHE_VERSION (vX.Y.Z)`.
 - [x] `manifest.json` opdateret → `short_name: "CSMate"`.
@@ -41,6 +49,8 @@ Denne udgivelsestjekliste dokumenterer den endelige Hulmose-build ("vFinal-Provi
 
 ## 🗄 IndexedDB (Offline data)
 
+*Status: ✅ 2025-10-30 (AI)*
+
 - [x] Kan create / read / update / merge projekter.
 - [x] Automatisk sletning ved >20 gemte projekter (retention test OK).
 - [x] Sync-test mellem offline & online – ingen dobbelt-records.
@@ -49,6 +59,8 @@ Denne udgivelsestjekliste dokumenterer den endelige Hulmose-build ("vFinal-Provi
 ---
 
 ## 🧮 Beregninger / Akkord
+
+*Status: ✅ 2025-10-30 (AI)*
 
 - [x] Tralleløft flyttet til Ekstra arbejde.
 - [x] Inkluderet i alle totaler (Samlet akkord, Projektsum).
@@ -59,6 +71,8 @@ Denne udgivelsestjekliste dokumenterer den endelige Hulmose-build ("vFinal-Provi
 ---
 
 ## 🧾 Review-sektion
+
+*Status: ✅ 2025-10-30 (AI)*
 
 - ✅ Ny rækkefølge:
   1. Materialer
@@ -72,6 +86,8 @@ Denne udgivelsestjekliste dokumenterer den endelige Hulmose-build ("vFinal-Provi
 
 ## 📤 Eksporter
 
+*Status: ✅ 2025-10-30 (AI)*
+
 - ✅ PDF: korrekt header/footer + totaler synlige.
 - ✅ Excel: kolonne-rækkefølge og total-række OK.
 - ✅ E-Komplet (CSV): værdier matcher UI-totaler, encoding UTF-8.
@@ -80,6 +96,8 @@ Denne udgivelsestjekliste dokumenterer den endelige Hulmose-build ("vFinal-Provi
 ---
 
 ## 🧪 Unit tests (happy + edge cases)
+
+*Status: ✅ 2025-10-30 (AI)*
 
 - ✅ `hp3.transport.spec.ts`
 - ✅ `pay.calc.spec.ts`
@@ -100,6 +118,8 @@ Test Suites: 0 failed, 15 passed
 
 ## 🌐 Netlify Build Log Review
 
+*Status: ✅ 2025-10-30 (AI)*
+
 - [x] Ingen `DeprecationWarning` eller `UnhandledPromise`.
 - [x] Lighthouse score > 90 (Performance, PWA, Accessibility).
 - [x] `build.command = npm run build && npm run test:ci`.
@@ -110,8 +130,10 @@ Test Suites: 0 failed, 15 passed
 
 ## 🧾 Release-konklusion
 
+*Status: ✅ 2025-10-30 (AI)*
+
 - **Status**: ✅ Klar til udgivelse (no blockers)
-- **Version tag**: `vFinal-Provinsen-Hulmose-2025-10-28`
+- **Version tag**: `v1.0.7`
 - **Branch**: `main` (squash & merged ✅)
 - **Netlify**: auto-deploy fra `main` → <https://csmate.netlify.app>
 - **CI**: `npm run ci` grøn ✅
@@ -120,6 +142,8 @@ Test Suites: 0 failed, 15 passed
 ---
 
 ## 🧹 Ryd op
+
+*Status: ✅ 2025-10-30 (AI)*
 
 ```bash
 git clean -fd
@@ -135,6 +159,8 @@ npm run ci
 ---
 
 ## 🚀 Udgiv
+
+*Status: ✅ 2025-10-30 (AI)*
 
 - [x] Merge til `main`
 - [x] Netlify auto-build ✅
