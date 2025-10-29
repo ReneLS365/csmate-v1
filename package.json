@@ -7,6 +7,7 @@
     "test": "vitest run",
     "lint": "eslint \"app/src/**/*.js\" \"scripts/**/*.js\"",
     "bump-sw": "node scripts/bump-sw-version.js",
+    "cache:report": "node scripts/cache-report.js",
     "gen:template": "node scripts/generate-template.js",
     "dump:config": "node scripts/dump-config.js",
     "serve:dist": "http-server dist -p 4173 -s",
