@@ -2543,13 +2543,19 @@ function buildCSVPayload(customSagsnummer, options = {}) {
   const montageBase = calcMaterialesum() + tralleSum;
   const slaebePctInput = toNumber(document.getElementById('slaebePct')?.value);
   const slaebeBelob = montageBase * (Number.isFinite(slaebePctInput) ? slaebePctInput / 100 : 0);
+  const antalBoringHuller = toNumber(document.getElementById('antalBoringHuller')?.value);
+  const antalBoringBeton = toNumber(document.getElementById('antalBoringBeton')?.value);
+  const antalLukHuller = toNumber(document.getElementById('antalLukHuller')?.value);
+  const antalOpskydeligt = toNumber(document.getElementById('antalOpskydeligt')?.value);
+  const antalKm = toNumber(document.getElementById('km')?.value);
+
   const ekstraarbejdeModel = {
     tralleløft: tralleSum,
-    huller: toNumber(document.getElementById('antalBoringHuller')?.value) * BORING_HULLER_RATE,
-    boring: toNumber(document.getElementById('antalBoringBeton')?.value) * BORING_BETON_RATE,
-    lukAfHul: toNumber(document.getElementById('antalLukHuller')?.value) * LUK_HULLER_RATE,
-    opskydeligt: toNumber(document.getElementById('antalOpskydeligt')?.value) * OPSKYDELIGT_RATE,
-    km: toNumber(document.getElementById('km')?.value) * KM_RATE,
+    huller: antalBoringHuller * BORING_HULLER_RATE,
+    boring: antalBoringBeton * BORING_BETON_RATE,
+    lukAfHul: antalLukHuller * LUK_HULLER_RATE,
+    opskydeligt: antalOpskydeligt * OPSKYDELIGT_RATE,
+    km: antalKm * KM_RATE,
     oevrige: 0,
   };
   const laborTotals = labor.map(entry => ({
@@ -2744,6 +2750,83 @@ async function exportPDFBlob(customSagsnummer, options = {}) {
   wrapper.style.padding = '24px';
   wrapper.style.width = '794px';
   wrapper.style.boxSizing = 'border-box';
+
+  const workerCountDisplay = laborTotals.filter(entry => Number.isFinite(entry.hours) && entry.hours > 0).length;
+  const fmtHours = value => new Intl.NumberFormat('da-DK', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value || 0);
+
+  function formatReviewValue(row) {
+    switch (row.format) {
+      case 'currency': {
+        const amount = `${formatCurrency(row.value)} kr`;
+        if (!row.info) return amount;
+        let infoText = '';
+        if (row.info.type === 'percent') {
+          infoText = `${formatNumber(row.info.percent)} %`;
+        } else if (row.info.type === 'qtyPrice') {
+          const qtyLabel = row.info.unitLabel ? `${formatNumber(row.info.qty)} ${row.info.unitLabel}` : formatNumber(row.info.qty);
+          infoText = `${qtyLabel} × ${formatCurrency(row.info.unitPrice)} kr`;
+        } else if (row.info.type === 'trolley') {
+          const qtyText = row.info.qty ? `${formatNumber(row.info.qty)} løft` : '';
+          const entryText = Array.isArray(row.info.entries)
+            ? row.info.entries
+              .filter(entry => entry && Number(entry.qty) > 0)
+              .map(entry => `${formatNumber(entry.qty)} × ${formatCurrency(entry.unitPrice)} kr`)
+              .join(' · ')
+            : '';
+          infoText = [qtyText, entryText].filter(Boolean).join(' · ');
+        }
+        return infoText ? `${amount} (${infoText})` : amount;
+      }
+      case 'hours':
+        return `${fmtHours(row.value)} t`;
+      case 'team': {
+        const count = Number(row.value?.workersCount) || 0;
+        const hours = fmtHours(row.value?.hours || 0);
+        if (!count) return `${hours} t`;
+        const label = count === 1 ? '1 medarbejder' : `${count} medarbejdere`;
+        return `${label} · ${hours} t`;
+      }
+      default:
+        return '';
+    }
+  }
+
+  const reviewRows = [
+    { id: 'materials', label: '1. Materialer', format: 'currency', value: materialSum },
+    { id: 'extraWork', label: '2. Ekstra arbejde', format: 'currency', value: extraSum },
+    { id: 'extra-sled', label: '   Slæb', format: 'currency', value: slaebeBelob, subtle: true, info: { type: 'percent', percent: slaebePctInput } },
+    { id: 'extra-km', label: '   Kilometer', format: 'currency', value: ekstraarbejdeModel.km, subtle: true, info: { type: 'qtyPrice', qty: antalKm, unitPrice: KM_RATE, unitLabel: 'km' } },
+    { id: 'extra-holes', label: '   Boring af huller', format: 'currency', value: ekstraarbejdeModel.huller, subtle: true, info: { type: 'qtyPrice', qty: antalBoringHuller, unitPrice: BORING_HULLER_RATE } },
+    { id: 'extra-close-hole', label: '   Luk af hul', format: 'currency', value: ekstraarbejdeModel.lukAfHul, subtle: true, info: { type: 'qtyPrice', qty: antalLukHuller, unitPrice: LUK_HULLER_RATE } },
+    { id: 'extra-concrete', label: '   Boring i beton', format: 'currency', value: ekstraarbejdeModel.boring, subtle: true, info: { type: 'qtyPrice', qty: antalBoringBeton, unitPrice: BORING_BETON_RATE } },
+    { id: 'extra-folding-rail', label: '   Opslåeligt rækværk', format: 'currency', value: ekstraarbejdeModel.opskydeligt, subtle: true, info: { type: 'qtyPrice', qty: antalOpskydeligt, unitPrice: OPSKYDELIGT_RATE } },
+    {
+      id: 'extra-trolley',
+      label: '   Tralleløft',
+      format: 'currency',
+      value: tralleSum,
+      subtle: true,
+      info: {
+        type: 'trolley',
+        qty: (tralleState?.n35 || 0) + (tralleState?.n50 || 0),
+        entries: [
+          { qty: tralleState?.n35 || 0, unitPrice: TRAELLE_RATE35 },
+          { qty: tralleState?.n50 || 0, unitPrice: TRAELLE_RATE50 }
+        ]
+      }
+    },
+    { id: 'accordSum', label: '3. Samlet akkordsum', format: 'currency', value: totalsFallback.samletAkkordsum, emphasize: true },
+    { id: 'hours', label: '4. Timer', format: 'hours', value: totalHours },
+    { id: 'team', label: '5. Medarbejdere & timer', format: 'team', value: { workersCount: workerCountDisplay, hours: totalHours } }
+  ];
+
+  const reviewRowsHtml = reviewRows.map(row => {
+    const classes = ['review-row'];
+    if (row.subtle) classes.push('review-row--subtle');
+    if (row.emphasize) classes.push('review-row--emphasize');
+    return `<div class="${classes.join(' ')}"><span>${row.label}</span><strong>${formatReviewValue(row)}</strong></div>`;
+  }).join('');
+
   wrapper.innerHTML = `
     <style>
       .export-preview { font-family: system-ui, -apple-system, Segoe UI, sans-serif; }
@@ -2754,6 +2837,12 @@ async function exportPDFBlob(customSagsnummer, options = {}) {
       .export-preview table { width: 100%; border-collapse: collapse; margin-top: 8px; }
       .export-preview th, .export-preview td { border: 1px solid #ccc; padding: 6px 8px; text-align: left; font-size: 14px; }
       .export-preview th { background: #f0f0f0; }
+      .export-preview .review-grid { display: flex; flex-direction: column; gap: 6px; }
+      .export-preview .review-row { display: flex; justify-content: space-between; gap: 12px; font-size: 14px; }
+      .export-preview .review-row--subtle { color: #4f4f4f; font-size: 13px; }
+      .export-preview .review-row--emphasize { font-weight: 600; }
+      .export-preview .review-row span { flex: 1; }
+      .export-preview .review-row strong { white-space: pre-wrap; text-align: right; }
       .export-preview .totals { display: flex; gap: 12px; flex-wrap: wrap; }
       .export-preview .totals div { background: #f7f7f7; border: 1px solid #ddd; padding: 8px 12px; border-radius: 6px; }
     </style>
@@ -2810,11 +2899,14 @@ async function exportPDFBlob(customSagsnummer, options = {}) {
       ` : '<p>Ingen lønlinjer registreret.</p>'}
     </section>
     <section>
-      <h3>Totals</h3>
+      <h3>Oversigt</h3>
+      <div class="review-grid">
+        ${reviewRowsHtml}
+      </div>
+    </section>
+    <section>
+      <h3>Løn & projektsum</h3>
       <div class="totals">
-        <div><strong>Materialesum</strong><div>${formatCurrency(materialSum)} kr</div></div>
-        ${extraSum > 0 ? `<div><strong>Ekstraarbejde</strong><div>${formatCurrency(extraSum)} kr</div></div>` : ''}
-        ${haulSum > 0 ? `<div><strong>Slæb</strong><div>${formatCurrency(haulSum)} kr</div></div>` : ''}
         <div><strong>Lønsum</strong><div>${formatCurrency(laborSum)} kr</div></div>
         <div><strong>Projektsum</strong><div>${formatCurrency(projectSum)} kr</div></div>
       </div>
