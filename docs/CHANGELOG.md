@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Ingen ændringer endnu.
+
+## 1.0.7 - 2025-10-30
+
 ### Added
 - Adminpanel til Hulmose med SSO-konfiguration, rollemapping og nød-adgang direkte i `src/admin`.
 - Vitest coverage for the new accord calculator including tralleløft edge cases.
