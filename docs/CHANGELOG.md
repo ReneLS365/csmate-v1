@@ -16,6 +16,7 @@
 ### Fixed
 - Runde-trip mellem eksport og import bevarer nu præcise ekstraarbejde- og timeprisberegninger uden dobbeltregning.
 - Importen sætter manglende felter til nulværdier og sikrer at km/tralleløft altid indlæses med gyldige tal til beregneren.
+- Synkroniseret `cache-output.json` med service workerens precache-liste og fil-hash for mere pålidelig PWA-verificering.
 
 ## 1.0.6 - 2025-10-28
 

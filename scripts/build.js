@@ -4,6 +4,7 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { bumpServiceWorkerVersion } from './bump-sw-version.js'
+import { writeCacheReport } from './cache-report.js'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -30,9 +31,11 @@ function copyRecursive (src, dest) {
 function main () {
   ensureSourceExists()
   const result = bumpServiceWorkerVersion({ projectRoot })
+  const { outputPath: cacheReportPath } = writeCacheReport({ projectRoot })
   copyRecursive(sourceDir, distDir)
   console.log(`Build completed. Output: ${distDir}`)
   console.log(`Service worker version: ${result.version}`)
+  console.log(`Cache manifest: ${cacheReportPath}`)
 }
 
 try {

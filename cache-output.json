@@ -1,0 +1,69 @@
+{
+  "version": "v20251029T120150",
+  "cachePrefix": "csmate",
+  "cacheName": "csmate-v20251029T120150",
+  "precache": [
+    {
+      "url": "/",
+      "file": "app/index.html",
+      "aliasFor": "/index.html",
+      "exists": true,
+      "bytes": 17870,
+      "sha256": "8918373660478dbc35e90441aa04181e2b50d3d142bcbb32ad0e9f3ebd79912b"
+    },
+    {
+      "url": "/index.html",
+      "file": "app/index.html",
+      "exists": true,
+      "bytes": 17870,
+      "sha256": "8918373660478dbc35e90441aa04181e2b50d3d142bcbb32ad0e9f3ebd79912b",
+      "duplicateOf": "app/index.html"
+    },
+    {
+      "url": "/main.js",
+      "file": "app/main.js",
+      "exists": true,
+      "bytes": 112996,
+      "sha256": "011c065787abbff79387290840582538e6940673c53d61093e99f4347741b676"
+    },
+    {
+      "url": "/style.css",
+      "file": "app/style.css",
+      "exists": true,
+      "bytes": 14049,
+      "sha256": "f34c87da9cadbca1305689e1d5a44c9c6298d85119e9f798902de27edd23f2ba"
+    },
+    {
+      "url": "/print.css",
+      "file": "app/print.css",
+      "exists": true,
+      "bytes": 110,
+      "sha256": "3dc747dc6f471d2311d465320c032f662be9046fe620f9df910a3a5bb685d30b"
+    },
+    {
+      "url": "/manifest.json",
+      "file": "app/manifest.json",
+      "exists": true,
+      "bytes": 165,
+      "sha256": "2920669725551e1ad58fa1dc3e8591b75019467c42a9ff58ad709d3528256ef0"
+    },
+    {
+      "url": "/src/ui/numpad.css",
+      "file": "app/src/ui/numpad.css",
+      "exists": true,
+      "bytes": 1809,
+      "sha256": "841b9aa79a3565e50ec74eba371862f89da7bd670b88939c42bfc536ded983fe"
+    },
+    {
+      "url": "/src/styles/fixes.css",
+      "file": "app/src/styles/fixes.css",
+      "exists": true,
+      "bytes": 2337,
+      "sha256": "1163a0839555715e9c9e347830cf3d451019203c977539bc092253f1087d9e5f"
+    }
+  ],
+  "dataMatchers": [
+    "/\\/data\\//",
+    "/\\.json(?:\\?|$)/i"
+  ]
+}
