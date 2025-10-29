@@ -2706,13 +2706,19 @@ async function exportPDFBlob(customSagsnummer, options = {}) {
   const montageBase = calcMaterialesum() + tralleSum;
   const slaebePctInput = toNumber(document.getElementById('slaebePct')?.value);
   const slaebeBelob = montageBase * (Number.isFinite(slaebePctInput) ? slaebePctInput / 100 : 0);
+  const antalBoringHuller = toNumber(document.getElementById('antalBoringHuller')?.value);
+  const antalBoringBeton = toNumber(document.getElementById('antalBoringBeton')?.value);
+  const antalLukHuller = toNumber(document.getElementById('antalLukHuller')?.value);
+  const antalOpskydeligt = toNumber(document.getElementById('antalOpskydeligt')?.value);
+  const antalKm = toNumber(document.getElementById('km')?.value);
+
   const ekstraarbejdeModel = {
     tralleløft: tralleSum,
-    huller: toNumber(document.getElementById('antalBoringHuller')?.value) * BORING_HULLER_RATE,
-    boring: toNumber(document.getElementById('antalBoringBeton')?.value) * BORING_BETON_RATE,
-    lukAfHul: toNumber(document.getElementById('antalLukHuller')?.value) * LUK_HULLER_RATE,
-    opskydeligt: toNumber(document.getElementById('antalOpskydeligt')?.value) * OPSKYDELIGT_RATE,
-    km: toNumber(document.getElementById('km')?.value) * KM_RATE,
+    huller: antalBoringHuller * BORING_HULLER_RATE,
+    boring: antalBoringBeton * BORING_BETON_RATE,
+    lukAfHul: antalLukHuller * LUK_HULLER_RATE,
+    opskydeligt: antalOpskydeligt * OPSKYDELIGT_RATE,
+    km: antalKm * KM_RATE,
     oevrige: 0,
   };
   const laborTotals = labor.map(entry => ({
