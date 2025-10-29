@@ -23,3 +23,10 @@
 - Started a fresh context, created an "Online Project", then toggled Playwright to offline mode.
 - While offline, recalculated with new name "Offline Project"; after restoring online mode, ran again with "Back Online Project".
 - IndexedDB contained three sequential entries with matching labels across offline/online transitions, and no transaction errors surfaced. 【01296d†L1-L1】【b9f756†L1-L8】
+
+## Export Roundtrip QA – 2025-02-27
+- `npx vitest run tests/export.csv.test.js tests/export.final.test.js tests/export.ekomplet.payload.test.js tests/import.v2.test.js` → pass (CSV rows keep Danish decimal comma, JSON/EK payloads stay aligned, import schema v3 restores all fields). 【1eec31†L1-L8】【e256fd†L1-L44】【bef43e†L1-L34】【295a4f†L1-L27】【e821b9†L1-L43】
+- Verified via `tests/export.csv.test.js` that the generated CSV fields remain numeric strings with comma separators (e.g. `1000,00`, `280,00`) and include extra work columns for km, holes, and trolley lift totals. 【e256fd†L1-L44】
+- `tests/export.final.test.js` confirms montage/demontage totals and variants survive the JSON roundtrip, ensuring totals/extrawork parity when re-importing. 【bef43e†L1-L34】【e821b9†L1-L43】
+- `tests/export.ekomplet.payload.test.js` guarantees the E-Komplet payload bundles user/role context alongside positive monetary totals, and `tests/import.v2.test.js` shows the importer restores the same values (including add-ons) on rehydrate. 【295a4f†L1-L27】【e821b9†L1-L43】
+- Manual UI export/import smoke plus Excel column layout check remain pending; needs a full browser with download support and Excel-compatible viewer to verify PDF/JSON downloads and column formatting visually.
