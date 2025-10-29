@@ -1,0 +1,158 @@
+
+> csmate@1.0.1 ci
+> npm run lint && npm run test -- --coverage && npm run build
+
+
+> csmate@1.0.1 lint
+> eslint "app/src/**/*.js" "scripts/**/*.js"
+
+
+> csmate@1.0.1 test
+> vitest run --coverage
+
+
+ RUN  v1.6.1 /workspace/csmate-v1
+      Coverage enabled with v8
+
+ ✓ tests/renderer.spec.ts  (10 tests) 329ms
+ ✓ tests/materials-scroll-lock.test.js  (3 tests) 30ms
+ ✓ tests/populate-workers.test.js  (1 test) 526ms
+ ✓ tests/materials.spec.js  (2 tests) 223ms
+ ✓ tests/materials.layout.test.ts  (1 test) 35ms
+ ✓ tests/db.test.js  (2 tests) 21ms
+ ✓ tests/hulmose-template.spec.ts  (6 tests) 21ms
+ ✓ tests/e-komplet.roundtrip.test.js  (3 tests) 16ms
+ ✓ tests/review.sections.test.js  (3 tests) 12ms
+ ✓ tests/approval.flow.test.js  (5 tests) 7ms
+ ✓ tests/templates.module.test.js  (4 tests) 10ms
+ ✓ tests/auth.spec.js  (6 tests) 7ms
+ ✓ tests/calc-core.test.js  (8 tests) 7ms
+ ✓ tests/export.csv.test.js  (1 test) 9ms
+ ✓ tests/import.v2.test.js  (2 tests) 9ms
+ ✓ tests/totals.test.js  (3 tests) 6ms
+ ✓ tests/cache-output.test.js  (2 tests) 13ms
+ ✓ tests/transport.module.test.js  (4 tests) 6ms
+ ✓ tests/calc.test.js  (2 tests) 6ms
+ ✓ tests/tenant.spec.ts  (2 tests) 329ms
+ ✓ tests/e-komplet.validate.test.js  (2 tests) 8ms
+ ✓ tests/export.v2.shape.test.js  (1 test) 6ms
+ ✓ tests/export.final.test.js  (2 tests) 6ms
+ ✓ tests/export.ekomplet.payload.test.js  (1 test) 6ms
+ ✓ tests/material-exclusions.test.js  (3 tests) 5ms
+ ✓ tests/numpad.eval.test.js  (5 tests) 7ms
+
+ Test Files  26 passed (26)
+      Tests  84 passed (84)
+   Start at  14:29:04
+   Duration  25.61s (transform 1.03s, setup 8ms, collect 1.37s, tests 1.66s, environment 5.00s, prepare 4.94s)
+
+ % Coverage report from v8
+-------------------|---------|----------|---------|---------|-------------------
+File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+-------------------|---------|----------|---------|---------|-------------------
+All files          |   45.31 |    55.98 |   56.92 |    45.3 |                   
+ csmate-v1         |       0 |        0 |       0 |       0 |                   
+  ...ght.config.ts |       0 |        0 |       0 |       0 | 1-17              
+ csmate-v1/app     |   38.89 |    39.22 |   44.23 |   38.89 |                   
+  dataset.js       |       0 |        0 |       0 |       0 | 1-255             
+  main.js          |   43.39 |    39.56 |   45.09 |   43.39 | ...3134-3146,3150 
+  ...ice-worker.js |       0 |        0 |       0 |       0 | 1-110             
+ ...atures/pctcalc |   71.59 |    65.38 |      50 |   71.59 |                   
+  pctcalc.js       |   71.59 |    65.38 |      50 |   71.59 | ...50,156-158,165 
+ ...v1/app/src/lib |   52.21 |    71.42 |   63.33 |   52.21 |                   
+  calc-core.js     |   58.14 |    73.21 |   66.66 |   58.14 | ...06-307,312-313 
+  string-utils.js  |   85.71 |    66.66 |      50 |   85.71 | 14-16             
+  timeRows.js      |       0 |        0 |       0 |       0 | 1-49              
+ .../lib/e-komplet |   59.14 |    54.43 |      25 |   59.14 |                   
+  export.js        |   45.65 |       40 |   36.36 |   45.65 | ...47-164,178-184 
+  import.js        |   68.61 |    69.23 |      25 |   68.61 | ...24-125,128-137 
+  schema.js        |     100 |    57.14 |     100 |     100 | 19,26-28          
+  storage.js       |      49 |       25 |    5.55 |      49 | ...6,89-91,94-100 
+  validate.js      |   83.33 |    66.66 |     100 |   83.33 | ...16-17,19-20,33 
+ .../lib/materials |     100 |       80 |     100 |     100 |                   
+  exclusions.js    |     100 |       80 |     100 |     100 | 17                
+ .../src/materials |       0 |        0 |       0 |       0 |                   
+  featureFlags.ts  |       0 |        0 |       0 |       0 | 1-154             
+ ...c/materials/v2 |   58.66 |    59.25 |   78.57 |   58.66 |                   
+  index.js         |       0 |        0 |       0 |       0 | 1-329             
+  renderer.js      |   92.46 |    59.81 |   81.48 |   92.46 | ...80,484-488,491 
+ ...pp/src/modules |   75.11 |    56.97 |   69.23 |   75.11 |                   
+  ...lateTotals.js |     100 |      100 |     100 |     100 |                   
+  ...owTemplate.js |   95.56 |    54.34 |     100 |   95.56 | ...,33-34,155-157 
+  ...ScrollLock.js |   77.77 |    52.94 |      75 |   77.77 | ...46,55-56,81-82 
+  numpadOverlay.js |   34.67 |       20 |      25 |   34.67 | ...99-119,122-124 
+ .../app/src/pages |       0 |        0 |       0 |       0 |                   
+  demo.js          |       0 |        0 |       0 |       0 | 1-260             
+ ...-v1/app/src/ui |   12.75 |    56.75 |   41.66 |   12.61 |                   
+  diagnostics.js   |       0 |        0 |       0 |       0 | 1-92              
+  ...plet-panel.js |       0 |        0 |       0 |       0 | 1-290             
+  numpad.init.js   |   55.29 |       50 |      50 |   55.29 | ...49,69-70,75-79 
+  numpad.js        |   19.88 |    70.58 |      50 |   19.42 | ...3,35-38,41-175 
+ ...e-v1/functions |   35.98 |       25 |   69.23 |   35.98 |                   
+  admin-update.js  |    45.2 |    25.58 |      75 |    45.2 | ...36-242,244-250 
+  tenant-config.js |       0 |        0 |       0 |       0 | 1-64              
+ csmate-v1/scripts |   29.55 |    56.41 |   56.25 |   29.55 |                   
+  build.js         |       0 |        0 |       0 |       0 | 1-46              
+  ...sw-version.js |       0 |        0 |       0 |       0 | 1-75              
+  cache-report.js  |   83.43 |    66.66 |      90 |   83.43 | ...56-157,161-169 
+  ci-summary.js    |       0 |        0 |       0 |       0 | 1-13              
+  ...-template.mjs |       0 |        0 |       0 |       0 | 1-136             
+  dump-config.js   |       0 |        0 |       0 |       0 | 1-9               
+  ...e-template.js |       0 |        0 |       0 |       0 | 1-29              
+ csmate-v1/src     |     100 |    28.57 |     100 |     100 |                   
+  main.js          |     100 |    28.57 |     100 |     100 | 12,15-19          
+ ...e-v1/src/admin |       0 |        0 |       0 |       0 |                   
+  admin.js         |       0 |        0 |       0 |       0 | 1-226             
+ ...te-v1/src/auth |    41.1 |    47.72 |   88.88 |    41.1 |                   
+  guards.js        |   88.18 |    48.83 |     100 |   88.18 | ...26-29,34-37,71 
+  oidc.js          |       0 |        0 |       0 |       0 | 1-126             
+ ...src/components |       0 |        0 |       0 |       0 |                   
+  AdminGate.jsx    |       0 |        0 |       0 |       0 | 1-53              
+  ...ovalBadge.jsx |       0 |        0 |       0 |       0 | 1-21              
+  ...lControls.jsx |       0 |        0 |       0 |       0 | 1-93              
+  ...ateSelect.jsx |       0 |        0 |       0 |       0 | 1-35              
+ csmate-v1/src/lib |   81.19 |    60.78 |   61.11 |   81.19 |                   
+  ...oval-perms.js |     100 |      100 |     100 |     100 |                   
+  approval.js      |     100 |      100 |     100 |     100 |                   
+  autosave.js      |       0 |        0 |       0 |       0 | 1                 
+  calc.js          |     100 |    88.23 |     100 |     100 | 3,21              
+  db.js            |     100 |      100 |     100 |     100 |                   
+  diff.js          |       0 |        0 |       0 |       0 | 1                 
+  exporters-ek.js  |     100 |      100 |     100 |     100 |                   
+  exporters.js     |     100 |      100 |     100 |     100 |                   
+  importers.js     |     100 |      100 |     100 |     100 |                   
+  number.js        |       0 |        0 |       0 |       0 | 1                 
+  schema.js        |   92.59 |    16.66 |     100 |   92.59 | 9-10,12-13        
+  secure.js        |       0 |        0 |       0 |       0 | 1-17              
+  storage.js       |   77.52 |     62.5 |      75 |   77.52 | ...75,78-82,85-89 
+  templates.js     |     100 |      100 |     100 |     100 |                   
+  transport.js     |     100 |      100 |     100 |     100 |                   
+ ...v1/src/modules |   87.75 |    66.47 |   80.59 |   87.75 |                   
+  ...oval-perms.js |   90.47 |    73.33 |     100 |   90.47 | ...1,87-88,99-100 
+  approval.js      |   81.81 |    58.82 |     100 |   81.81 | 27-31,46-52,59-60 
+  autosave.js      |       0 |        0 |       0 |       0 | 1-22              
+  db.js            |    90.6 |    73.97 |   73.68 |    90.6 | ...,93-97,170-171 
+  diff.js          |       0 |        0 |       0 |       0 | 1-14              
+  exporters-ek.js  |     100 |     17.5 |     100 |     100 | 17,23-32,47-69    
+  exporters.js     |     100 |    43.75 |     100 |     100 | ...22,28,54-58,74 
+  importers.js     |   96.66 |    81.81 |     100 |   96.66 | 17-18             
+  number.js        |       0 |        0 |       0 |       0 | 1-23              
+  ...w-sections.js |   95.65 |    88.46 |     100 |   95.65 | 120-127           
+  selectors.js     |     100 |       50 |     100 |     100 | 12                
+  templates.js     |   85.71 |    73.33 |   61.53 |   85.71 | ...59-160,164-168 
+  transport.js     |     100 |    83.33 |     100 |     100 | 15,26,42-46,56    
+ ...e-v1/src/state |   72.35 |    74.41 |      80 |   72.35 |                   
+  defaults.js      |       0 |        0 |       0 |       0 | 1-28              
+  derive.js        |   93.68 |    76.19 |     100 |   93.68 | 13-14,51-54       
+ ...e-v1/src/store |       0 |        0 |       0 |       0 |                   
+  selectors.js     |       0 |        0 |       0 |       0 | 1-2               
+ ...e-v1/src/views |       0 |        0 |       0 |       0 |                   
+  Review.jsx       |       0 |        0 |       0 |       0 | 1-128             
+-------------------|---------|----------|---------|---------|-------------------
+
+> csmate@1.0.1 build
+> node scripts/build.js
+
+Build completed. Output: /workspace/csmate-v1/dist
+Service worker version: v20251029T142933
+Cache manifest: /workspace/csmate-v1/cache-output.json
