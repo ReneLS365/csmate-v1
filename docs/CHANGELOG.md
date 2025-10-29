@@ -5,6 +5,7 @@
 ### Added
 - Adminpanel til Hulmose med SSO-konfiguration, rollemapping og nød-adgang direkte i `src/admin`.
 - Vitest coverage for the new accord calculator including tralleløft edge cases.
+- Tilføjet E-Komplet admin guide i projektroden (`CSMate-Ekomplet-Guide.txt`).
 
 ### Changed
 - Eksportpayloads inkluderer nu bruger/rolle fra aktiv session og Review viser brugeren øverst i metadata.
