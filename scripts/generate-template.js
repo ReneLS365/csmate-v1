@@ -17,10 +17,13 @@ function saveTemplate (path, data) {
 
 function main () {
   const template = loadTemplate(sourcePath)
+  const adminCode = typeof template?._meta?.admin_code === 'string'
+    ? template._meta.admin_code
+    : ''
   template._meta = {
     ...template._meta,
     template: 'hulmose',
-    admin_code: 'StilAce'
+    admin_code: adminCode
   }
   saveTemplate(targetPath, template)
   console.log(`Skabelon genereret → ${targetPath}`)

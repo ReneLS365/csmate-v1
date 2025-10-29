@@ -6,6 +6,12 @@ import { calculateTotals } from './src/modules/calculateTotals.js'
 import { normalizeKey } from './src/lib/string-utils.js'
 import { EXCLUDED_MATERIAL_KEYS, shouldExcludeMaterialEntry } from './src/lib/materials/exclusions.js'
 import { createMaterialRow } from './src/modules/materialRowTemplate.js'
+import { sha256Hex, constantTimeEquals } from './src/lib/sha256.js'
+import hulmoseTenant from './data/tenants/hulmose.json' assert { type: 'json' }
+
+const DEFAULT_ADMIN_CODE_HASH = typeof hulmoseTenant?._meta?.admin_code === 'string'
+  ? hulmoseTenant._meta.admin_code
+  : ''
 
 initNumpadOverlay()
 
@@ -1926,12 +1932,21 @@ function handleImportFile(file) {
 }
 
 // --- Authentication ---
-function login() {
+async function verifyAdminCodeInput(value) {
+  if (typeof value !== 'string') return false;
+  const trimmed = value.trim();
+  if (!trimmed || !DEFAULT_ADMIN_CODE_HASH) return false;
+  const hash = await sha256Hex(trimmed);
+  if (!hash) return false;
+  return constantTimeEquals(hash, DEFAULT_ADMIN_CODE_HASH);
+}
+
+async function login() {
   const codeInput = document.getElementById('adminCode');
   const feedback = document.getElementById('adminFeedback');
   if (!codeInput) return;
 
-  const isValid = codeInput.value.trim() === 'StilAce';
+  const isValid = await verifyAdminCodeInput(codeInput.value);
   if (isValid) {
     admin = true;
     codeInput.value = '';
@@ -1943,17 +1958,21 @@ function login() {
     }
     renderOptaelling();
     updateTotals(true);
-  } else {
-    if (feedback) {
-      feedback.textContent = 'Forkert kode. Prøv igen.';
-      feedback.classList.remove('success');
-      feedback.classList.add('error');
-      feedback.removeAttribute('hidden');
-    }
+  } else if (feedback) {
+    feedback.textContent = 'Forkert kode. Prøv igen.';
+    feedback.classList.remove('success');
+    feedback.classList.add('error');
+    feedback.removeAttribute('hidden');
   }
 }
 
-document.getElementById('btnAdminLogin')?.addEventListener('click', login);
+const adminLoginButton = document.getElementById('btnAdminLogin');
+if (adminLoginButton) {
+  adminLoginButton.addEventListener('click', event => {
+    event.preventDefault();
+    login();
+  });
+}
 
 // --- Worker Functions ---
 function addWorker() {

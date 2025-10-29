@@ -107,7 +107,7 @@ test.describe('CSMate release smoke', () => {
     await page.selectOption('#sagStatus', 'godkendt');
     await expect(page.locator('#statusIndicator')).not.toHaveAttribute('data-status', 'godkendt');
 
-    await page.fill('#adminCode', 'StilAce');
+    await page.fill('#adminCode', 'hulmose-2025-admin');
     await page.click('#btnAdminLogin');
     await expect(page.locator('#adminFeedback')).toContainText('Admin-tilstand');
     await page.selectOption('#sagStatus', 'godkendt');
