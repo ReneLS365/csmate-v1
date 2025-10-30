@@ -15,123 +15,123 @@ const K = new Uint32Array([
   0x391c0cb3, 0x4ed8aa4a, 0x5b9cca4f, 0x682e6ff3,
   0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208,
   0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
-]);
+])
 
 const INITIAL_HASH = new Uint32Array([
   0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a,
   0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19
-]);
+])
 
-function rotateRight(value, amount) {
-  return (value >>> amount) | (value << (32 - amount));
+function rotateRight (value, amount) {
+  return (value >>> amount) | (value << (32 - amount))
 }
 
-function sha256Sync(message) {
+function sha256Sync (message) {
   if (typeof message !== 'string') {
-    message = String(message ?? '');
+    message = String(message ?? '')
   }
 
-  const encoder = typeof TextEncoder !== 'undefined' ? new TextEncoder() : null;
-  const bytes = encoder ? encoder.encode(message) : new Uint8Array(Array.from(message, ch => ch.charCodeAt(0) & 0xff));
-  const bitLength = bytes.length * 8;
-  const wordCount = ((bytes.length + 9 + 63) >> 6) << 4;
-  const words = new Uint32Array(wordCount);
+  const encoder = typeof TextEncoder !== 'undefined' ? new TextEncoder() : null
+  const bytes = encoder ? encoder.encode(message) : new Uint8Array(Array.from(message, ch => ch.charCodeAt(0) & 0xff))
+  const bitLength = bytes.length * 8
+  const wordCount = ((bytes.length + 9 + 63) >> 6) << 4
+  const words = new Uint32Array(wordCount)
 
   for (let i = 0; i < bytes.length; i += 1) {
-    words[i >> 2] |= bytes[i] << (24 - (i % 4) * 8);
+    words[i >> 2] |= bytes[i] << (24 - (i % 4) * 8)
   }
 
-  const paddingIndex = bytes.length >> 2;
-  words[paddingIndex] |= 0x80 << (24 - (bytes.length % 4) * 8);
-  words[words.length - 1] = bitLength;
+  const paddingIndex = bytes.length >> 2
+  words[paddingIndex] |= 0x80 << (24 - (bytes.length % 4) * 8)
+  words[words.length - 1] = bitLength
 
-  const hash = new Uint32Array(INITIAL_HASH);
-  const w = new Uint32Array(64);
+  const hash = new Uint32Array(INITIAL_HASH)
+  const w = new Uint32Array(64)
 
   for (let offset = 0; offset < words.length; offset += 16) {
-    w.set(words.subarray(offset, offset + 16));
+    w.set(words.subarray(offset, offset + 16))
 
     for (let t = 16; t < 64; t += 1) {
-      const s0 = rotateRight(w[t - 15], 7) ^ rotateRight(w[t - 15], 18) ^ (w[t - 15] >>> 3);
-      const s1 = rotateRight(w[t - 2], 17) ^ rotateRight(w[t - 2], 19) ^ (w[t - 2] >>> 10);
-      w[t] = (w[t - 16] + s0 + w[t - 7] + s1) >>> 0;
+      const s0 = rotateRight(w[t - 15], 7) ^ rotateRight(w[t - 15], 18) ^ (w[t - 15] >>> 3)
+      const s1 = rotateRight(w[t - 2], 17) ^ rotateRight(w[t - 2], 19) ^ (w[t - 2] >>> 10)
+      w[t] = (w[t - 16] + s0 + w[t - 7] + s1) >>> 0
     }
 
-    let a = hash[0];
-    let b = hash[1];
-    let c = hash[2];
-    let d = hash[3];
-    let e = hash[4];
-    let f = hash[5];
-    let g = hash[6];
-    let h = hash[7];
+    let a = hash[0]
+    let b = hash[1]
+    let c = hash[2]
+    let d = hash[3]
+    let e = hash[4]
+    let f = hash[5]
+    let g = hash[6]
+    let h = hash[7]
 
     for (let t = 0; t < 64; t += 1) {
-      const S1 = rotateRight(e, 6) ^ rotateRight(e, 11) ^ rotateRight(e, 25);
-      const ch = (e & f) ^ (~e & g);
-      const temp1 = (h + S1 + ch + K[t] + w[t]) >>> 0;
-      const S0 = rotateRight(a, 2) ^ rotateRight(a, 13) ^ rotateRight(a, 22);
-      const maj = (a & b) ^ (a & c) ^ (b & c);
-      const temp2 = (S0 + maj) >>> 0;
+      const S1 = rotateRight(e, 6) ^ rotateRight(e, 11) ^ rotateRight(e, 25)
+      const ch = (e & f) ^ (~e & g)
+      const temp1 = (h + S1 + ch + K[t] + w[t]) >>> 0
+      const S0 = rotateRight(a, 2) ^ rotateRight(a, 13) ^ rotateRight(a, 22)
+      const maj = (a & b) ^ (a & c) ^ (b & c)
+      const temp2 = (S0 + maj) >>> 0
 
-      h = g;
-      g = f;
-      f = e;
-      e = (d + temp1) >>> 0;
-      d = c;
-      c = b;
-      b = a;
-      a = (temp1 + temp2) >>> 0;
+      h = g
+      g = f
+      f = e
+      e = (d + temp1) >>> 0
+      d = c
+      c = b
+      b = a
+      a = (temp1 + temp2) >>> 0
     }
 
-    hash[0] = (hash[0] + a) >>> 0;
-    hash[1] = (hash[1] + b) >>> 0;
-    hash[2] = (hash[2] + c) >>> 0;
-    hash[3] = (hash[3] + d) >>> 0;
-    hash[4] = (hash[4] + e) >>> 0;
-    hash[5] = (hash[5] + f) >>> 0;
-    hash[6] = (hash[6] + g) >>> 0;
-    hash[7] = (hash[7] + h) >>> 0;
+    hash[0] = (hash[0] + a) >>> 0
+    hash[1] = (hash[1] + b) >>> 0
+    hash[2] = (hash[2] + c) >>> 0
+    hash[3] = (hash[3] + d) >>> 0
+    hash[4] = (hash[4] + e) >>> 0
+    hash[5] = (hash[5] + f) >>> 0
+    hash[6] = (hash[6] + g) >>> 0
+    hash[7] = (hash[7] + h) >>> 0
   }
 
-  let result = '';
+  let result = ''
   for (let i = 0; i < hash.length; i += 1) {
-    result += hash[i].toString(16).padStart(8, '0');
+    result += hash[i].toString(16).padStart(8, '0')
   }
-  return result;
+  return result
 }
 
-export async function sha256Hex(value) {
+export async function sha256Hex (value) {
   if (typeof value !== 'string' || value.length === 0) {
-    return '';
+    return ''
   }
 
-  const cryptoModule = globalThis.crypto || globalThis.msCrypto;
+  const cryptoModule = globalThis.crypto || globalThis.msCrypto
   if (cryptoModule?.subtle && typeof TextEncoder !== 'undefined') {
     try {
-      const encoder = new TextEncoder();
-      const data = encoder.encode(value);
-      const digest = await cryptoModule.subtle.digest('SHA-256', data);
-      const bytes = new Uint8Array(digest);
-      let hex = '';
+      const encoder = new TextEncoder()
+      const data = encoder.encode(value)
+      const digest = await cryptoModule.subtle.digest('SHA-256', data)
+      const bytes = new Uint8Array(digest)
+      let hex = ''
       for (let i = 0; i < bytes.length; i += 1) {
-        hex += bytes[i].toString(16).padStart(2, '0');
+        hex += bytes[i].toString(16).padStart(2, '0')
       }
-      return hex;
+      return hex
     } catch {
       // fall through to synchronous implementation
     }
   }
 
-  return sha256Sync(value);
+  return sha256Sync(value)
 }
 
-export function constantTimeEquals(a, b) {
-  if (typeof a !== 'string' || typeof b !== 'string') return false;
-  if (a.length !== b.length) return false;
-  let mismatch = 0;
+export function constantTimeEquals (a, b) {
+  if (typeof a !== 'string' || typeof b !== 'string') return false
+  if (a.length !== b.length) return false
+  let mismatch = 0
   for (let i = 0; i < a.length; i += 1) {
-    mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i);
+    mismatch |= a.charCodeAt(i) ^ b.charCodeAt(i)
   }
-  return mismatch === 0;
+  return mismatch === 0
 }
