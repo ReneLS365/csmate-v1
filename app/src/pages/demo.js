@@ -122,26 +122,25 @@ function renderTimeRows () {
     hoursInput.readOnly = true
     hoursInput.className = 'qty-input'
     hoursInput.value = row.hours != null ? formatNumber(row.hours) : '0'
-    const openHoursPad = () => {
-      openNumpad({
-        initial: hoursInput.value,
-        baseValue: parseInputNumber(hoursInput.value),
-        onConfirm: value => {
-          hoursInput.value = formatNumber(value)
-          hoursInput.dispatchEvent(new Event('input', { bubbles: true }))
-          hoursInput.dispatchEvent(new Event('change', { bubbles: true }))
-        }
+    const openHoursPad = async () => {
+      const value = await openNumpad({
+        startValue: hoursInput.value,
+        baseValue: parseInputNumber(hoursInput.value)
       })
+      if (value == null) return
+      hoursInput.value = formatNumber(value)
+      hoursInput.dispatchEvent(new Event('input', { bubbles: true }))
+      hoursInput.dispatchEvent(new Event('change', { bubbles: true }))
     }
-    hoursInput.addEventListener('click', openHoursPad)
+    hoursInput.addEventListener('click', () => { void openHoursPad() })
     hoursInput.addEventListener('keydown', event => {
       if (event.key === 'Enter' || event.key === ' ') {
         event.preventDefault()
-        openHoursPad()
+        void openHoursPad()
       }
     })
     hoursInput.addEventListener('input', () => {
-      row.hours = Number(hoursInput.value)
+      row.hours = parseInputNumber(hoursInput.value)
       saveTimeRows(timeRows)
       refreshPanel()
     })
@@ -189,30 +188,29 @@ addTimeBtn.addEventListener('click', () => {
 })
 
 akkordInput.readOnly = true
-const openAkkordPad = () => {
-  openNumpad({
-    initial: akkordInput.value,
-    baseValue: parseInputNumber(akkordInput.value),
-    onConfirm: value => {
-      priceBreakdown.akkordAmount = Number(value)
-      akkordInput.value = formatNumber(priceBreakdown.akkordAmount)
-      savePriceBreakdown(priceBreakdown)
-      refreshPanel()
-      akkordInput.dispatchEvent(new Event('input', { bubbles: true }))
-      akkordInput.dispatchEvent(new Event('change', { bubbles: true }))
-    }
+const openAkkordPad = async () => {
+  const value = await openNumpad({
+    startValue: akkordInput.value,
+    baseValue: parseInputNumber(akkordInput.value)
   })
+  if (value == null) return
+  priceBreakdown.akkordAmount = parseInputNumber(value)
+  akkordInput.value = formatNumber(priceBreakdown.akkordAmount)
+  savePriceBreakdown(priceBreakdown)
+  refreshPanel()
+  akkordInput.dispatchEvent(new Event('input', { bubbles: true }))
+  akkordInput.dispatchEvent(new Event('change', { bubbles: true }))
 }
-akkordInput.addEventListener('click', openAkkordPad)
+akkordInput.addEventListener('click', () => { void openAkkordPad() })
 akkordInput.addEventListener('keydown', event => {
   if (event.key === 'Enter' || event.key === ' ') {
     event.preventDefault()
-    openAkkordPad()
+    void openAkkordPad()
   }
 })
 
 akkordInput.addEventListener('input', () => {
-  priceBreakdown.akkordAmount = Number(akkordInput.value)
+  priceBreakdown.akkordAmount = parseInputNumber(akkordInput.value)
   savePriceBreakdown(priceBreakdown)
   refreshPanel()
 })

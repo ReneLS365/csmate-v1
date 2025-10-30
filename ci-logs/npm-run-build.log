@@ -1,7 +1,0 @@
-
-> csmate@1.0.1 build
-> node scripts/build.js
-
-Build completed. Output: /workspace/csmate-v1/dist
-Service worker version: v20251029T143003
-Cache manifest: /workspace/csmate-v1/cache-output.json

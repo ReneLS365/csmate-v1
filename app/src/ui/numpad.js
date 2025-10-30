@@ -1,6 +1,13 @@
-import { initNumpadOverlay, getNumpadOverlayElements, showNumpadOverlay, hideNumpadOverlay } from '../modules/numpadOverlay.js'
+const overlay = typeof document !== 'undefined' ? document.getElementById('npOverlay') : null
+const screen = typeof document !== 'undefined' ? document.getElementById('npScreen') : null
 
-// Lightweight expression evaluator (+ - * /) with locale-safe decimals
+let resolveInput = null
+let buffer = '0'
+let baseValue = 0
+let pristine = true
+let previousFocus = null
+let keydownHandlerAttached = false
+
 function toNumber (value, fallback = 0) {
   if (typeof value === 'number' && Number.isFinite(value)) return value
   if (typeof value === 'string') {
@@ -12,10 +19,10 @@ function toNumber (value, fallback = 0) {
   return fallback
 }
 
-export function evalExpr (expr, baseValue = 0) {
-  const base = toNumber(baseValue, 0)
+export function evalExpr (expr, base = 0) {
+  const baseNumber = toNumber(base, 0)
   const raw = typeof expr === 'string' ? expr.trim() : ''
-  if (!raw) return base
+  if (!raw) return baseNumber
 
   const normalized = raw
     .replace(/,/g, '.')
@@ -23,153 +30,233 @@ export function evalExpr (expr, baseValue = 0) {
     .replace(/÷/g, '/')
     .replace(/\s+/g, '')
 
-  const expression = /^[+\-*/]/.test(normalized) ? `${base}${normalized}` : normalized
-  if (!/^[0-9.+\-*/]*$/.test(expression)) throw new Error('Invalid')
+  const expression = /^[+\-*/]/.test(normalized) ? `${baseNumber}${normalized}` : normalized
+  if (!/^[0-9.+\-*/]*$/.test(expression)) throw new Error('Invalid expression')
 
   // eslint-disable-next-line no-new-func
-  const value = Function(`"use strict";return (${expression || base});`)()
-  if (!Number.isFinite(value)) throw new Error('NaN')
+  const value = Function(`"use strict";return (${expression || baseNumber});`)()
+  if (!Number.isFinite(value)) throw new Error('Invalid result')
   return value
 }
 
-function formatDisplayValue (value) {
-  const number = toNumber(value, 0)
-  return String(number).replace('.', ',')
+function render () {
+  if (screen) {
+    screen.textContent = buffer || '0'
+  }
 }
 
-export function openNumpad ({ initial = '', baseValue = 0, onConfirm } = {}) {
-  initNumpadOverlay()
-  const elements = getNumpadOverlayElements()
-  if (!elements) return
+function currentOperandHasComma () {
+  const lastPlus = buffer.lastIndexOf('+')
+  const lastMinus = buffer.lastIndexOf('-')
+  const lastTimes = buffer.lastIndexOf('×')
+  const lastDivide = buffer.lastIndexOf('÷')
+  const lastOp = Math.max(lastPlus, lastMinus, lastTimes, lastDivide)
+  const segment = buffer.slice(lastOp + 1)
+  return segment.includes(',')
+}
 
-  const { overlay, keypad } = elements
-  const display = overlay.querySelector('#csm-np-display')
-  const base = toNumber(baseValue, 0)
-  const initialDisplay = typeof initial === 'string' ? initial.trim() : ''
-  const fallbackDisplay = (initialDisplay !== '' ? initialDisplay : formatDisplayValue(base)) || '0'
-  let buffer = ''
-  const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
-  let closed = false
+function closeNumpad (commitValue = null) {
+  if (!overlay) return
+  overlay.classList.remove('open')
+  overlay.setAttribute('aria-hidden', 'true')
+  document.documentElement.classList.remove('np-lock')
 
-  const render = () => {
-    if (display) display.textContent = buffer || fallbackDisplay || '0'
+  if (previousFocus && typeof previousFocus.focus === 'function') {
+    previousFocus.focus({ preventScroll: true })
+  }
+  previousFocus = null
+
+  if (keydownHandlerAttached) {
+    document.removeEventListener('keydown', handleKeydown, true)
+    keydownHandlerAttached = false
   }
 
-  const cleanup = () => {
-    if (closed) return
-    closed = true
-    keypad?.removeEventListener('keydown', handleKeydown)
-    overlay.removeEventListener('click', handleClick)
-    document.removeEventListener('keydown', handleEscape, true)
-    hideNumpadOverlay()
-    if (previousFocus && typeof previousFocus.focus === 'function') {
-      previousFocus.focus({ preventScroll: true })
+  const resolver = resolveInput
+  resolveInput = null
+  if (typeof commitValue === 'string' && resolver) {
+    resolver(commitValue)
+  } else if (!commitValue && resolver) {
+    resolver(null)
+  }
+}
+
+function commitValue () {
+  try {
+    const value = evalExpr(buffer, baseValue)
+    closeNumpad(String(value))
+  } catch (error) {
+    if (screen && typeof screen.animate === 'function') {
+      screen.animate([{ opacity: 1 }, { opacity: 0.2 }, { opacity: 1 }], { duration: 160 })
     }
   }
+}
 
-  const closeOverlay = () => {
-    cleanup()
-  }
-
-  const confirmValue = () => {
-    try {
-      const result = evalExpr(buffer, base)
-      if (typeof onConfirm === 'function') {
-        onConfirm(result)
+function applyKey (key) {
+  switch (key) {
+    case 'enter':
+      commitValue()
+      return
+    case 'close':
+      closeNumpad()
+      return
+    case 'C':
+      buffer = '0'
+      pristine = true
+      render()
+      return
+    case ',':
+      if (currentOperandHasComma()) return
+      buffer = pristine ? '0,' : `${buffer},`
+      pristine = false
+      render()
+      return
+    case '+':
+    case '-':
+    case '×':
+    case '÷':
+      if (pristine || buffer === '0') {
+        buffer = key
+      } else if (/[+\-×÷]$/.test(buffer)) {
+        buffer = buffer.slice(0, -1) + key
+      } else {
+        buffer = `${buffer}${key}`
       }
-      cleanup()
-    } catch (error) {
-      if (display) {
-        display.animate([{ opacity: 1 }, { opacity: 0.2 }, { opacity: 1 }], { duration: 160 })
+      pristine = false
+      render()
+      return
+    default:
+      if (/^\d$/.test(key)) {
+        if (pristine || buffer === '0') {
+          buffer = key
+        } else {
+          buffer = `${buffer}${key}`
+        }
+        pristine = false
+        render()
       }
-    }
   }
+}
 
-  const handleKeydown = event => {
-    if (event.key === 'Escape') {
-      event.preventDefault()
-      closeOverlay()
-      return
-    }
-    if (event.key === 'Enter') {
-      event.preventDefault()
-      confirmValue()
-      return
-    }
-    if (event.key === 'Backspace') {
-      event.preventDefault()
-      buffer = buffer.slice(0, -1)
-      render()
-      return
-    }
-    if ('0123456789+-*/.,xX'.includes(event.key)) {
-      event.preventDefault()
-      const key = event.key.replace('x', '×').replace('X', '×').replace('.', ',')
-      buffer += key
-      render()
-    }
-  }
+function handlePointerDown (event) {
+  if (!(event instanceof PointerEvent)) return
+  if (!overlay) return
 
-  const handleEscape = event => {
-    if (event.key === 'Escape' && overlay.classList.contains('open')) {
-      event.preventDefault()
-      closeOverlay()
-    }
-  }
-
-  const handleClick = event => {
-    const target = event.target
-    if (!(target instanceof HTMLElement)) return
-
-    if (target === overlay) {
-      if (!overlay.classList.contains('no-backdrop-close')) {
-        event.preventDefault()
-        closeOverlay()
-      }
-      return
-    }
-
-    const button = target.closest('button[data-action], .csm-np-btn')
-    if (!(button instanceof HTMLButtonElement) || !overlay.contains(button)) return
-
-    const action = button.dataset.action
-    if (action === 'cancel') {
-      event.preventDefault()
-      closeOverlay()
-      return
-    }
-    if (action === 'clear') {
-      event.preventDefault()
-      buffer = ''
-      render()
-      return
-    }
-    if (action === 'confirm') {
-      event.preventDefault()
-      confirmValue()
-      return
-    }
-    if (button.classList.contains('csm-np-btn') && !action) {
-      event.preventDefault()
-      buffer += button.textContent.trim()
-      render()
-    }
-  }
-
-  const opened = showNumpadOverlay()
-  if (!opened) {
-    cleanup()
+  const target = event.target
+  if (target === overlay) {
+    event.preventDefault()
+    closeNumpad()
     return
   }
 
-  keypad?.addEventListener('keydown', handleKeydown)
-  overlay.addEventListener('click', handleClick)
-  document.addEventListener('keydown', handleEscape, true)
+  const button = target instanceof HTMLElement ? target.closest('button[data-key]') : null
+  if (!button) return
 
+  event.preventDefault()
+  overlay.setPointerCapture?.(event.pointerId)
+  const key = button.getAttribute('data-key')
+  if (!key) return
+  applyKey(key)
+}
+
+function handleKeydown (event) {
+  if (!overlay || !overlay.classList.contains('open')) return
+  const { key } = event
+
+  if (key === 'Escape') {
+    event.preventDefault()
+    closeNumpad()
+    return
+  }
+
+  if (key === 'Enter') {
+    event.preventDefault()
+    commitValue()
+    return
+  }
+
+  if (key === 'Backspace') {
+    event.preventDefault()
+    if (buffer.length <= 1) {
+      buffer = '0'
+      pristine = true
+    } else {
+      buffer = buffer.slice(0, -1)
+      pristine = false
+    }
+    render()
+    return
+  }
+
+  if (/^[0-9]$/.test(key)) {
+    event.preventDefault()
+    applyKey(key)
+    return
+  }
+
+  if (key === ',' || key === '.') {
+    event.preventDefault()
+    applyKey(',')
+    return
+  }
+
+  if (key === '+' || key === '-') {
+    event.preventDefault()
+    applyKey(key)
+    return
+  }
+
+  if (key === '*' || key === 'x' || key === 'X') {
+    event.preventDefault()
+    applyKey('×')
+    return
+  }
+
+  if (key === '/' || key === '÷') {
+    event.preventDefault()
+    applyKey('÷')
+  }
+}
+
+if (overlay) {
+  overlay.addEventListener('pointerdown', handlePointerDown, { passive: false })
+}
+
+export function openNumpad (options = {}) {
+  if (!overlay || !screen) return Promise.resolve(null)
+
+  const normalized = typeof options === 'string' ? { startValue: options } : options || {}
+  const startValue = typeof normalized.startValue === 'string' ? normalized.startValue : (typeof normalized.initial === 'string' ? normalized.initial : '')
+  baseValue = toNumber(normalized.baseValue ?? normalized.base ?? 0, 0)
+
+  const initial = startValue.trim()
+  const fallback = initial !== '' ? initial : String(baseValue || 0)
+  buffer = fallback || '0'
+  pristine = initial === ''
   render()
 
-  const focusable = overlay.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')
-  if (focusable instanceof HTMLElement) {
-    requestAnimationFrame(() => focusable.focus({ preventScroll: true }))
+  overlay.classList.add('open')
+  overlay.setAttribute('aria-hidden', 'false')
+  document.documentElement.classList.add('np-lock')
+
+  previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
+
+  if (!keydownHandlerAttached) {
+    document.addEventListener('keydown', handleKeydown, true)
+    keydownHandlerAttached = true
   }
+
+  const firstButton = overlay.querySelector('button[data-key]')
+  queueMicrotask(() => {
+    if (firstButton instanceof HTMLElement) {
+      firstButton.focus()
+    }
+  })
+
+  return new Promise(resolve => {
+    resolveInput = resolve
+  })
+}
+
+export function isNumpadOpen () {
+  return Boolean(overlay?.classList.contains('open'))
 }
