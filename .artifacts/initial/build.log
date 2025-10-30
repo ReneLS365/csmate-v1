@@ -1,6 +1,0 @@
-npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
-
-> csmate@1.0.0 build
-> node scripts/bump-sw-version.js
-
-Service worker version bumped to v20251028T005039

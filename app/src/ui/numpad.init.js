@@ -26,26 +26,22 @@ function applyBinding (input) {
   }
   input.readOnly = true
 
-  const open = () => {
+  const open = async () => {
     const currentValue = input.value
     const baseValue = parseNumericValue(currentValue)
-    openNumpad({
-      initial: currentValue,
-      baseValue,
-      onConfirm: value => {
-        const useComma = input.dataset.decimal === 'comma'
-        input.value = formatResult(value, useComma)
-        input.dispatchEvent(new Event('input', { bubbles: true }))
-        input.dispatchEvent(new Event('change', { bubbles: true }))
-      }
-    })
+    const value = await openNumpad({ startValue: currentValue, baseValue })
+    if (value == null) return
+    const useComma = input.dataset.decimal === 'comma'
+    input.value = formatResult(value, useComma)
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+    input.dispatchEvent(new Event('change', { bubbles: true }))
   }
 
-  input.addEventListener('click', open)
+  input.addEventListener('click', () => { void open() })
   input.addEventListener('keydown', event => {
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault()
-      open()
+      void open()
     }
   })
 }

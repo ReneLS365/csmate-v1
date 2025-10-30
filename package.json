@@ -15,6 +15,7 @@
     "serve:ci": "http-server -p 4173 -c-1 . >/dev/null 2>&1",
     "e2e": "playwright test --project=chromium",
     "e2e:headed": "playwright test --headed --project=chromium",
+    "test:e2e": "playwright test --reporter=line",
     "ci": "npm run lint && npm run test -- --coverage && npm run build"
   },
   "devDependencies": {

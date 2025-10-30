@@ -7,11 +7,24 @@ import { normalizeKey } from './src/lib/string-utils.js'
 import { EXCLUDED_MATERIAL_KEYS, shouldExcludeMaterialEntry } from './src/lib/materials/exclusions.js'
 import { createMaterialRow } from './src/modules/materialRowTemplate.js'
 import { sha256Hex, constantTimeEquals } from './src/lib/sha256.js'
-import hulmoseTenant from './data/tenants/hulmose.json' assert { type: 'json' }
+let DEFAULT_ADMIN_CODE_HASH = ''
 
-const DEFAULT_ADMIN_CODE_HASH = typeof hulmoseTenant?._meta?.admin_code === 'string'
-  ? hulmoseTenant._meta.admin_code
-  : ''
+async function loadDefaultAdminCode () {
+  try {
+    const response = await fetch('./data/tenants/hulmose.json')
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`)
+    }
+    const tenant = await response.json()
+    if (tenant && typeof tenant._meta?.admin_code === 'string') {
+      DEFAULT_ADMIN_CODE_HASH = tenant._meta.admin_code
+    }
+  } catch (error) {
+    console.warn('Kunne ikke indlæse standard admin-kode', error)
+  }
+}
+
+loadDefaultAdminCode()
 
 initNumpadOverlay()
 
