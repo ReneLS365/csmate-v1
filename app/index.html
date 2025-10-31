@@ -9,6 +9,8 @@
   <link rel="stylesheet" href="print.css" media="print">
   <link rel="stylesheet" href="src/styles/fixes.css">
   <link rel="stylesheet" href="/css/pwa.css">
+  <link rel="manifest" href="/manifest.webmanifest" crossorigin="use-credentials">
+  <meta name="theme-color" content="#0b0b0b">
 </head>
 <body>
   <div id="app" class="app-shell">
@@ -455,30 +457,45 @@
     window.updateMaterialLine = row => updateLine(row);
   })();
 </script>
+
+  <div class="pwa-install-wrap" role="presentation">
+    <button id="installBtn" class="pwa-install-btn" type="button" hidden>Installer app</button>
+    <div id="iosInstallHint" class="pwa-ios-hint" hidden>
+      Tilføj CSMate til hjemmeskærmen: <strong>Del</strong> → <strong>Føj til hjemmeskærm</strong>.
+    </div>
+  </div>
+
 <script>
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/service-worker.js').catch(async error => {
-      const offline = navigator.onLine === false;
-      const networkErrorNames = new Set(['AbortError', 'NetworkError']);
-      const message = typeof error?.message === 'string' ? error.message : '';
-      const isNetworkFailure =
-        offline ||
-        (typeof error === 'object' && error !== null && networkErrorNames.has(error.name)) ||
-        /(?:offline|network)/i.test(message);
+    window.addEventListener('load', () => {
+      navigator.serviceWorker
+        .register('/service-worker.js', { scope: '/' })
+        .then(reg => {
+          console.debug('Service worker registered', reg.scope);
+        })
+        .catch(async error => {
+          const offline = navigator.onLine === false;
+          const networkErrorNames = new Set(['AbortError', 'NetworkError']);
+          const message = typeof error?.message === 'string' ? error.message : '';
+          const isNetworkFailure =
+            offline ||
+            (typeof error === 'object' && error !== null && networkErrorNames.has(error.name)) ||
+            /(?:offline|network)/i.test(message);
 
-      if (isNetworkFailure) {
-        console.warn('Service worker registration failed due to network issues; keeping existing worker', error);
-        return;
-      }
+          if (isNetworkFailure) {
+            console.warn('Service worker registration failed due to network issues; keeping existing worker', error);
+            return;
+          }
 
-      try {
-        const regs = await navigator.serviceWorker.getRegistrations();
-        await Promise.all(regs.map(r => r.unregister()));
-      } finally {
-        const url = new URL(window.location.href);
-        url.searchParams.set('no-sw', Date.now().toString());
-        window.location.replace(url.toString());
-      }
+          try {
+            const regs = await navigator.serviceWorker.getRegistrations();
+            await Promise.all(regs.map(r => r.unregister()));
+          } finally {
+            const url = new URL(window.location.href);
+            url.searchParams.set('no-sw', Date.now().toString());
+            window.location.replace(url.toString());
+          }
+        });
     });
   }
 </script>

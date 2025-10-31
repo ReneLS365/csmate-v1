@@ -75,28 +75,34 @@ function normaliseUrlToFile (url) {
 }
 
 function describeFile (root, relativeFile, url) {
-  const appDir = resolve(root, 'app')
-  const filePath = resolve(appDir, relativeFile)
-  const relativePath = relative(appDir, filePath)
+  const searchRoots = [
+    { base: 'app', dir: resolve(root, 'app') },
+    { base: 'public', dir: resolve(root, 'public') }
+  ]
+
   const record = {
     url,
-    file: `app/${relativePath}`,
+    file: `app/${relativeFile}`,
     aliasFor: url === '/' ? '/index.html' : undefined,
     exists: false,
     bytes: null,
     sha256: null
   }
 
-  try {
-    const stats = statSync(filePath)
-    if (stats.isFile()) {
+  for (const { base, dir } of searchRoots) {
+    const filePath = resolve(dir, relativeFile)
+    try {
+      const stats = statSync(filePath)
+      if (!stats.isFile()) continue
       record.exists = true
       record.bytes = stats.size
+      record.file = `${base}/${relative(dir, filePath)}`
       const hash = createHash('sha256')
       hash.update(readFileSync(filePath))
       record.sha256 = hash.digest('hex')
-    }
-  } catch {}
+      break
+    } catch {}
+  }
 
   if (!record.exists) {
     delete record.bytes

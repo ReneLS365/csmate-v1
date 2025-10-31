@@ -35,6 +35,12 @@
   [headers.values]
   Cache-Control = "max-age=300"
 
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+  Cache-Control = "max-age=300"
+  Content-Type = "application/manifest+json"
+
 # Long-term cache for hashed asset bundles
 [[headers]]
   for = "/assets/*"
