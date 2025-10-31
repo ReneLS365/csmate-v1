@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { cpSync, rmSync, statSync } from 'node:fs'
+import { cpSync, existsSync, rmSync, statSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -11,6 +11,7 @@ const __dirname = dirname(__filename)
 const projectRoot = resolve(__dirname, '..')
 const distDir = resolve(projectRoot, 'dist')
 const sourceDir = resolve(projectRoot, 'app')
+const publicDir = resolve(projectRoot, 'public')
 
 function ensureSourceExists () {
   try {
@@ -28,11 +29,17 @@ function copyRecursive (src, dest) {
   cpSync(src, dest, { recursive: true, force: true })
 }
 
+function copyPublicAssets () {
+  if (!existsSync(publicDir)) return
+  cpSync(publicDir, distDir, { recursive: true, force: true })
+}
+
 function main () {
   ensureSourceExists()
   const result = bumpServiceWorkerVersion({ projectRoot })
   const { outputPath: cacheReportPath } = writeCacheReport({ projectRoot })
   copyRecursive(sourceDir, distDir)
+  copyPublicAssets()
   console.log(`Build completed. Output: ${distDir}`)
   console.log(`Service worker version: ${result.version}`)
   console.log(`Cache manifest: ${cacheReportPath}`)

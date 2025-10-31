@@ -1,5 +1,5 @@
 /* CSMate Service Worker – cache busting hard mode */
-const VERSION = 'v20251029T161351'; // replaced automatically during build
+const VERSION = 'v20251031T183000'; // replaced automatically during build
 const CACHE_VERSION = VERSION; // replaced automatically during build
 const CACHE_PREFIX = 'csmate';
 const CACHE_NAME = `${CACHE_PREFIX}-${CACHE_VERSION}`;
@@ -10,6 +10,9 @@ const PRECACHE = [
   '/style.css',
   '/print.css',
   '/manifest.json',
+  '/manifest.webmanifest',
+  '/icons/icon-192.svg',
+  '/icons/icon-512.svg',
   '/src/ui/numpad.css',
   '/src/styles/fixes.css',
 ];

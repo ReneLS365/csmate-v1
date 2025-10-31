@@ -3110,6 +3110,89 @@ function setupServiceWorkerMessaging() {
   });
 }
 
+function setupPWAInstallPrompt() {
+  if (typeof window === 'undefined') return;
+
+  const installButton = document.getElementById('installBtn');
+  const iosHint = document.getElementById('iosInstallHint');
+  if (!installButton && !iosHint) return;
+
+  let deferredPrompt = null;
+  const displayModeMedia = typeof window.matchMedia === 'function'
+    ? window.matchMedia('(display-mode: standalone)')
+    : null;
+
+  const hideInstallButton = () => {
+    if (installButton) {
+      installButton.setAttribute('hidden', '');
+      installButton.disabled = false;
+    }
+  };
+
+  const showInstallButton = () => {
+    if (installButton) {
+      installButton.removeAttribute('hidden');
+      installButton.disabled = false;
+    }
+  };
+
+  const hideIOSHint = () => {
+    if (iosHint) {
+      iosHint.setAttribute('hidden', '');
+    }
+  };
+
+  const maybeShowIOSHint = () => {
+    if (!iosHint) return;
+    const ua = navigator.userAgent || '';
+    const isiOS = /iphone|ipad|ipod/i.test(ua);
+    const isStandalone = (displayModeMedia?.matches ?? false) || navigator.standalone === true;
+    if (isiOS && !isStandalone) {
+      iosHint.removeAttribute('hidden');
+    } else {
+      hideIOSHint();
+    }
+  };
+
+  window.addEventListener('beforeinstallprompt', event => {
+    event.preventDefault();
+    deferredPrompt = event;
+    showInstallButton();
+  });
+
+  installButton?.addEventListener('click', async () => {
+    if (!deferredPrompt) return;
+    installButton.disabled = true;
+    const promptEvent = deferredPrompt;
+    deferredPrompt = null;
+    promptEvent.prompt();
+    try {
+      await promptEvent.userChoice;
+    } catch (error) {
+      console.warn('Install prompt failed', error);
+    } finally {
+      hideInstallButton();
+    }
+  });
+
+  window.addEventListener('appinstalled', () => {
+    deferredPrompt = null;
+    hideInstallButton();
+    hideIOSHint();
+  });
+
+  if (displayModeMedia?.addEventListener) {
+    displayModeMedia.addEventListener('change', event => {
+      if (event.matches) {
+        hideInstallButton();
+        hideIOSHint();
+      }
+    });
+  }
+
+  maybeShowIOSHint();
+}
+
 async function hardResetApp() {
   if (navigator.serviceWorker) {
     const regs = await navigator.serviceWorker.getRegistrations();
@@ -3248,6 +3331,7 @@ function initApp() {
   initNumpadBinding();
   setupMobileKeyboardDismissal();
   setupServiceWorkerMessaging();
+  setupPWAInstallPrompt();
 
   document.getElementById('btnHardResetApp')?.addEventListener('click', () => {
     hardResetApp();

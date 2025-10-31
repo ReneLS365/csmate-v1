@@ -1,30 +1,30 @@
 {
-  "version": "v20251029T161351",
+  "version": "v20251031T183000",
   "cachePrefix": "csmate",
-  "cacheName": "csmate-v20251029T161351",
+  "cacheName": "csmate-v20251031T183000",
   "precache": [
     {
       "url": "/",
       "file": "app/index.html",
       "aliasFor": "/index.html",
       "exists": true,
-      "bytes": 17870,
-      "sha256": "8918373660478dbc35e90441aa04181e2b50d3d142bcbb32ad0e9f3ebd79912b"
+      "bytes": 19780,
+      "sha256": "afbd37e4af8d50736568c3db6f5d35cba1a32cf885115394edd996e349171ac0"
     },
     {
       "url": "/index.html",
       "file": "app/index.html",
       "exists": true,
-      "bytes": 17870,
-      "sha256": "8918373660478dbc35e90441aa04181e2b50d3d142bcbb32ad0e9f3ebd79912b",
+      "bytes": 19780,
+      "sha256": "afbd37e4af8d50736568c3db6f5d35cba1a32cf885115394edd996e349171ac0",
       "duplicateOf": "app/index.html"
     },
     {
       "url": "/main.js",
       "file": "app/main.js",
       "exists": true,
-      "bytes": 117822,
-      "sha256": "76ee64cb20ea14e0de6a8ec2f77bf212b90400aef96ccfb597df4c5e62913855"
+      "bytes": 120952,
+      "sha256": "47ddb6af03f1202e97caa0ca8e6d5cc9fb3f4ef53cdfaf90d20035c02f0c295b"
     },
     {
       "url": "/style.css",
@@ -44,15 +44,36 @@
       "url": "/manifest.json",
       "file": "app/manifest.json",
       "exists": true,
-      "bytes": 165,
-      "sha256": "2920669725551e1ad58fa1dc3e8591b75019467c42a9ff58ad709d3528256ef0"
+      "bytes": 423,
+      "sha256": "19b4c3eec2a55fa64b7f808382aca66d2870bf318c3d92a828bcbf6d514d79cd"
+    },
+    {
+      "url": "/manifest.webmanifest",
+      "file": "app/manifest.webmanifest",
+      "exists": true,
+      "bytes": 423,
+      "sha256": "19b4c3eec2a55fa64b7f808382aca66d2870bf318c3d92a828bcbf6d514d79cd"
+    },
+    {
+      "url": "/icons/icon-192.svg",
+      "file": "public/icons/icon-192.svg",
+      "exists": true,
+      "bytes": 345,
+      "sha256": "a04d56c923a30d9e5460d41fd3a195f9a3d20a2024001214aa70bfc79be9fc54"
+    },
+    {
+      "url": "/icons/icon-512.svg",
+      "file": "public/icons/icon-512.svg",
+      "exists": true,
+      "bytes": 353,
+      "sha256": "0f745260051c911a9c18c38e4ca6f8f60541cab968c695d8ef2bb455d78c4d11"
     },
     {
       "url": "/src/ui/numpad.css",
       "file": "app/src/ui/numpad.css",
       "exists": true,
-      "bytes": 1809,
-      "sha256": "841b9aa79a3565e50ec74eba371862f89da7bd670b88939c42bfc536ded983fe"
+      "bytes": 2073,
+      "sha256": "234a4df2e688bebd40198db3a0864d8a708ccee6c9b1bfd9f6e12a61702c35d6"
     },
     {
       "url": "/src/styles/fixes.css",
