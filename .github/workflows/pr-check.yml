@@ -1,0 +1,20 @@
+name: PR Check (text-only build)
+on:
+  pull_request:
+    branches: [ main, master ]
+permissions:
+  contents: read
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 18
+      - name: Build hulmose.json
+        run: node scripts/build-hulmose-from-dataset.mjs
+      - name: Verify ALFIX presence
+        run: |
+          test -f templates/hulmose.json
+          node -e "const j=require('./templates/hulmose.json'); if(!j._meta.systems.includes('ALFIX')){process.exit(1)}"
