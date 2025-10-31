@@ -6,6 +6,7 @@
 
 import defaultTemplate from '@/templates/default.json' assert { type: 'json' };
 import hulmoseTemplate from '@/templates/hulmose.json' assert { type: 'json' };
+import { buildItemMaps } from '@/lib/items';
 
 const STATIC_TEMPLATES = {
   default: defaultTemplate,
@@ -130,7 +131,9 @@ export function loadTemplate(id = DEFAULT_TEMPLATE_ID) {
   const resolved = resolveTemplateId(id);
   const source = STATIC_TEMPLATES[resolved] ?? STATIC_TEMPLATES[DEFAULT_TEMPLATE_ID];
   const clone = cloneTemplate(source);
-  return normalizeTemplate(clone, resolved);
+  const template = normalizeTemplate(clone, resolved);
+  buildItemMaps(template);
+  return template;
 }
 
 export function listTemplates() {

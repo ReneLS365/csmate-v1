@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "build": "node scripts/build.js",
+    "build:hulmose": "node scripts/build-hulmose-from-dataset.mjs",
     "test": "vitest run",
     "lint": "eslint \"app/src/**/*.js\" \"scripts/**/*.js\"",
     "bump-sw": "node scripts/bump-sw-version.js",
@@ -12,6 +13,9 @@
     "dump:config": "node scripts/dump-config.js",
     "serve:dist": "http-server dist -p 4173 -s",
     "serve": "http-server -p 4173 -c-1 .",
+    "twa:init": "echo \"Brug: export PROD_URL=https://DIT-DOMAE NE; npx bubblewrap init --manifest=\\\"$PROD_URL/manifest.webmanifest\\\" --directory twa && cd twa && jq '.packageId=\"com.csmate.app\"' twa-manifest.json > tmp && mv tmp twa-manifest.json\"",
+    "twa:update": "cd twa && npx bubblewrap update",
+    "twa:build": "cd twa && npx bubblewrap build",
     "serve:ci": "http-server -p 4173 -c-1 . >/dev/null 2>&1",
     "e2e": "playwright test --project=chromium",
     "e2e:headed": "playwright test --headed --project=chromium",

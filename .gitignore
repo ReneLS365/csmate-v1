@@ -1,11 +1,19 @@
-# Node / tooling
-node_modules/
-dist/
-.cache/
-.build/
-
-# Editors / OS
+# Node/Web
+node_modules
+dist
+build
+.cache
+*.log
+# Android / TWA / Gradle
+twa/
+android/
+*.aab
+*.apk
+*.jks
+.keystore
+.gradle
+**/build/
+# iOS (hvis det kommer senere)
+ios/
+# OS
 .DS_Store
-Thumbs.db
-.vscode/
-.idea/
