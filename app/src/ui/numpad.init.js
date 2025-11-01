@@ -1,4 +1,5 @@
 import { openNumpad } from './numpad.js'
+import { devlog } from '../utils/devlog.js'
 
 function parseNumericValue (value) {
   if (typeof value !== 'string') return 0
@@ -29,6 +30,8 @@ function applyBinding (input) {
   const open = async () => {
     const currentValue = input.value
     const baseValue = parseNumericValue(currentValue)
+    devlog.mark('numpad:trigger')
+    devlog.time('numpad:trigger→open')
     const value = await openNumpad({ startValue: currentValue, baseValue })
     if (value == null) return
     const useComma = input.dataset.decimal === 'comma'

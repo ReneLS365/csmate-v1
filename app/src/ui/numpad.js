@@ -1,3 +1,5 @@
+import { devlog } from '../utils/devlog.js'
+
 const overlay = typeof document !== 'undefined' ? document.getElementById('npOverlay') : null
 const screen = typeof document !== 'undefined' ? document.getElementById('npScreen') : null
 
@@ -55,16 +57,28 @@ function currentOperandHasComma () {
   return segment.includes(',')
 }
 
-function closeNumpad (commitValue = null) {
+function closeNumpad (commitValue = null, reason = 'close') {
   if (!overlay) return
+  const reasonLabel = `numpad:close:${reason}`
+  devlog.mark('numpad:close:start')
+  devlog.mark(`${reasonLabel}:start`)
+  devlog.time('numpad:close')
+  devlog.time(reasonLabel)
   overlay.classList.remove('open')
   overlay.setAttribute('aria-hidden', 'true')
   document.documentElement.classList.remove('np-lock')
 
-  if (previousFocus && typeof previousFocus.focus === 'function') {
-    previousFocus.focus({ preventScroll: true })
-  }
+  const focusTarget = previousFocus
   previousFocus = null
+  if (focusTarget && typeof focusTarget.focus === 'function') {
+    queueMicrotask(() => {
+      try {
+        focusTarget.focus({ preventScroll: true })
+      } catch {
+        focusTarget.focus()
+      }
+    })
+  }
 
   if (keydownHandlerAttached) {
     document.removeEventListener('keydown', handleKeydown, true)
@@ -78,26 +92,58 @@ function closeNumpad (commitValue = null) {
   } else if (!commitValue && resolver) {
     resolver(null)
   }
+
+  devlog.mark(`${reasonLabel}:end`)
+  devlog.mark('numpad:close:end')
+  const specificMeasure = devlog.measure(reasonLabel, `${reasonLabel}:start`, `${reasonLabel}:end`)
+  const specificDuration = devlog.timeEnd(reasonLabel)
+  const closeMeasure = devlog.measure('numpad:close', 'numpad:close:start', 'numpad:close:end')
+  const closeDuration = devlog.timeEnd('numpad:close')
+  devlog.warnIfSlow(reasonLabel, specificMeasure || specificDuration, 50)
+  devlog.warnIfSlow('numpad:close', closeMeasure || closeDuration, 50)
 }
 
 function commitValue () {
+  devlog.mark('numpad:commit:start')
+  devlog.time('numpad:commit')
   try {
     const value = evalExpr(buffer, baseValue)
-    closeNumpad(String(value))
+    closeNumpad(String(value), 'commit')
   } catch (error) {
     if (screen && typeof screen.animate === 'function') {
       screen.animate([{ opacity: 1 }, { opacity: 0.2 }, { opacity: 1 }], { duration: 160 })
     }
+  } finally {
+    devlog.mark('numpad:commit:end')
+    const measured = devlog.measure('numpad:commit', 'numpad:commit:start', 'numpad:commit:end')
+    const duration = devlog.timeEnd('numpad:commit')
+    devlog.warnIfSlow('numpad:commit', measured || duration, 50)
   }
 }
 
 function applyKey (key) {
   switch (key) {
     case 'enter':
+      devlog.mark('numpad:clickOK→close:start')
+      devlog.time('numpad:clickOK→close')
       commitValue()
+      devlog.mark('numpad:clickOK→close:end')
+      {
+        const measured = devlog.measure('numpad:clickOK→close', 'numpad:clickOK→close:start', 'numpad:clickOK→close:end')
+        const duration = devlog.timeEnd('numpad:clickOK→close')
+        devlog.warnIfSlow('numpad:clickOK→close', measured || duration, 50)
+      }
       return
     case 'close':
-      closeNumpad()
+      devlog.mark('numpad:clickClose:start')
+      devlog.time('numpad:clickClose')
+      closeNumpad(null, 'button')
+      devlog.mark('numpad:clickClose:end')
+      {
+        const measured = devlog.measure('numpad:clickClose', 'numpad:clickClose:start', 'numpad:clickClose:end')
+        const duration = devlog.timeEnd('numpad:clickClose')
+        devlog.warnIfSlow('numpad:clickClose', measured || duration, 50)
+      }
       return
     case 'C':
       buffer = '0'
@@ -144,7 +190,7 @@ function handlePointerDown (event) {
   const target = event.target
   if (target === overlay) {
     event.preventDefault()
-    closeNumpad()
+    closeNumpad(null, 'overlay')
     return
   }
 
@@ -164,13 +210,29 @@ function handleKeydown (event) {
 
   if (key === 'Escape') {
     event.preventDefault()
-    closeNumpad()
+    devlog.mark('numpad:key→close:start')
+    devlog.time('numpad:key→close')
+    closeNumpad(null, 'escape')
+    devlog.mark('numpad:key→close:end')
+    {
+      const measured = devlog.measure('numpad:key→close', 'numpad:key→close:start', 'numpad:key→close:end')
+      const duration = devlog.timeEnd('numpad:key→close')
+      devlog.warnIfSlow('numpad:key→close', measured || duration, 50)
+    }
     return
   }
 
   if (key === 'Enter') {
     event.preventDefault()
+    devlog.mark('numpad:key→close:start')
+    devlog.time('numpad:key→close')
     commitValue()
+    devlog.mark('numpad:key→close:end')
+    {
+      const measured = devlog.measure('numpad:key→close', 'numpad:key→close:start', 'numpad:key→close:end')
+      const duration = devlog.timeEnd('numpad:key→close')
+      devlog.warnIfSlow('numpad:key→close', measured || duration, 50)
+    }
     return
   }
 
@@ -234,6 +296,12 @@ export function openNumpad (options = {}) {
   pristine = initial === ''
   render()
 
+  devlog.mark('numpad:open')
+  const triggerMeasure = devlog.measure('numpad:trigger→open', 'numpad:trigger', 'numpad:open')
+  const triggerDuration = devlog.timeEnd('numpad:trigger→open')
+  devlog.warnIfSlow('numpad:trigger→open', triggerMeasure || triggerDuration, 50)
+  devlog.time('numpad:open→focus')
+
   overlay.classList.add('open')
   overlay.setAttribute('aria-hidden', 'false')
   document.documentElement.classList.add('np-lock')
@@ -248,6 +316,10 @@ export function openNumpad (options = {}) {
   const firstButton = overlay.querySelector('button[data-key]')
   queueMicrotask(() => {
     if (firstButton instanceof HTMLElement) {
+      devlog.mark('numpad:focus')
+      const measured = devlog.measure('numpad:open→focus', 'numpad:open', 'numpad:focus')
+      const duration = devlog.timeEnd('numpad:open→focus')
+      devlog.warnIfSlow('numpad:open→focus', measured || duration, 50)
       firstButton.focus()
     }
   })
