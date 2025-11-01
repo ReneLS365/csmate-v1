@@ -158,10 +158,10 @@
           </select>
         </label>
         <label for="montagepris"><span>Montagepris (auto)</span>
-          <input id="montagepris" placeholder="Montagepris (auto)" inputmode="decimal" data-numpad="true" data-decimal="comma">
+          <input id="montagepris" placeholder="Montagepris (auto)" inputmode="decimal" data-numpad="true" data-decimal="comma" data-numpad-field="montagepris">
         </label>
         <label for="demontagepris"><span>Demontagepris (auto)</span>
-          <input id="demontagepris" placeholder="Demontagepris (auto)" inputmode="decimal" data-numpad="true" data-decimal="comma">
+          <input id="demontagepris" placeholder="Demontagepris (auto)" inputmode="decimal" data-numpad="true" data-decimal="comma" data-numpad-field="demontagepris">
         </label>
       </div>
     </fieldset>
@@ -169,10 +169,10 @@
       <legend>Tillæg & km</legend>
       <div class="grid-2">
         <label for="slaebePct"><span>Slæb i %</span>
-          <input id="slaebePct" placeholder="Slæb i %" inputmode="decimal" data-numpad="true" data-decimal="comma">
+          <input id="slaebePct" placeholder="Slæb i %" inputmode="decimal" data-numpad="true" data-decimal="comma" data-numpad-field="slaebePct">
         </label>
         <label for="km"><span>Km</span>
-          <input id="km" placeholder="Km" inputmode="decimal" data-numpad="true" data-decimal="comma">
+          <input id="km" placeholder="Km" inputmode="decimal" data-numpad="true" data-decimal="comma" data-numpad-field="km">
         </label>
       </div>
     </fieldset>
@@ -181,22 +181,22 @@
       <legend>Ekstra arbejde</legend>
       <div class="grid-3 extra-work-grid">
         <label for="antalBoringHuller"><span>Huller (antal)</span>
-          <input id="antalBoringHuller" placeholder="Huller (antal)" inputmode="numeric" data-numpad="true" data-decimal="comma" data-testid="antal-input-1">
+          <input id="antalBoringHuller" placeholder="Huller (antal)" inputmode="numeric" data-numpad="true" data-decimal="comma" data-testid="antal-input-1" data-numpad-field="antalBoringHuller">
         </label>
         <label for="antalLukHuller"><span>Luk af hul (antal)</span>
-          <input id="antalLukHuller" placeholder="Luk af hul (antal)" inputmode="numeric" data-numpad="true" data-decimal="comma">
+          <input id="antalLukHuller" placeholder="Luk af hul (antal)" inputmode="numeric" data-numpad="true" data-decimal="comma" data-numpad-field="antalLukHuller">
         </label>
         <label for="antalBoringBeton"><span>Boring i beton (antal)</span>
-          <input id="antalBoringBeton" placeholder="Boring i beton (antal)" inputmode="numeric" data-numpad="true" data-decimal="comma">
+          <input id="antalBoringBeton" placeholder="Boring i beton (antal)" inputmode="numeric" data-numpad="true" data-decimal="comma" data-numpad-field="antalBoringBeton">
         </label>
         <label for="antalOpskydeligt"><span>Opskydeligt rækværk (antal)</span>
-          <input id="antalOpskydeligt" placeholder="Opskydeligt rækværk (antal)" inputmode="numeric" data-numpad="true" data-decimal="comma">
+          <input id="antalOpskydeligt" placeholder="Opskydeligt rækværk (antal)" inputmode="numeric" data-numpad="true" data-decimal="comma" data-numpad-field="antalOpskydeligt">
         </label>
         <label for="traelleloeft35"><span>Tralleløft 0,35 (antal)</span>
-          <input id="traelleloeft35" placeholder="Tralleløft 0,35 (antal)" inputmode="numeric" data-numpad="true" data-decimal="comma">
+          <input id="traelleloeft35" placeholder="Tralleløft 0,35 (antal)" inputmode="numeric" data-numpad="true" data-decimal="comma" data-numpad-field="traelleloeft35">
         </label>
         <label for="traelleloeft50"><span>Tralleløft 0,50 (antal)</span>
-          <input id="traelleloeft50" placeholder="Tralleløft 0,50 (antal)" inputmode="numeric" data-numpad="true" data-decimal="comma">
+          <input id="traelleloeft50" placeholder="Tralleløft 0,50 (antal)" inputmode="numeric" data-numpad="true" data-decimal="comma" data-numpad-field="traelleloeft50">
         </label>
       </div>
     </fieldset>
@@ -277,8 +277,8 @@
     </div>
   </div>
 
-  <div class="csm-np-overlay" id="npOverlay" aria-hidden="true">
-    <div class="csm-np" role="dialog" aria-modal="true" aria-label="Tal-tastatur">
+  <div class="csm-np-overlay" id="npOverlay" aria-hidden="true" data-testid="numpad-backdrop">
+    <div class="csm-np" role="dialog" aria-modal="true" aria-label="Tal-tastatur" tabindex="-1" data-testid="numpad-dialog">
       <div class="csm-np-screen" id="npScreen" aria-live="polite">0</div>
       <div class="csm-np-grid">
         <button type="button" data-key="7">7</button>
@@ -299,7 +299,7 @@
         <button type="button" data-key="+">+</button>
       </div>
       <button type="button" class="csm-np-enter" data-key="enter">Enter</button>
-      <button type="button" class="csm-np-close" data-key="close" aria-label="Luk tastatur">×</button>
+      <button type="button" class="csm-np-close" data-key="close" aria-label="Luk tastatur" data-testid="numpad-close">×</button>
     </div>
   </div>
 

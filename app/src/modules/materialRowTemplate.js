@@ -66,6 +66,8 @@ export function createMaterialRow (item, {
   qtyInput.autocomplete = 'off'
   qtyInput.step = '0.01'
   qtyInput.dataset.numpad = 'true'
+  qtyInput.dataset.numpadField = qtyInputId
+  qtyInput.setAttribute('data-numpad-field', qtyInputId)
   qtyInput.placeholder = '0'
   qtyInput.setAttribute('aria-label', 'Antal')
   const qtyValue = item.quantity != null && item.quantity !== '' ? toNumber(item.quantity) : 0
@@ -81,6 +83,8 @@ export function createMaterialRow (item, {
   priceInput.autocomplete = 'off'
   priceInput.step = '0.01'
   priceInput.dataset.numpad = 'true'
+  priceInput.dataset.numpadField = `price-${sanitizedId}`
+  priceInput.setAttribute('data-numpad-field', `price-${sanitizedId}`)
   priceInput.setAttribute('aria-label', 'Enhedspris')
   const hasPrice = item.price !== null && item.price !== undefined && item.price !== ''
   const priceValue = hasPrice ? toNumber(item.price) : 0

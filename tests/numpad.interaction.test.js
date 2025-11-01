@@ -3,8 +3,8 @@
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
 
 const overlayMarkup = `
-  <div class="csm-np-overlay" id="npOverlay" aria-hidden="true">
-    <div class="csm-np" role="dialog" aria-modal="true" aria-label="Tal-tastatur">
+  <div class="csm-np-overlay" id="npOverlay" aria-hidden="true" data-testid="numpad-backdrop">
+    <div class="csm-np" role="dialog" aria-modal="true" aria-label="Tal-tastatur" tabindex="-1" data-testid="numpad-dialog">
       <div class="csm-np-screen" id="npScreen" aria-live="polite">0</div>
       <div class="csm-np-grid">
         <button type="button" data-key="7">7</button>
@@ -25,14 +25,15 @@ const overlayMarkup = `
         <button type="button" data-key="+">+</button>
       </div>
       <button type="button" class="csm-np-enter" data-key="enter">Enter</button>
-      <button type="button" class="csm-np-close" data-key="close" aria-label="Luk tastatur">×</button>
+      <button type="button" class="csm-np-close" data-key="close" aria-label="Luk tastatur" data-testid="numpad-close">×</button>
     </div>
   </div>
 `
 
 function createDOM () {
   document.body.innerHTML = `
-    <input id="hours" value="0" />
+    <input id="hours" value="0" data-numpad-field="hours" />
+    <input id="next" value="0" data-numpad-field="next" />
     ${overlayMarkup}
   `
   const input = document.getElementById('hours')
@@ -81,6 +82,26 @@ describe('numpad interactions', () => {
     expect(document.activeElement).toBe(input)
   })
 
+  it('commits on Tab and focuses the next numpad field', async () => {
+    const input = document.getElementById('hours')
+    const next = document.getElementById('next')
+    input.value = '4'
+
+    const resultPromise = openNumpad({ startValue: '4', baseValue: 4 })
+    expect(isNumpadOpen()).toBe(true)
+
+    const tabEvent = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true })
+    document.dispatchEvent(tabEvent)
+
+    const result = await resultPromise
+    expect(result).toBe('4')
+    expect(isNumpadOpen()).toBe(false)
+
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(document.activeElement).toBe(next)
+  })
+
   it('closes without commit on Escape', async () => {
     const input = document.getElementById('hours')
     input.value = '99'
@@ -97,5 +118,15 @@ describe('numpad interactions', () => {
 
     await Promise.resolve()
     expect(document.activeElement).toBe(input)
+  })
+
+  it('applies inert to the background while open', async () => {
+    const input = document.getElementById('hours')
+    const promise = openNumpad({ startValue: '1', baseValue: 1 })
+    expect(isNumpadOpen()).toBe(true)
+    expect(input?.getAttribute('aria-hidden')).toBe('true')
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+    await promise
+    expect(input?.hasAttribute('aria-hidden')).toBe(false)
   })
 })

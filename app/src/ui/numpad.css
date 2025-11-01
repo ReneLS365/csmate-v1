@@ -18,16 +18,18 @@
 .csm-np {
   position: relative;
   width: min(560px, 96vw);
-  max-height: 86vh;
-  padding: 16px 16px 52px;
-  border-radius: 16px;
+  max-height: min(86vh, 640px);
+  padding: 28px 20px 48px;
+  border-radius: 18px;
   background: #1e1f22;
   color: #e7e7e7;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 14px;
+  box-shadow: 0 28px 80px rgba(10, 12, 16, 0.6);
   transform: translateZ(0);
   will-change: transform, opacity;
+  outline: none;
 }
 
 .csm-np-screen {
@@ -85,20 +87,27 @@
 
 .csm-np-close {
   position: absolute;
-  right: 12px;
-  bottom: 12px;
-  width: 44px;
-  height: 44px;
+  top: 14px;
+  right: 14px;
+  width: 34px;
+  height: 34px;
   border: 0;
   border-radius: 999px;
   background: #b43a3a;
   color: #fff;
-  font-size: 22px;
+  font-size: 18px;
   line-height: 1;
   display: grid;
   place-items: center;
   opacity: 0.92;
   touch-action: manipulation;
+}
+
+.csm-np-close:focus-visible,
+.csm-np-enter:focus-visible,
+.csm-np-grid button:focus-visible {
+  outline: 2px solid #61dafb;
+  outline-offset: 2px;
 }
 
 .csm-np button:active,

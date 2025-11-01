@@ -9,6 +9,8 @@ let baseValue = 0
 let pristine = true
 let previousFocus = null
 let keydownHandlerAttached = false
+let focusTrapAttached = false
+const inertRecords = []
 
 function toNumber (value, fallback = 0) {
   if (typeof value === 'number' && Number.isFinite(value)) return value
@@ -47,6 +49,132 @@ function render () {
   }
 }
 
+function setBackgroundInert () {
+  if (!overlay) return
+  const parent = overlay.parentElement || document.body
+  if (!parent) return
+  inertRecords.length = 0
+  const children = Array.from(parent.children)
+  for (const element of children) {
+    if (!(element instanceof HTMLElement)) continue
+    if (element === overlay) continue
+    inertRecords.push({
+      element,
+      hadInertAttr: element.hasAttribute('inert'),
+      inertValue: 'inert' in element ? element.inert : undefined,
+      ariaHidden: element.getAttribute('aria-hidden')
+    })
+    element.setAttribute('aria-hidden', 'true')
+    if ('inert' in element) {
+      try {
+        element.inert = true
+      } catch {
+        element.setAttribute('inert', '')
+      }
+    } else {
+      element.setAttribute('inert', '')
+    }
+  }
+}
+
+function clearBackgroundInert () {
+  while (inertRecords.length > 0) {
+    const record = inertRecords.pop()
+    if (!record || !(record.element instanceof HTMLElement)) continue
+    const { element, hadInertAttr, inertValue, ariaHidden } = record
+    if (ariaHidden == null) {
+      element.removeAttribute('aria-hidden')
+    } else {
+      element.setAttribute('aria-hidden', ariaHidden)
+    }
+    if ('inert' in element) {
+      try {
+        element.inert = Boolean(inertValue)
+      } catch {
+        // ignore restoration failures
+      }
+    }
+    if (hadInertAttr) {
+      element.setAttribute('inert', '')
+    } else {
+      element.removeAttribute('inert')
+    }
+  }
+}
+
+function getFocusableElements () {
+  if (!overlay) return []
+  const selector = 'button:not([disabled]), [href], input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+  return Array.from(overlay.querySelectorAll(selector)).filter(element => element instanceof HTMLElement)
+}
+
+function focusElement (element) {
+  if (!(element instanceof HTMLElement)) return
+  try {
+    element.focus({ preventScroll: true })
+  } catch {
+    element.focus()
+  }
+}
+
+function enforceFocusTrap (event) {
+  if (!overlay || !overlay.classList.contains('open')) return
+  const target = event?.target
+  if (target instanceof Node && overlay.contains(target)) return
+  const focusables = getFocusableElements()
+  const fallback = focusables.find(el => el instanceof HTMLElement) || overlay.querySelector('.csm-np')
+  focusElement(fallback instanceof HTMLElement ? fallback : overlay)
+}
+
+function attachFocusTrap () {
+  if (focusTrapAttached) return
+  if (typeof document === 'undefined') return
+  document.addEventListener('focusin', enforceFocusTrap, true)
+  focusTrapAttached = true
+}
+
+function detachFocusTrap () {
+  if (!focusTrapAttached) return
+  if (typeof document === 'undefined') return
+  document.removeEventListener('focusin', enforceFocusTrap, true)
+  focusTrapAttached = false
+}
+
+function isFocusableField (element) {
+  if (!(element instanceof HTMLInputElement)) return false
+  if (element.disabled) return false
+  if (element.readOnly && element.tabIndex < 0) return false
+  if (element.closest('[hidden]')) return false
+  if (element.closest('[aria-hidden="true"]')) return false
+  if (typeof window !== 'undefined' && typeof window.getComputedStyle === 'function') {
+    const style = window.getComputedStyle(element)
+    if (!style) return true
+    if (style.display === 'none' || style.visibility === 'hidden') return false
+  }
+  return true
+}
+
+function resolveNextField (current, direction) {
+  const currentElement = current instanceof HTMLElement ? current : null
+  const fields = Array.from(document.querySelectorAll('input[data-numpad-field]'))
+    .filter(isFocusableField)
+  if (!fields.length) return currentElement
+  const index = currentElement ? fields.indexOf(currentElement) : -1
+  if (direction === 'forward' || direction === 'backward') {
+    const step = direction === 'forward' ? 1 : -1
+    let candidateIndex = index === -1 ? (direction === 'forward' ? 0 : fields.length - 1) : index + step
+    while (candidateIndex >= 0 && candidateIndex < fields.length) {
+      const candidate = fields[candidateIndex]
+      if (isFocusableField(candidate)) {
+        return candidate
+      }
+      candidateIndex += step
+    }
+  }
+  if (index !== -1 && currentElement) return currentElement
+  return currentElement || fields[0]
+}
+
 function currentOperandHasComma () {
   const lastPlus = buffer.lastIndexOf('+')
   const lastMinus = buffer.lastIndexOf('-')
@@ -57,7 +185,7 @@ function currentOperandHasComma () {
   return segment.includes(',')
 }
 
-function closeNumpad (commitValue = null, reason = 'close') {
+function closeNumpad (commitValue = null, reason = 'close', focusDirection = null) {
   if (!overlay) return
   const reasonLabel = `numpad:close:${reason}`
   devlog.mark('numpad:close:start')
@@ -68,17 +196,11 @@ function closeNumpad (commitValue = null, reason = 'close') {
   overlay.setAttribute('aria-hidden', 'true')
   document.documentElement.classList.remove('np-lock')
 
+  detachFocusTrap()
+  clearBackgroundInert()
+
   const focusTarget = previousFocus
   previousFocus = null
-  if (focusTarget && typeof focusTarget.focus === 'function') {
-    queueMicrotask(() => {
-      try {
-        focusTarget.focus({ preventScroll: true })
-      } catch {
-        focusTarget.focus()
-      }
-    })
-  }
 
   if (keydownHandlerAttached) {
     document.removeEventListener('keydown', handleKeydown, true)
@@ -93,6 +215,21 @@ function closeNumpad (commitValue = null, reason = 'close') {
     resolver(null)
   }
 
+  const direction = focusDirection === 'backward' ? 'backward' : (focusDirection === 'forward' ? 'forward' : null)
+  queueMicrotask(() => {
+    let candidate = null
+    if (direction) {
+      candidate = resolveNextField(focusTarget, direction)
+    } else if (isFocusableField(focusTarget)) {
+      candidate = focusTarget
+    } else {
+      candidate = resolveNextField(null, null)
+    }
+    if (candidate) {
+      focusElement(candidate)
+    }
+  })
+
   devlog.mark(`${reasonLabel}:end`)
   devlog.mark('numpad:close:end')
   const specificMeasure = devlog.measure(reasonLabel, `${reasonLabel}:start`, `${reasonLabel}:end`)
@@ -103,12 +240,12 @@ function closeNumpad (commitValue = null, reason = 'close') {
   devlog.warnIfSlow('numpad:close', closeMeasure || closeDuration, 50)
 }
 
-function commitValue () {
+function commitValue (reason = 'commit', focusDirection = null) {
   devlog.mark('numpad:commit:start')
   devlog.time('numpad:commit')
   try {
     const value = evalExpr(buffer, baseValue)
-    closeNumpad(String(value), 'commit')
+    closeNumpad(String(value), reason, focusDirection)
   } catch (error) {
     if (screen && typeof screen.animate === 'function') {
       screen.animate([{ opacity: 1 }, { opacity: 0.2 }, { opacity: 1 }], { duration: 160 })
@@ -126,7 +263,7 @@ function applyKey (key) {
     case 'enter':
       devlog.mark('numpad:clickOK→close:start')
       devlog.time('numpad:clickOK→close')
-      commitValue()
+      commitValue('commit-button')
       devlog.mark('numpad:clickOK→close:end')
       {
         const measured = devlog.measure('numpad:clickOK→close', 'numpad:clickOK→close:start', 'numpad:clickOK→close:end')
@@ -137,7 +274,7 @@ function applyKey (key) {
     case 'close':
       devlog.mark('numpad:clickClose:start')
       devlog.time('numpad:clickClose')
-      closeNumpad(null, 'button')
+      closeNumpad(null, 'close-button')
       devlog.mark('numpad:clickClose:end')
       {
         const measured = devlog.measure('numpad:clickClose', 'numpad:clickClose:start', 'numpad:clickClose:end')
@@ -226,7 +363,22 @@ function handleKeydown (event) {
     event.preventDefault()
     devlog.mark('numpad:key→close:start')
     devlog.time('numpad:key→close')
-    commitValue()
+    commitValue('enter-key')
+    devlog.mark('numpad:key→close:end')
+    {
+      const measured = devlog.measure('numpad:key→close', 'numpad:key→close:start', 'numpad:key→close:end')
+      const duration = devlog.timeEnd('numpad:key→close')
+      devlog.warnIfSlow('numpad:key→close', measured || duration, 50)
+    }
+    return
+  }
+
+  if (key === 'Tab') {
+    event.preventDefault()
+    devlog.mark('numpad:key→close:start')
+    devlog.time('numpad:key→close')
+    const direction = event.shiftKey ? 'backward' : 'forward'
+    commitValue('tab-key', direction)
     devlog.mark('numpad:key→close:end')
     {
       const measured = devlog.measure('numpad:key→close', 'numpad:key→close:start', 'numpad:key→close:end')
@@ -308,6 +460,9 @@ export function openNumpad (options = {}) {
 
   previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
 
+  setBackgroundInert()
+  attachFocusTrap()
+
   if (!keydownHandlerAttached) {
     document.addEventListener('keydown', handleKeydown, true)
     keydownHandlerAttached = true
@@ -320,7 +475,7 @@ export function openNumpad (options = {}) {
       const measured = devlog.measure('numpad:open→focus', 'numpad:open', 'numpad:focus')
       const duration = devlog.timeEnd('numpad:open→focus')
       devlog.warnIfSlow('numpad:open→focus', measured || duration, 50)
-      firstButton.focus()
+      focusElement(firstButton)
     }
   })
 
