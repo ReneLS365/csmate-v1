@@ -22,8 +22,8 @@
     "test:e2e": "playwright test --reporter=line",
     "ci": "npm run lint && npm run test -- --coverage && npm run build",
     "lhci": "npm run build && lhci autorun --collect.url=http://127.0.0.1:4173 --collect.numberOfRuns=1 --collect.startServerCommand=\"npm run serve:dist\" --collect.settings.chromeFlags=\"--no-sandbox --headless=new --disable-gpu --disable-dev-shm-usage\" --assert.preset=lighthouse:recommended --upload.target=filesystem",
-    "lh:collect": "lhci collect --url=https://$PREVIEW_URL --numberOfRuns=1 --settings.preset=desktop --upload.target=filesystem --outputDir=.lighthouse",
-    "lh:assert": "lhci assert --config=.lighthouserc.js",
+    "lh:collect": "lhci collect --config=.lighthouserc.mjs",
+    "lh:assert": "lhci assert --config=.lighthouserc.mjs",
     "generate:pwa-assets": "node scripts/generate-pwa-assets.mjs",
     "prepare": "npm run generate:pwa-assets"
   },
