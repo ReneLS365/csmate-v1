@@ -70,7 +70,7 @@ function extractDataMatchers (source) {
 }
 
 function normaliseUrlToFile (url) {
-  if (url === '/') return 'index.html'
+  if (url === '/' || url.startsWith('/?')) return 'index.html'
   return url.replace(/^\//, '')
 }
 

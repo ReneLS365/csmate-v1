@@ -1,0 +1,24 @@
+name: Lighthouse 100 Gate
+on:
+  pull_request:
+    branches: [ main ]
+jobs:
+  lhci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm ci
+      - run: npm run build
+      - name: Start preview server
+        run: npx serve -s dist -l 4173 &
+      - name: Wait for server
+        run: npx wait-on http://127.0.0.1:4173
+      - name: Run Lighthouse
+        env:
+          PREVIEW_URL: http://127.0.0.1:4173
+        run: npx lhci collect --url=$PREVIEW_URL --numberOfRuns=1 --settings.preset=desktop --upload.target=filesystem --outputDir=.lighthouse
+      - name: Assert 100/100
+        run: npx lhci assert --config=.lighthouserc.js

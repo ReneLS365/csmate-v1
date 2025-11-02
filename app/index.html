@@ -4,31 +4,40 @@
   <!-- keep charset meta within first kilobyte for Lighthouse best-practice -->
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="description" content="CSMate – stilladsoptælling, akkord og PWA til byggepladsen.">
+  <meta name="theme-color" content="#0f172a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>akkordseddel</title>
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="src/ui/numpad.css">
   <link rel="stylesheet" href="print.css" media="print">
   <link rel="stylesheet" href="src/styles/fixes.css">
   <link rel="stylesheet" href="/css/pwa.css">
-  <link rel="manifest" href="/manifest.webmanifest" crossorigin="use-credentials">
-  <link rel="apple-touch-icon" sizes="192x192" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAYAAABS3GwHAAADjUlEQVR4nO3dUW7aQBRAUUDdANn/GsMS2q9UbRJSQ+phhnvOb0KwrHc9jgWa4+E/OJ/PP//H34FbXS6X43def/eLDT2zuSeGm19g8JndLSFs/kWDz2q2hHDa8ocMPyvaMrdfFmLweRbXVoOrK4Dh55lcm+dPAzD8PKPP5nrT/wDwrD4E4OrPM3s/36evfgjP6M85dwtE2u8AXP0peZt3KwBpx8PB1Z8uKwBpAiDt5PaHMisAaQIgTQCkCYA0AZAmANIEQJoASBMAaQIgTQCkCYA0AZAmANIEQJoASBMAaQIgTQCkCYA0AZAmANIEQJoASBMAaQIgTQCkCYA0AZAmANIEQJoASBMAaQIgTQCkCYA0AZAmANIEQJoASBMAaQIgTQCkCYA0AZAmANIEQJoASBMAaQIgTQCkCYA0AZAmANIEQJoASBMAaQIgTQCkCYA0AZD241Fv/Pr6+qi3vurl5eXRh8Bgx/P5/HPkG844+O8JoWPoLdAKw384rHOcfN+wAFYbqtWOl/sMCWDVYVr1uNnOUyDSdg9g9avo6sfP16wApAmANAGQJgDSBEDa7gGs/rGC1Y+fr1kBSBsSwKpX0VWPm+2GrQCrDdNqx8t9ht4CrTJUqxwn3zf8+wBvZvyIgcHveVgAMANPgUgTAGkCIE0ApAmANAGQJgDSBECaAEgTAGkCIE0ApAmANPsDTMZHsseyP8CkhDCG/QEm5VyNYX+AiTln+7M/wOScu315CkSa/QEW4BzuxwpAmgBIEwBpAiBNAKTZH2ABzuF+rACk2R9gcs7dvuwPMDHnbH/2B5iUczWG/QEmY/DHsj8AaZ4CkSYA0gRAmgBIEwBpAiBNAKQJgDQBkCYA0gRAmgBIEwBp9gdgGo/4KLj9AZjOyBDsD8B0Rs6J/QGY0qh5sT8A0xoxN54CkWZ/AKa29/xYAUgTAGkCIE0ApAmANPsDMLW958cKQJr9AZjWiLmxPwBTGjUv9gdgOiPnxP4ATCPxhRiYiadApAmANAGQJgDSBECaAEg7XS6X46MPAh7FCkCaAEg7HQ6Hg9sgii6Xy9EKQNrvAKwClLzNuxWAtL8CsApQ8Oecf1gBRMAzez/fboFI+zQAqwDP6LO5vroCiIBncm2eNw25r02yqn9dyDf9D2A1YEVb5vbmwbYaMLtbLth3X9mFwGzuuVP5BTgUygVre+VHAAAAAElFTkSuQmCC">
-  <meta name="theme-color" content="#0b0b0b">
+  <link rel="manifest" href="/manifest.webmanifest" crossorigin="anonymous">
+  <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <link rel="canonical" href="https://csmate.netlify.app/">
 </head>
 <body>
+  <a class="skip-to-content" href="#main">Spring til indhold</a>
+  <div id="iosInstallPrompt" class="ios-install-prompt" role="region" aria-live="polite" hidden>
+    <p>Tilføj CSMate til hjemmeskærmen: Tryk på delingsknappen og vælg <strong>Føj til hjemmeskærm</strong>.</p>
+    <button type="button" id="iosInstallDismiss" class="ios-install-dismiss" aria-label="Skjul iOS installationshint">✕</button>
+  </div>
   <div id="app" class="app-shell">
     <header>
       <div class="bar">
-    <div class="ttl">akkordseddel</div>
-    <nav>
-      <button id="btnSagsinfo" data-section="sagsinfo" class="active" type="button">Sagsinfo</button>
-      <button id="btnOptaelling" data-section="optaelling" type="button">Optælling</button>
-      <button id="btnLon" data-section="lon" type="button">Løn</button>
-    </nav>
+        <h1 class="ttl">akkordseddel</h1>
+        <nav>
+          <button id="btnSagsinfo" data-section="sagsinfo" class="active" type="button">Sagsinfo</button>
+          <button id="btnOptaelling" data-section="optaelling" type="button">Optælling</button>
+          <button id="btnLon" data-section="lon" type="button">Løn</button>
+        </nav>
       </div>
     </header>
     <div class="app-content">
       <div class="materials-scroll">
-        <main>
+        <main id="main">
   <section id="sagsinfoSection" class="sektion">
     <fieldset>
       <legend>Stamdata</legend>
@@ -459,9 +468,6 @@
 
   <div class="pwa-install-wrap" role="presentation">
     <button id="installBtn" class="pwa-install-btn" type="button" hidden>Installer app</button>
-    <div id="iosInstallHint" class="pwa-ios-hint" hidden>
-      Tilføj CSMate til hjemmeskærmen: <strong>Del</strong> → <strong>Føj til hjemmeskærm</strong>.
-    </div>
   </div>
 
 <script>
@@ -469,9 +475,6 @@
     window.addEventListener('load', () => {
       navigator.serviceWorker
         .register('/service-worker.js', { scope: '/' })
-        .then(reg => {
-          console.debug('Service worker registered', reg.scope);
-        })
         .catch(async error => {
           const offline = navigator.onLine === false;
           const networkErrorNames = new Set(['AbortError', 'NetworkError']);
