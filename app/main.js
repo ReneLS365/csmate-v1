@@ -1,13 +1,15 @@
 import './src/features/pctcalc/pctcalc.js'
-import { initNumpadBinding } from './src/ui/numpad.init.js'
-import { initNumpadOverlay } from './src/modules/numpadOverlay.js'
 import { initMaterialsScrollLock } from './src/modules/materialsScrollLock.js'
 import { calculateTotals } from './src/modules/calculateTotals.js'
 import { normalizeKey } from './src/lib/string-utils.js'
 import { EXCLUDED_MATERIAL_KEYS, shouldExcludeMaterialEntry } from './src/lib/materials/exclusions.js'
 import { createMaterialRow } from './src/modules/materialRowTemplate.js'
 import { sha256Hex, constantTimeEquals } from './src/lib/sha256.js'
+import { ensureExportLibs, ensureZipLib, prefetchExportLibs } from './src/features/export/lazy-libs.js'
+import { installLazyNumpad } from './src/ui/numpad.lazy.js'
+import { createVirtualMaterialsList } from './src/modules/materialsVirtualList.js'
 let DEFAULT_ADMIN_CODE_HASH = ''
+let materialsVirtualListController = null
 
 async function loadDefaultAdminCode () {
   try {
@@ -25,8 +27,6 @@ async function loadDefaultAdminCode () {
 }
 
 loadDefaultAdminCode()
-
-initNumpadOverlay()
 
 // --- Utility Functions ---
 function resolveSectionId(id) {
@@ -856,6 +856,10 @@ function renderOptaelling() {
     message.className = 'empty-state';
     message.textContent = 'Ingen systemer valgt. Vælg et eller flere systemer for at starte optællingen.';
     container.appendChild(message);
+    if (materialsVirtualListController) {
+      materialsVirtualListController.controller.destroy?.();
+      materialsVirtualListController = null;
+    }
     return;
   }
 
@@ -877,20 +881,35 @@ function renderOptaelling() {
   }
   list.classList.add('csm-materials-list');
 
-  Array.from(list.querySelectorAll('.material-row')).forEach(row => row.remove());
-
-  items.forEach(item => {
-    const { row } = createMaterialRow(item, {
+  const renderRow = (item, index) => {
+    const result = createMaterialRow(item, {
       admin,
       toNumber,
       formatCurrency,
       systemLabelMap
-    });
-    list.appendChild(row);
-  });
+    })
+    const row = result?.row || result
+    if (row) {
+      row.dataset.index = String(index)
+    }
+    return result
+  }
 
-  initMaterialsScrollLock(container);
-  updateTotals(true);
+  if (!materialsVirtualListController || materialsVirtualListController.container !== list) {
+    const controller = createVirtualMaterialsList({
+      container: list,
+      items,
+      renderRow,
+      rowHeight: 64,
+      overscan: 8
+    })
+    materialsVirtualListController = { container: list, controller }
+  } else {
+    materialsVirtualListController.controller.update(items)
+  }
+
+  initMaterialsScrollLock(container)
+  updateTotals(true)
 }
 
 // --- Update Functions ---
@@ -2951,8 +2970,8 @@ async function exportPDFBlob(customSagsnummer, options = {}) {
 
   document.body.appendChild(wrapper);
   try {
+    const { jsPDF, html2canvas } = await ensureExportLibs();
     const canvas = await html2canvas(wrapper, { scale: 2, backgroundColor: '#ffffff' });
-    const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ unit: 'px', format: [canvas.width, canvas.height] });
     doc.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, canvas.width, canvas.height);
     const baseName = sanitizeFilename(info.sagsnummer || 'akkordseddel');
@@ -2986,11 +3005,8 @@ async function exportZip() {
     updateActionHint('Udfyld Sagsinfo for at eksportere.', 'error');
     return;
   }
-  if (typeof JSZip === 'undefined') {
-    updateActionHint('ZIP bibliotek er ikke indlæst.', 'error');
-    return;
-  }
   try {
+    const { JSZip } = await ensureZipLib();
     beregnLon();
     const csvPayload = buildCSVPayload(null, { skipValidation: true, skipBeregn: true });
     if (!csvPayload) return;
@@ -3297,6 +3313,14 @@ function initApp() {
     await exportZip();
   });
 
+  ['btnExportAll', 'btnExportZip'].forEach(id => {
+    const button = document.getElementById(id);
+    if (!button) return;
+    const prime = () => prefetchExportLibs();
+    button.addEventListener('pointerenter', prime, { once: true });
+    button.addEventListener('focus', prime, { once: true });
+  });
+
   document.getElementById('btnAddWorker')?.addEventListener('click', () => addWorker());
 
   const recentSelect = document.getElementById('recentCases');
@@ -3328,7 +3352,7 @@ function initApp() {
 
   validateSagsinfo();
   updateTotals(true);
-  initNumpadBinding();
+  installLazyNumpad();
   setupMobileKeyboardDismissal();
   setupServiceWorkerMessaging();
   setupPWAInstallPrompt();
