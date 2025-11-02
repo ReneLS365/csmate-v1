@@ -17,3 +17,7 @@ android/
 ios/
 # OS
 .DS_Store
+
+# Generated PWA assets
+public/icons/*.png
+public/screenshots/*.png

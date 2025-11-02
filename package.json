@@ -3,7 +3,7 @@
   "version": "1.0.1",
   "type": "module",
   "scripts": {
-    "build": "node scripts/build.js",
+    "build": "npm run generate:pwa-assets && node scripts/build.js && node scripts/build-sw.mjs",
     "build:hulmose": "node scripts/build-hulmose-from-dataset.mjs",
     "test": "vitest run",
     "lint": "eslint \"app/src/**/*.js\" \"scripts/**/*.js\"",
@@ -21,7 +21,11 @@
     "e2e:headed": "playwright test --headed --project=chromium",
     "test:e2e": "playwright test --reporter=line",
     "ci": "npm run lint && npm run test -- --coverage && npm run build",
-    "lhci": "npm run build && lhci autorun --collect.url=http://127.0.0.1:4173 --collect.numberOfRuns=1 --collect.startServerCommand=\"npm run serve:dist\" --collect.settings.chromeFlags=\"--no-sandbox --headless=new --disable-gpu --disable-dev-shm-usage\" --assert.preset=lighthouse:recommended --upload.target=filesystem"
+    "lhci": "npm run build && lhci autorun --collect.url=http://127.0.0.1:4173 --collect.numberOfRuns=1 --collect.startServerCommand=\"npm run serve:dist\" --collect.settings.chromeFlags=\"--no-sandbox --headless=new --disable-gpu --disable-dev-shm-usage\" --assert.preset=lighthouse:recommended --upload.target=filesystem",
+    "lh:collect": "lhci collect --config=.lighthouserc.cjs",
+    "lh:assert": "lhci assert --config=.lighthouserc.cjs",
+    "generate:pwa-assets": "node scripts/generate-pwa-assets.mjs",
+    "prepare": "npm run generate:pwa-assets"
   },
   "devDependencies": {
     "@lhci/cli": "^0.13.0",
@@ -33,11 +37,12 @@
     "eslint-plugin-n": "^16.6.2",
     "eslint-plugin-promise": "^6.1.1",
     "http-server": "^14.1.1",
-    "start-server-and-test": "^2.0.3",
-    "netlify-plugin-minify-html": "^0.3.1",
-    "wait-on": "^8.0.2",
     "jsdom": "^27.0.0",
-    "vitest": "^1.4.0"
+    "netlify-plugin-minify-html": "^0.3.1",
+    "start-server-and-test": "^2.0.3",
+    "vitest": "^1.4.0",
+    "wait-on": "^8.0.2",
+    "workbox-build": "^7.0.0"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2"

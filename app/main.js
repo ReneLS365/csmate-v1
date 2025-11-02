@@ -8,6 +8,8 @@ import { sha256Hex, constantTimeEquals } from './src/lib/sha256.js'
 import { ensureExportLibs, ensureZipLib, prefetchExportLibs } from './src/features/export/lazy-libs.js'
 import { installLazyNumpad } from './src/ui/numpad.lazy.js'
 import { createVirtualMaterialsList } from './src/modules/materialsVirtualList.js'
+
+const IOS_INSTALL_PROMPT_DISMISSED_KEY = 'csmate.iosInstallPromptDismissed'
 let DEFAULT_ADMIN_CODE_HASH = ''
 let materialsVirtualListController = null
 
@@ -3130,8 +3132,9 @@ function setupPWAInstallPrompt() {
   if (typeof window === 'undefined') return;
 
   const installButton = document.getElementById('installBtn');
-  const iosHint = document.getElementById('iosInstallHint');
-  if (!installButton && !iosHint) return;
+  const iosBanner = document.getElementById('iosInstallPrompt');
+  const iosDismissButton = document.getElementById('iosInstallDismiss');
+  if (!installButton && !iosBanner) return;
 
   let deferredPrompt = null;
   const displayModeMedia = typeof window.matchMedia === 'function'
@@ -3152,21 +3155,38 @@ function setupPWAInstallPrompt() {
     }
   };
 
-  const hideIOSHint = () => {
-    if (iosHint) {
-      iosHint.setAttribute('hidden', '');
+  const hasDismissedIOSPrompt = () => {
+    try {
+      return window.localStorage?.getItem(IOS_INSTALL_PROMPT_DISMISSED_KEY) === '1';
+    } catch (error) {
+      console.warn('Kunne ikke læse iOS prompt flag', error);
+      return false;
+    }
+  };
+
+  const hideIOSHint = (persist = false) => {
+    if (iosBanner) {
+      iosBanner.setAttribute('hidden', '');
+    }
+    if (persist) {
+      try {
+        window.localStorage?.setItem(IOS_INSTALL_PROMPT_DISMISSED_KEY, '1');
+      } catch (error) {
+        console.warn('Kunne ikke gemme iOS prompt flag', error);
+      }
     }
   };
 
   const maybeShowIOSHint = () => {
-    if (!iosHint) return;
+    if (!iosBanner) return;
     const ua = navigator.userAgent || '';
     const isiOS = /iphone|ipad|ipod/i.test(ua);
+    const isSafari = /safari/i.test(ua) && !/(crios|fxios|edgios)/i.test(ua);
     const isStandalone = (displayModeMedia?.matches ?? false) || navigator.standalone === true;
-    if (isiOS && !isStandalone) {
-      iosHint.removeAttribute('hidden');
+    if (isiOS && isSafari && !isStandalone && !hasDismissedIOSPrompt()) {
+      iosBanner.removeAttribute('hidden');
     } else {
-      hideIOSHint();
+      iosBanner.setAttribute('hidden', '');
     }
   };
 
@@ -3194,19 +3214,37 @@ function setupPWAInstallPrompt() {
   window.addEventListener('appinstalled', () => {
     deferredPrompt = null;
     hideInstallButton();
-    hideIOSHint();
+    hideIOSHint(true);
   });
 
   if (displayModeMedia?.addEventListener) {
     displayModeMedia.addEventListener('change', event => {
       if (event.matches) {
         hideInstallButton();
-        hideIOSHint();
+        hideIOSHint(true);
       }
     });
   }
 
+  iosDismissButton?.addEventListener('click', () => {
+    hideIOSHint(true);
+  });
+
+  iosBanner?.addEventListener('keydown', event => {
+    if (event.key === 'Escape') {
+      hideIOSHint(true);
+    }
+  });
+
   maybeShowIOSHint();
+
+  if (iosBanner) {
+    iosBanner.addEventListener('click', event => {
+      if (event.target === iosBanner) {
+        hideIOSHint(true);
+      }
+    });
+  }
 }
 
 async function hardResetApp() {

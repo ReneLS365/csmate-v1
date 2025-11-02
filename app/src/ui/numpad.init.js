@@ -39,7 +39,19 @@ function applyBinding (input) {
   }
   input.readOnly = true
 
+  const isClosingGuardActive = () => {
+    if (typeof document === 'undefined') return false
+    const body = document.body
+    if (!body) return false
+    try {
+      return body.dataset?.numpadClosing === '1'
+    } catch {
+      return body.getAttribute('data-numpad-closing') === '1'
+    }
+  }
+
   const open = async () => {
+    if (isClosingGuardActive()) return
     const currentValue = input.value
     const baseValue = parseNumericValue(currentValue)
     devlog.mark('numpad:trigger')
@@ -52,8 +64,20 @@ function applyBinding (input) {
     input.dispatchEvent(new Event('change', { bubbles: true }))
   }
 
-  input.addEventListener('click', () => { void open() })
+  input.addEventListener('click', event => {
+    if (isClosingGuardActive()) {
+      event.preventDefault()
+      event.stopPropagation()
+      return
+    }
+    void open()
+  })
   input.addEventListener('keydown', event => {
+    if (isClosingGuardActive()) {
+      event.preventDefault()
+      event.stopPropagation()
+      return
+    }
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault()
       void open()

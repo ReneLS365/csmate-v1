@@ -127,3 +127,7 @@
     width: min(480px, 94vw);
   }
 }
+
+body[data-numpad-closing='1'] * {
+  outline: none !important;
+}

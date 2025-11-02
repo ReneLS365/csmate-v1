@@ -3,6 +3,48 @@ import { devlog } from '../utils/devlog.js'
 const overlay = typeof document !== 'undefined' ? document.getElementById('npOverlay') : null
 const screen = typeof document !== 'undefined' ? document.getElementById('npScreen') : null
 
+function rafPair (callback) {
+  if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(callback)
+    })
+    return
+  }
+  setTimeout(callback, 0)
+}
+
+function activateClosingGuard () {
+  if (typeof document === 'undefined') {
+    return () => {}
+  }
+  const body = document.body
+  if (!body) {
+    return () => {}
+  }
+  try {
+    body.dataset.numpadClosing = '1'
+  } catch {
+    body.setAttribute('data-numpad-closing', '1')
+  }
+  let released = false
+  return () => {
+    if (released) return
+    released = true
+    const finalize = () => {
+      try {
+        if (body.dataset) {
+          delete body.dataset.numpadClosing
+        } else {
+          body.removeAttribute('data-numpad-closing')
+        }
+      } catch {
+        body.removeAttribute?.('data-numpad-closing')
+      }
+    }
+    rafPair(finalize)
+  }
+}
+
 let resolveInput = null
 let buffer = '0'
 let baseValue = 0
@@ -240,12 +282,22 @@ function closeNumpad (commitValue = null, reason = 'close', focusDirection = nul
   devlog.warnIfSlow('numpad:close', closeMeasure || closeDuration, 50)
 }
 
-function commitValue (reason = 'commit', focusDirection = null) {
+function commitValue (reason = 'commit', focusDirection = null, options = {}) {
+  const { guardClose = false } = options || {}
   devlog.mark('numpad:commit:start')
   devlog.time('numpad:commit')
   try {
     const value = evalExpr(buffer, baseValue)
-    closeNumpad(String(value), reason, focusDirection)
+    if (guardClose) {
+      const releaseGuard = activateClosingGuard()
+      try {
+        closeNumpad(String(value), reason, focusDirection)
+      } finally {
+        releaseGuard()
+      }
+    } else {
+      closeNumpad(String(value), reason, focusDirection)
+    }
   } catch (error) {
     if (screen && typeof screen.animate === 'function') {
       screen.animate([{ opacity: 1 }, { opacity: 0.2 }, { opacity: 1 }], { duration: 160 })
@@ -263,7 +315,7 @@ function applyKey (key) {
     case 'enter':
       devlog.mark('numpad:clickOK→close:start')
       devlog.time('numpad:clickOK→close')
-      commitValue('commit-button')
+      commitValue('commit-button', null, { guardClose: true })
       devlog.mark('numpad:clickOK→close:end')
       {
         const measured = devlog.measure('numpad:clickOK→close', 'numpad:clickOK→close:start', 'numpad:clickOK→close:end')
@@ -363,7 +415,7 @@ function handleKeydown (event) {
     event.preventDefault()
     devlog.mark('numpad:key→close:start')
     devlog.time('numpad:key→close')
-    commitValue('enter-key')
+    commitValue('enter-key', null, { guardClose: true })
     devlog.mark('numpad:key→close:end')
     {
       const measured = devlog.measure('numpad:key→close', 'numpad:key→close:start', 'numpad:key→close:end')
@@ -459,6 +511,11 @@ export function openNumpad (options = {}) {
   document.documentElement.classList.add('np-lock')
 
   previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
+  if (previousFocus instanceof HTMLElement) {
+    try {
+      previousFocus.blur()
+    } catch {}
+  }
 
   setBackgroundInert()
   attachFocusTrap()
