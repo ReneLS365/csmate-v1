@@ -301,6 +301,33 @@ round:rgba(255,255,255,0.03)}
   padding-bottom:12px;
 }
 
+.materials-virtual-list{
+  display:block !important;
+  position:relative;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  padding-bottom:12px;
+  max-height:clamp(360px,70vh,720px);
+  border-radius:12px;
+}
+
+.materials-virtual-pool{
+  position:absolute;
+  inset:0;
+}
+
+.materials-virtual-spacer{
+  width:100%;
+  height:1px;
+  pointer-events:none;
+  visibility:hidden;
+}
+
+.materials-virtual-list .material-row,
+.materials-virtual-list .csm-row{
+  width:100%;
+}
+
 .materials-list .mat-row,
 .csm-materials-list .csm-row{
   border:none;

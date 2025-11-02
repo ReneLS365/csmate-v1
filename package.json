@@ -20,7 +20,8 @@
     "e2e": "playwright test --project=chromium",
     "e2e:headed": "playwright test --headed --project=chromium",
     "test:e2e": "playwright test --reporter=line",
-    "ci": "npm run lint && npm run test -- --coverage && npm run build"
+    "ci": "npm run lint && npm run test -- --coverage && npm run build",
+    "lhci": "npm run build && lhci autorun --collect.url=http://127.0.0.1:4173 --collect.numberOfRuns=1 --collect.startServerCommand=\"npm run serve:dist\" --collect.settings.chromeFlags=\"--no-sandbox --headless=new --disable-gpu --disable-dev-shm-usage\" --assert.preset=lighthouse:recommended --upload.target=filesystem"
   },
   "devDependencies": {
     "@lhci/cli": "^0.13.0",
