@@ -1,12 +1,23 @@
 import { openNumpad } from './numpad.js'
 import { devlog } from '../utils/devlog.js'
 
+let autoFieldId = 0
+
 function parseNumericValue (value) {
   if (typeof value !== 'string') return 0
   const normalized = value.replace(/,/g, '.').trim()
   if (normalized === '') return 0
   const parsed = Number.parseFloat(normalized)
   return Number.isFinite(parsed) ? parsed : 0
+}
+
+function ensureFieldIdentifier (input) {
+  if (!(input instanceof HTMLInputElement)) return
+  if (input.hasAttribute('data-numpad-field')) return
+  const explicit = input.getAttribute('id') || input.getAttribute('name') || input.dataset.id || ''
+  autoFieldId += 1
+  const value = explicit && explicit.trim() ? explicit.trim() : `np-field-${autoFieldId}`
+  input.setAttribute('data-numpad-field', value)
 }
 
 function formatResult (value, useComma) {
@@ -21,6 +32,7 @@ function applyBinding (input) {
   if (input.disabled) return
 
   input.dataset.npBound = 'true'
+  ensureFieldIdentifier(input)
   const originalInputMode = input.getAttribute('inputmode')
   if (!originalInputMode || originalInputMode === 'numeric') {
     input.setAttribute('inputmode', 'decimal')

@@ -1998,7 +1998,7 @@ function addWorker() {
     <div class="worker-grid">
       <label>
         <span>Timer</span>
-        <input type="text" class="worker-hours" value="0" inputmode="decimal" data-numpad="true" data-decimal="comma">
+        <input type="text" class="worker-hours" value="0" inputmode="decimal" data-numpad="true" data-decimal="comma" data-numpad-field="worker-hours-${workerCount}">
       </label>
       <label>
         <span>Uddannelse</span>
@@ -2009,7 +2009,7 @@ function addWorker() {
       </label>
       <label>
         <span>Mentortillæg (22,26 kr/t)</span>
-        <input type="text" class="worker-tillaeg" value="0" inputmode="decimal" data-numpad="true" data-decimal="comma">
+        <input type="text" class="worker-tillaeg" value="0" inputmode="decimal" data-numpad="true" data-decimal="comma" data-numpad-field="worker-tillaeg-${workerCount}">
       </label>
     </div>
     <div class="worker-output" aria-live="polite"></div>
