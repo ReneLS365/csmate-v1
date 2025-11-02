@@ -21,4 +21,4 @@ jobs:
           PREVIEW_URL: http://127.0.0.1:4173
         run: npx lhci collect --url=$PREVIEW_URL --numberOfRuns=1 --settings.preset=desktop --upload.target=filesystem --outputDir=.lighthouse
       - name: Assert 100/100
-        run: npx lhci assert --config=.lighthouserc.mjs
+        run: npx lhci assert --config=.lighthouserc.cjs
