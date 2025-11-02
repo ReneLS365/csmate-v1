@@ -10,7 +10,11 @@
   --pad:12px;
 }
 *{box-sizing:border-box}
-html,body{margin:0;height:100%;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+html,body{margin:0;height:100%;width:100%;max-width:100vw;overflow-x:hidden;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial}
+.app-shell,.app-content,.materials-scroll{max-width:100vw}
+@media (max-width:420px){
+  .app-shell,.app-content,main,header,footer{width:100%;max-width:100vw}
+}
 .app-shell{height:100dvh;height:var(--app-vh,100dvh);display:flex;flex-direction:column}
 .app-content{flex:1 1 auto;min-height:0;overflow:hidden}
 .materials-scroll{height:100%;overflow-y:auto;overscroll-behavior:contain;padding-bottom:0!important;-webkit-overflow-scrolling:touch}
