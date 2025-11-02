@@ -2,13 +2,98 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import pkg from 'pngjs'
-
-const { PNG } = pkg
+import { deflateSync } from 'node:zlib'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
 const projectRoot = resolve(__dirname, '..')
+
+const PNG_SIGNATURE = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])
+const CRC_TABLE = createCrcTable()
+
+function createCrcTable () {
+  const table = new Uint32Array(256)
+  for (let n = 0; n < 256; n++) {
+    let c = n
+    for (let k = 0; k < 8; k++) {
+      c = (c & 1) ? (0xedb88320 ^ (c >>> 1)) : (c >>> 1)
+    }
+    table[n] = c >>> 0
+  }
+  return table
+}
+
+function crc32 (buffer) {
+  let crc = 0xffffffff
+  for (let i = 0; i < buffer.length; i++) {
+    crc = CRC_TABLE[(crc ^ buffer[i]) & 0xff] ^ (crc >>> 8)
+  }
+  return (crc ^ 0xffffffff) >>> 0
+}
+
+function encodeChunk (type, data) {
+  const chunk = Buffer.alloc(8 + data.length + 4)
+  chunk.writeUInt32BE(data.length, 0)
+  chunk.write(type, 4, 4, 'ascii')
+  data.copy(chunk, 8)
+  const crc = crc32(Buffer.concat([Buffer.from(type, 'ascii'), data]))
+  chunk.writeUInt32BE(crc >>> 0, chunk.length - 4)
+  return chunk
+}
+
+function encodePng (image) {
+  const { width, height, data } = image
+  const ihdr = Buffer.alloc(13)
+  ihdr.writeUInt32BE(width, 0)
+  ihdr.writeUInt32BE(height, 4)
+  ihdr[8] = 8 // bit depth
+  ihdr[9] = 6 // RGBA
+  ihdr[10] = 0
+  ihdr[11] = 0
+  ihdr[12] = 0
+
+  const rowSize = width * 4
+  const raw = Buffer.alloc((rowSize + 1) * height)
+  for (let y = 0; y < height; y++) {
+    const rowStart = y * (rowSize + 1)
+    raw[rowStart] = 0 // filter type
+    const srcStart = y * rowSize
+    for (let x = 0; x < rowSize; x++) {
+      raw[rowStart + 1 + x] = data[srcStart + x]
+    }
+  }
+
+  const idat = deflateSync(raw)
+
+  return Buffer.concat([
+    PNG_SIGNATURE,
+    encodeChunk('IHDR', ihdr),
+    encodeChunk('IDAT', idat),
+    encodeChunk('IEND', Buffer.alloc(0))
+  ])
+}
+
+class PngImage {
+  constructor (width, height) {
+    this.width = width
+    this.height = height
+    this.data = new Uint8ClampedArray(width * height * 4)
+  }
+
+  setPixel (x, y, color) {
+    if (x < 0 || y < 0 || x >= this.width || y >= this.height) return
+    const idx = (this.width * y + x) * 4
+    const { r, g, b, a = 255 } = color
+    this.data[idx] = clampColor(r)
+    this.data[idx + 1] = clampColor(g)
+    this.data[idx + 2] = clampColor(b)
+    this.data[idx + 3] = clampColor(a)
+  }
+}
+
+function clampColor (value) {
+  return Math.max(0, Math.min(255, Math.round(value)))
+}
 
 const palette = {
   midnight: parseColor('#0f172a'),
@@ -49,34 +134,29 @@ function parseColor (hex, alpha = 255) {
 function mix (a, b, factor) {
   const clamp = Math.max(0, Math.min(1, factor))
   return {
-    r: Math.round(a.r + (b.r - a.r) * clamp),
-    g: Math.round(a.g + (b.g - a.g) * clamp),
-    b: Math.round(a.b + (b.b - a.b) * clamp),
-    a: Math.round(a.a + (b.a - a.a) * clamp)
+    r: a.r + (b.r - a.r) * clamp,
+    g: a.g + (b.g - a.g) * clamp,
+    b: a.b + (b.b - a.b) * clamp,
+    a: a.a + (b.a - a.a) * clamp
   }
 }
 
-function setPixel (png, x, y, color) {
-  if (x < 0 || y < 0 || x >= png.width || y >= png.height) return
-  const idx = (png.width * y + x) << 2
-  png.data[idx] = color.r
-  png.data[idx + 1] = color.g
-  png.data[idx + 2] = color.b
-  png.data[idx + 3] = color.a ?? 255
-}
-
 function fillRect (png, x, y, width, height, color) {
-  const clampedColor = color.a === undefined ? { ...color, a: 255 } : color
-  for (let iy = Math.max(0, y); iy < Math.min(png.height, y + height); iy++) {
-    for (let ix = Math.max(0, x); ix < Math.min(png.width, x + width); ix++) {
-      setPixel(png, ix, iy, clampedColor)
+  const fillColor = color.a === undefined ? { ...color, a: 255 } : color
+  const startX = Math.max(0, x)
+  const startY = Math.max(0, y)
+  const endX = Math.min(png.width, x + width)
+  const endY = Math.min(png.height, y + height)
+  for (let iy = startY; iy < endY; iy++) {
+    for (let ix = startX; ix < endX; ix++) {
+      png.setPixel(ix, iy, fillColor)
     }
   }
 }
 
 function fillRoundedRect (png, x, y, width, height, radius, color) {
   const r = Math.max(0, Math.min(Math.floor(radius), Math.min(width, height) / 2))
-  const squareColor = color.a === undefined ? { ...color, a: 255 } : color
+  const fillColor = color.a === undefined ? { ...color, a: 255 } : color
   for (let iy = 0; iy < height; iy++) {
     for (let ix = 0; ix < width; ix++) {
       const globalX = x + ix
@@ -98,12 +178,12 @@ function fillRoundedRect (png, x, y, width, height, radius, color) {
       }
 
       if (dx <= 0 && dy <= 0) {
-        setPixel(png, globalX, globalY, squareColor)
+        png.setPixel(globalX, globalY, fillColor)
         continue
       }
 
       if ((dx * dx) + (dy * dy) <= r * r) {
-        setPixel(png, globalX, globalY, squareColor)
+        png.setPixel(globalX, globalY, fillColor)
       }
     }
   }
@@ -114,14 +194,14 @@ function fillVerticalGradient (png, topColor, bottomColor) {
     const ratio = png.height <= 1 ? 0 : y / (png.height - 1)
     const color = mix(topColor, bottomColor, ratio)
     for (let x = 0; x < png.width; x++) {
-      setPixel(png, x, y, color)
+      png.setPixel(x, y, color)
     }
   }
 }
 
 function drawCircle (png, cx, cy, radius, color) {
   const sq = radius * radius
-  const finalColor = color.a === undefined ? { ...color, a: 255 } : color
+  const fillColor = color.a === undefined ? { ...color, a: 255 } : color
   const minX = Math.max(0, Math.floor(cx - radius))
   const maxX = Math.min(png.width - 1, Math.ceil(cx + radius))
   const minY = Math.max(0, Math.floor(cy - radius))
@@ -132,14 +212,14 @@ function drawCircle (png, cx, cy, radius, color) {
       const dx = x - cx
       const dy = y - cy
       if ((dx * dx) + (dy * dy) <= sq) {
-        setPixel(png, x, y, finalColor)
+        png.setPixel(x, y, fillColor)
       }
     }
   }
 }
 
 function drawScaffoldIcon (size, { maskable = false } = {}) {
-  const png = new PNG({ width: size, height: size })
+  const png = new PngImage(size, size)
   fillVerticalGradient(png, palette.midnight, palette.slate)
 
   const haloRadius = size * (maskable ? 0.44 : 0.42)
@@ -155,12 +235,10 @@ function drawScaffoldIcon (size, { maskable = false } = {}) {
 
   const structureColor = mix(palette.highlight, palette.accentSoft, 0.35)
 
-  // Vertical columns
   fillRect(png, Math.round(size / 2) - barOffset - Math.floor(columnWidth / 2), verticalTop, columnWidth, verticalBottom - verticalTop, structureColor)
   fillRect(png, Math.round(size / 2) + barOffset - Math.floor(columnWidth / 2), verticalTop, columnWidth, verticalBottom - verticalTop, structureColor)
   fillRect(png, Math.round(size / 2) - Math.floor(columnWidth / 2), verticalTop, columnWidth, verticalBottom - verticalTop, structureColor)
 
-  // Horizontal connectors
   for (let i = 0; i < 3; i++) {
     const y = verticalTop + i * connectorGap
     fillRect(
@@ -173,14 +251,13 @@ function drawScaffoldIcon (size, { maskable = false } = {}) {
     )
   }
 
-  // Highlight node
   drawCircle(png, size * 0.33, size * 0.34, Math.max(6, size * 0.08), mix(palette.highlight, palette.accentSoft, 0.5))
 
   return png
 }
 
 function drawScreenshot (width, height, { layout }) {
-  const png = new PNG({ width, height })
+  const png = new PngImage(width, height)
   fillVerticalGradient(png, palette.midnight, palette.deepSea)
 
   const safeX = Math.round(width * 0.07)
@@ -188,7 +265,6 @@ function drawScreenshot (width, height, { layout }) {
   const safeWidth = width - safeX * 2
   const safeHeight = height - safeY * 2
 
-  // Outer frame
   fillRoundedRect(png, safeX, safeY, safeWidth, safeHeight, Math.round(Math.min(width, height) * 0.04), palette.surface)
 
   const contentPadding = Math.round(Math.min(width, height) * 0.04)
@@ -197,7 +273,6 @@ function drawScreenshot (width, height, { layout }) {
   const contentWidth = safeWidth - contentPadding * 2
   const contentHeight = safeHeight - contentPadding * 2
 
-  // Header / hero block
   const headerHeight = Math.round(contentHeight * (layout === 'landscape' ? 0.28 : 0.22))
   fillRoundedRect(png, contentX, contentY, contentWidth, headerHeight, Math.round(contentPadding * 0.7), palette.panel)
   fillRoundedRect(
@@ -288,7 +363,6 @@ function drawScreenshot (width, height, { layout }) {
     }
   }
 
-  // Floating button / actions
   const buttonSize = Math.round(Math.min(width, height) * 0.1)
   fillCircleButton(png, contentX + contentWidth - buttonSize - Math.round(contentPadding * 0.3), bodyTop - Math.round(buttonSize * 0.6), buttonSize, palette.accent)
 
@@ -301,20 +375,10 @@ function fillCircleButton (png, x, y, size, color) {
   drawCircle(png, x + size / 2, y + size / 2, size * 0.18, palette.highlight)
 }
 
-async function pngToBuffer (png) {
-  return await new Promise((resolve, reject) => {
-    const chunks = []
-    png.pack()
-      .on('data', chunk => chunks.push(chunk))
-      .on('end', () => resolve(Buffer.concat(chunks)))
-      .on('error', reject)
-  })
-}
-
 async function writePng (relativePath, png) {
   const absolute = resolve(projectRoot, relativePath)
   await mkdir(dirname(absolute), { recursive: true })
-  const buffer = await pngToBuffer(png)
+  const buffer = encodePng(png)
   await writeFile(absolute, buffer)
   return absolute
 }

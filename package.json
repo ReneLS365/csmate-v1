@@ -39,7 +39,6 @@
     "http-server": "^14.1.1",
     "jsdom": "^27.0.0",
     "netlify-plugin-minify-html": "^0.3.1",
-    "pngjs": "^7.0.0",
     "start-server-and-test": "^2.0.3",
     "vitest": "^1.4.0",
     "wait-on": "^8.0.2",
