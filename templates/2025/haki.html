@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="da">
+<head>
+  <meta charset="utf-8">
+  <title>HAKI akkordseddel 2025</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+    }
+    body {
+      margin: 32px;
+      color: #0f172a;
+      background: #ffffff;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+    header {
+      border-bottom: 2px solid #1e293b;
+      padding-bottom: 16px;
+      margin-bottom: 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+    h1 {
+      font-size: 24px;
+      margin: 0;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .meta {
+      text-align: right;
+      font-size: 12px;
+    }
+    .meta div {
+      margin-bottom: 4px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 24px;
+    }
+    th, td {
+      border: 1px solid #cbd5f5;
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background: #e2e8f0;
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 12px;
+    }
+    tbody tr:nth-child(even) {
+      background: #f8fafc;
+    }
+    tfoot td {
+      font-weight: 600;
+    }
+    .totals {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .totals td {
+      padding: 6px 8px;
+      font-size: 13px;
+    }
+    .totals tr:nth-child(odd) td {
+      background: #f1f5f9;
+    }
+    .totals tr:last-child td {
+      font-size: 14px;
+      font-weight: 700;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>HAKI 2025</h1>
+      <p>Akkordseddel for {{system}}</p>
+    </div>
+    <div class="meta">
+      <div><strong>Firma:</strong> {{firma}}</div>
+      <div><strong>Projekt:</strong> {{projekt}}</div>
+      <div><strong>Adresse:</strong> {{adresse}}</div>
+      <div><strong>Sagsnr.:</strong> {{sagsnr}}</div>
+      <div><strong>Dato:</strong> {{dagsdato}}</div>
+    </div>
+  </header>
+  <table aria-label="Materialelinjer">
+    <thead>
+      <tr>
+        <th>Varenr.</th>
+        <th>Beskrivelse</th>
+        <th>Enhed</th>
+        <th>Pris</th>
+        <th>Antal</th>
+        <th>Beløb</th>
+      </tr>
+    </thead>
+    <tbody>
+{{#linjer}}
+      <tr>
+        <td>{{varenr}}</td>
+        <td>{{navn}}</td>
+        <td>{{enhed}}</td>
+        <td>{{pris}}</td>
+        <td>{{antal}}</td>
+        <td>{{sum}}</td>
+      </tr>
+{{/linjer}}
+    </tbody>
+  </table>
+  <table class="totals" aria-label="Totaler">
+    <tbody>
+{{#totaler}}
+      <tr>
+        <td>{{label}}</td>
+        <td>{{value}}</td>
+      </tr>
+{{/totaler}}
+    </tbody>
+  </table>
+</body>
+</html>

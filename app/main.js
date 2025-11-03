@@ -8,6 +8,7 @@ import { sha256Hex, constantTimeEquals } from './src/lib/sha256.js'
 import { ensureExportLibs, ensureZipLib, prefetchExportLibs } from './src/features/export/lazy-libs.js'
 import { installLazyNumpad } from './src/ui/numpad.lazy.js'
 import { createVirtualMaterialsList } from './src/modules/materialsVirtualList.js'
+import { printAkkordsedlerFor, PopupBlockedError } from './src/print/printFlow.js'
 
 const IOS_INSTALL_PROMPT_DISMISSED_KEY = 'csmate.iosInstallPromptDismissed'
 let DEFAULT_ADMIN_CODE_HASH = ''
@@ -632,6 +633,154 @@ const manualMaterials = Array.from({ length: 3 }, (_, index) => ({
   manual: true,
 }));
 
+const PRINT_SYSTEM_KEYS = ['bosta', 'haki', 'modex', 'alfix'];
+let printButtonBusy = false;
+
+function ensurePrintState() {
+  if (typeof window === 'undefined') return { cart: {} };
+  if (!window.__APP_STATE__ || typeof window.__APP_STATE__ !== 'object') {
+    window.__APP_STATE__ = { cart: {} };
+  }
+  const state = window.__APP_STATE__;
+  if (!state.cart || typeof state.cart !== 'object') {
+    state.cart = {};
+  }
+  PRINT_SYSTEM_KEYS.forEach(key => {
+    if (!Array.isArray(state.cart[key])) {
+      state.cart[key] = [];
+    }
+  });
+  if (!Array.isArray(state.activeSystems)) {
+    state.activeSystems = [];
+  }
+  if (!Array.isArray(state.extras)) {
+    state.extras = [];
+  }
+  return state;
+}
+
+function getActiveSystemsFromCart(cart) {
+  return PRINT_SYSTEM_KEYS.filter(key => Array.isArray(cart?.[key]) && cart[key].some(line => toNumber(line?.antal) > 0));
+}
+
+function setAppStateSnapshot(partial = {}) {
+  const current = ensurePrintState();
+  const nextCart = partial.cart
+    ? PRINT_SYSTEM_KEYS.reduce((acc, key) => {
+        acc[key] = Array.isArray(partial.cart?.[key]) ? partial.cart[key] : [];
+        return acc;
+      }, {})
+    : current.cart;
+
+  const nextState = {
+    ...current,
+    ...partial,
+    cart: nextCart
+  };
+
+  nextState.activeSystems = Array.isArray(partial.activeSystems)
+    ? partial.activeSystems
+    : getActiveSystemsFromCart(nextCart);
+
+  if (typeof window !== 'undefined') {
+    window.__APP_STATE__ = nextState;
+  }
+  updatePrintButtonUI(nextState);
+  return nextState;
+}
+
+function buildCartSnapshot(items) {
+  const cart = PRINT_SYSTEM_KEYS.reduce((acc, key) => {
+    acc[key] = [];
+    return acc;
+  }, {});
+
+  items.forEach(item => {
+    if (!item) return;
+    const systemKey = String(item.systemKey || '').toLowerCase();
+    if (!cart[systemKey]) return;
+    const qty = toNumber(item.quantity ?? item.qty ?? item.antal);
+    if (qty <= 0) return;
+    const price = toNumber(item.price ?? item.pris);
+    const rawId = item.varenr ?? item.code ?? item.id;
+    const varenr = rawId != null ? String(rawId) : `${systemKey}-${cart[systemKey].length + 1}`;
+    cart[systemKey].push({
+      varenr,
+      navn: item.name ?? item.navn ?? '',
+      enhed: item.unit ?? item.enhed ?? 'stk',
+      pris: price,
+      antal: qty
+    });
+  });
+
+  return cart;
+}
+
+function buildExtrasList(extra, slaebeBelob) {
+  const entries = [
+    { label: 'Slæb', sum: slaebeBelob },
+    { label: 'Tralleløft', sum: extra?.tralleløft },
+    { label: 'Boring af huller', sum: extra?.huller },
+    { label: 'Boring i beton', sum: extra?.boring },
+    { label: 'Luk af hul', sum: extra?.lukAfHul },
+    { label: 'Opskydeligt rækværk', sum: extra?.opskydeligt },
+    { label: 'Kilometer', sum: extra?.km },
+    { label: 'Øvrige ekstraarbejde', sum: extra?.oevrige }
+  ];
+
+  return entries
+    .map(entry => ({ label: entry.label, sum: toNumber(entry.sum) }))
+    .filter(entry => entry.sum > 0);
+}
+
+function getActiveSystemsFromState() {
+  const state = ensurePrintState();
+  return getActiveSystemsFromCart(state.cart);
+}
+
+function updatePrintButtonUI(state = ensurePrintState()) {
+  const button = document.getElementById('btnPrintAkkord');
+  if (!button) return;
+  const activeSystems = Array.isArray(state.activeSystems) ? state.activeSystems : getActiveSystemsFromCart(state.cart);
+  const label = activeSystems.length <= 1 ? 'Print akkordseddel' : 'Print akkordsedler';
+  button.textContent = label;
+  button.dataset.activeSystems = JSON.stringify(activeSystems);
+  const disabled = printButtonBusy || activeSystems.length === 0;
+  button.disabled = disabled;
+  button.setAttribute('aria-disabled', disabled ? 'true' : 'false');
+}
+
+async function handlePrintButtonClick() {
+  if (printButtonBusy) return;
+  const systems = getActiveSystemsFromState();
+  if (!systems.length) return;
+  printButtonBusy = true;
+  updatePrintButtonUI();
+  try {
+    await printAkkordsedlerFor(systems);
+    updateActionHint('');
+  } catch (error) {
+    if (error instanceof PopupBlockedError || error?.code === 'POPUP_BLOCKED') {
+      updateActionHint('Tillad popups for at printe akkordsedler', 'error');
+    } else {
+      console.error('Kunne ikke printe akkordsedler', error);
+      updateActionHint('Kunne ikke printe akkordsedler.', 'error');
+    }
+  } finally {
+    printButtonBusy = false;
+    updatePrintButtonUI();
+  }
+}
+
+if (typeof window !== 'undefined') {
+  const printerApi = window.__APP_PRINTER__ && typeof window.__APP_PRINTER__ === 'object'
+    ? window.__APP_PRINTER__
+    : {};
+  printerApi.updatePrintButton = () => updatePrintButtonUI();
+  printerApi.setState = (next) => setAppStateSnapshot(next || {});
+  window.__APP_PRINTER__ = printerApi;
+}
+
 function hydrateMaterialListsFromJson() {
   const mapList = (target, entries, prefix) => {
     if (!Array.isArray(entries) || entries.length === 0) return false;
@@ -1106,6 +1255,29 @@ function performTotalsUpdate() {
   renderCurrency('[data-total="labor"]', totals.montoerLonMedTillaeg);
   renderCurrency('[data-total="project"]', totals.projektsum);
 
+  const sagsinfo = collectSagsinfo();
+  const cartSnapshot = buildCartSnapshot(aggregateSelectedSystemData());
+  const extrasList = buildExtrasList(ekstraarbejde, slaebeBelob);
+  setAppStateSnapshot({
+    firma: sagsinfo?.kunde ?? '',
+    projekt: sagsinfo?.navn ?? '',
+    adresse: sagsinfo?.adresse ?? '',
+    sagsnr: sagsinfo?.sagsnummer ?? '',
+    dagsdato: sagsinfo?.dato ?? '',
+    includeDemontage: jobType === 'demontage',
+    wage: totals.montoerLonMedTillaeg,
+    cart: cartSnapshot,
+    extras: extrasList,
+    jobType,
+    totals: {
+      materials: totals.materialer,
+      montage: montageBase,
+      demontage: montageBase * 0.5,
+      extrasTotal: extrasList.reduce((sum, entry) => sum + entry.sum, 0),
+      project: totals.projektsum
+    }
+  });
+
   const montageField = document.getElementById('montagepris');
   if (montageField) {
     montageField.value = montageBase.toFixed(2);
@@ -1568,7 +1740,7 @@ function validateSagsinfo() {
     el.classList.toggle('invalid', !fieldValid);
   });
 
-  ['btnExportCSV', 'btnExportAll', 'btnExportZip', 'btnPrint'].forEach(id => {
+  ['btnExportCSV', 'btnExportAll', 'btnExportZip', 'btnPrintAkkord'].forEach(id => {
     const btn = document.getElementById(id);
     if (btn) btn.disabled = !isValid;
   });
@@ -1578,6 +1750,15 @@ function validateSagsinfo() {
   } else {
     updateActionHint(DEFAULT_ACTION_HINT, 'error');
   }
+
+  const info = collectSagsinfo();
+  setAppStateSnapshot({
+    firma: info?.kunde ?? '',
+    projekt: info?.navn ?? '',
+    adresse: info?.adresse ?? '',
+    sagsnr: info?.sagsnummer ?? '',
+    dagsdato: info?.dato ?? ''
+  });
 
   return isValid;
 }
@@ -2314,14 +2495,21 @@ function beregnLon() {
       resultatDiv.appendChild(line);
     });
 
-    const actions = document.createElement('div');
-    actions.className = 'ekomplet-actions no-print';
+  const actions = document.createElement('div');
+  actions.className = 'ekomplet-actions no-print';
 
-    const btn = document.createElement('button');
-    btn.id = 'btnEkompletExport';
-    btn.type = 'button';
-    btn.textContent = 'Indberet til E-komplet';
-    actions.appendChild(btn);
+  const printBtn = document.createElement('button');
+  printBtn.id = 'btnPrintAkkord';
+  printBtn.type = 'button';
+  printBtn.textContent = 'Print akkordsedler';
+  printBtn.disabled = true;
+  actions.appendChild(printBtn);
+
+  const btn = document.createElement('button');
+  btn.id = 'btnEkompletExport';
+  btn.type = 'button';
+  btn.textContent = 'Indberet til E-komplet';
+  actions.appendChild(btn);
 
     const status = document.createElement('p');
     status.id = 'ekompletStatus';
@@ -3350,6 +3538,12 @@ function initApp() {
   document.getElementById('btnExportZip')?.addEventListener('click', async () => {
     await exportZip();
   });
+
+  const printButton = document.getElementById('btnPrintAkkord');
+  if (printButton) {
+    printButton.addEventListener('click', () => handlePrintButtonClick());
+  }
+  updatePrintButtonUI();
 
   ['btnExportAll', 'btnExportZip'].forEach(id => {
     const button = document.getElementById(id);
