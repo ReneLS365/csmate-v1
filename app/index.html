@@ -25,7 +25,7 @@
     <button type="button" id="iosInstallDismiss" class="ios-install-dismiss" aria-label="Skjul iOS installationshint">✕</button>
   </div>
   <div id="app" class="app-shell">
-    <header>
+    <header data-allow-click>
       <div class="bar">
         <h1 class="ttl">akkordseddel</h1>
         <nav>
@@ -146,7 +146,7 @@
     </div>
     <p id="actionHint" class="hint no-print">Udfyld Sagsinfo for at fortsætte.</p>
 
-    <fieldset class="no-print">
+    <fieldset class="no-print" data-allow-click>
       <legend>Admin</legend>
       <div class="row">
         <label class="sr-only" for="adminCode">Admin kode</label>
@@ -288,7 +288,7 @@
     </div>
   </div>
 
-  <div class="csm-np-overlay" id="npOverlay" aria-hidden="true" data-testid="numpad-backdrop">
+  <div class="csm-np-overlay" id="npOverlay" aria-hidden="true" data-testid="numpad-backdrop" data-allow-click>
     <div class="csm-np" role="dialog" aria-modal="true" aria-label="Tal-tastatur" tabindex="-1" data-testid="numpad-dialog">
       <div class="csm-np-screen" id="npScreen" aria-live="polite">0</div>
       <div class="csm-np-grid">
