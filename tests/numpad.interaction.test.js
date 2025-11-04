@@ -179,4 +179,28 @@ describe('numpad interactions', () => {
     await promise
     expect(input?.hasAttribute('aria-hidden')).toBe(false)
   })
+
+  it('falls back to first field on Escape if original field is disabled', async () => {
+    const input = document.getElementById('hours')
+    const next = document.getElementById('next')
+    input.value = '7'
+
+    const resultPromise = openNumpad({ startValue: '7', baseValue: 7 })
+    expect(isNumpadOpen()).toBe(true)
+
+    // Disable the original field while numpad is open
+    input.disabled = true
+
+    const escapeEvent = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })
+    document.dispatchEvent(escapeEvent)
+
+    const result = await resultPromise
+    expect(result).toBeNull()
+    expect(isNumpadOpen()).toBe(false)
+
+    // Focus should fall back to the first available field for accessibility
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(document.activeElement).toBe(next)
+  })
 })

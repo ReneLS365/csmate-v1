@@ -300,7 +300,7 @@ function closeNumpad (commitValue = null, reason = 'close', focusDirection = nul
   // Handle focus restoration based on direction
   // - 'none': Return focus to the original field without any fallback
   // - 'forward'/'backward': Navigate to next/previous field (Tab navigation)
-  // - null: Return focus to original field if available
+  // - null: Return focus to original field if available, with fallback for accessibility
   const direction = ['backward', 'forward'].includes(focusDirection) ? focusDirection : null
   queueMicrotask(() => {
     let candidate = null
@@ -317,6 +317,10 @@ function closeNumpad (commitValue = null, reason = 'close', focusDirection = nul
     } else if (isFocusableField(focusTarget)) {
       // null direction: Return focus to original field if available
       candidate = focusTarget
+    } else {
+      // null direction with unavailable original field: Fallback for accessibility
+      // Ensures focus doesn't get stuck on hidden overlay elements
+      candidate = resolveNextField(null, null)
     }
     if (candidate) {
       focusElement(candidate)
