@@ -1,30 +1,30 @@
 {
-  "version": "v20251104T222736",
+  "version": "v20251104T231843",
   "cachePrefix": "csmate",
-  "cacheName": "csmate-v20251104T222736",
+  "cacheName": "csmate-v20251104T231843",
   "precache": [
     {
       "url": "/",
       "file": "app/index.html",
       "aliasFor": "/index.html",
       "exists": true,
-      "bytes": 21144,
-      "sha256": "fb4640194568bc8cd91d04eeb2d26c6c2d4d46ce043abb13e745b8b64e7e6d61"
+      "bytes": 20101,
+      "sha256": "91e173a9773fe85e9d1cdbad5d88671c94ce293c43668cfc40e2f84b3f0c37b9"
     },
     {
       "url": "/?source=pwa",
       "file": "app/index.html",
       "exists": true,
-      "bytes": 21144,
-      "sha256": "fb4640194568bc8cd91d04eeb2d26c6c2d4d46ce043abb13e745b8b64e7e6d61",
+      "bytes": 20101,
+      "sha256": "91e173a9773fe85e9d1cdbad5d88671c94ce293c43668cfc40e2f84b3f0c37b9",
       "duplicateOf": "app/index.html"
     },
     {
       "url": "/index.html",
       "file": "app/index.html",
       "exists": true,
-      "bytes": 21144,
-      "sha256": "fb4640194568bc8cd91d04eeb2d26c6c2d4d46ce043abb13e745b8b64e7e6d61",
+      "bytes": 20101,
+      "sha256": "91e173a9773fe85e9d1cdbad5d88671c94ce293c43668cfc40e2f84b3f0c37b9",
       "duplicateOf": "app/index.html"
     },
     {
@@ -101,8 +101,8 @@
       "url": "/src/ui/numpad.css",
       "file": "app/src/ui/numpad.css",
       "exists": true,
-      "bytes": 3304,
-      "sha256": "5411008aabb9ae928e5ad0c800581723923d6a23e3b677cc8341d7dcb3dabb1f"
+      "bytes": 3391,
+      "sha256": "31e7621aa85f202905dfd88e7d44c3903bb061366df2b72df8328d3926ed219f"
     },
     {
       "url": "/src/styles/fixes.css",
