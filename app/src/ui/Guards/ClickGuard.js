@@ -28,6 +28,8 @@ export function attachClickGuard () {
   if (isAttached) return
   if (typeof document === 'undefined') return
 
+  // Note: passive: false is required because we call preventDefault()
+  // This is necessary to block clicks on non-input elements when locked
   document.addEventListener('pointerdown', handlePointerEvent, { capture: true, passive: false })
   document.addEventListener('click', handlePointerEvent, { capture: true, passive: false })
   isAttached = true

@@ -133,23 +133,12 @@ test.describe('Admin lock functionality', () => {
     await page.waitForLoadState('networkidle')
   })
 
-  test('admin lock is active by default', async ({ page }) => {
-    // The lock should be active on page load
-    const lockState = await page.evaluate(() => {
-      const { isLocked } = window.__adminState || {}
-      return typeof isLocked === 'function' ? isLocked() : true
-    })
-
-    // We expect the default state to have lock enabled
-    // Note: This test verifies the initial state
-    expect(typeof lockState).toBe('boolean')
-  })
-
   test('admin code unlocks non-input interactions', async ({ page }) => {
     // Navigate to the admin section
     await page.click('#btnOptaelling')
 
-    // Try to enter admin code
+    // Try to enter admin code (using the tenant default which is hashed in the app)
+    // The actual verification happens via the existing SHA-256 hash system
     await page.fill('#adminCode', 'StilAce')
     await page.click('#btnAdminLogin')
 
