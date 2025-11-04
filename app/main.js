@@ -8,6 +8,8 @@ import { sha256Hex, constantTimeEquals } from './src/lib/sha256.js'
 import { ensureExportLibs, ensureZipLib, prefetchExportLibs } from './src/features/export/lazy-libs.js'
 import { installLazyNumpad } from './src/ui/numpad.lazy.js'
 import { createVirtualMaterialsList } from './src/modules/materialsVirtualList.js'
+import { initClickGuard } from './src/ui/Guards/ClickGuard.js'
+import { setAdminOk, setLock } from './src/state/admin.js'
 
 const IOS_INSTALL_PROMPT_DISMISSED_KEY = 'csmate.iosInstallPromptDismissed'
 let DEFAULT_ADMIN_CODE_HASH = ''
@@ -29,6 +31,11 @@ async function loadDefaultAdminCode () {
 }
 
 loadDefaultAdminCode()
+
+// Initialize click guard for admin lock functionality
+if (typeof document !== 'undefined') {
+  initClickGuard()
+}
 
 // --- Utility Functions ---
 function resolveSectionId(id) {
@@ -1983,6 +1990,7 @@ async function login() {
   const isValid = await verifyAdminCodeInput(codeInput.value);
   if (isValid) {
     admin = true;
+    setAdminOk(true); // Update admin state for click guard
     codeInput.value = '';
     feedback?.classList.remove('error');
     feedback?.classList.add('success');

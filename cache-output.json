@@ -1,38 +1,38 @@
 {
-  "version": "v20251102T141740",
+  "version": "v20251104T211429",
   "cachePrefix": "csmate",
-  "cacheName": "csmate-v20251102T141740",
+  "cacheName": "csmate-v20251104T211429",
   "precache": [
     {
       "url": "/",
       "file": "app/index.html",
       "aliasFor": "/index.html",
       "exists": true,
-      "bytes": 20563,
-      "sha256": "319ab7e1cb0df76c6993d4fb02cdcf2b8165ac17b313f7d20d69ce715bde233d"
+      "bytes": 20614,
+      "sha256": "eb43b046f82784121639a5b2fa1f15054457b4a8a205cfeff8e4e5f83a0936ff"
     },
     {
       "url": "/?source=pwa",
       "file": "app/index.html",
       "exists": true,
-      "bytes": 20563,
-      "sha256": "319ab7e1cb0df76c6993d4fb02cdcf2b8165ac17b313f7d20d69ce715bde233d",
+      "bytes": 20614,
+      "sha256": "eb43b046f82784121639a5b2fa1f15054457b4a8a205cfeff8e4e5f83a0936ff",
       "duplicateOf": "app/index.html"
     },
     {
       "url": "/index.html",
       "file": "app/index.html",
       "exists": true,
-      "bytes": 20563,
-      "sha256": "319ab7e1cb0df76c6993d4fb02cdcf2b8165ac17b313f7d20d69ce715bde233d",
+      "bytes": 20614,
+      "sha256": "eb43b046f82784121639a5b2fa1f15054457b4a8a205cfeff8e4e5f83a0936ff",
       "duplicateOf": "app/index.html"
     },
     {
       "url": "/main.js",
       "file": "app/main.js",
       "exists": true,
-      "bytes": 123160,
-      "sha256": "1b52e6200309e5aa3776bddeecb8e9c226fdf993c424423b32d0a8f6589f9fbd"
+      "bytes": 123458,
+      "sha256": "d6b6bd8120d1eb734b14cb928fdbc445096145fced1a19d6dcdd83db0325cdb9"
     },
     {
       "url": "/style.css",
@@ -73,36 +73,36 @@
       "url": "/icons/icon-192.png",
       "file": "public/icons/icon-192.png",
       "exists": true,
-      "bytes": 7497,
-      "sha256": "4ccf9de9a747e3c3337b5131c0e376ce68cb08d6326652943f38d24fd9513460"
+      "bytes": 1960,
+      "sha256": "65302c3b49407735f8a9e9d81b3b00086a78084b15810ca824e4d85a66bfcb23"
     },
     {
       "url": "/icons/icon-192-maskable.png",
       "file": "public/icons/icon-192-maskable.png",
       "exists": true,
-      "bytes": 12540,
-      "sha256": "ab6586102649b8db9586417eadae54bfa4b014624e2f6ab30a1d0cab46d7c12f"
+      "bytes": 1998,
+      "sha256": "b2ff2d4bafca53f60589648c2e20ee716a4abe6604a843dec6da2e83e9aaa0d3"
     },
     {
       "url": "/icons/icon-512.png",
       "file": "public/icons/icon-512.png",
       "exists": true,
-      "bytes": 39851,
-      "sha256": "ec75933e2879f73b5178e006d4578041d4a4f6592fbb9c4ca1c4c2e0a502eb17"
+      "bytes": 8075,
+      "sha256": "44b9cbdcdcd0f38e8574d149a2e8f7f64aa78573dc609d52c26ca88c6cfc24e8"
     },
     {
       "url": "/icons/icon-512-maskable.png",
       "file": "public/icons/icon-512-maskable.png",
       "exists": true,
-      "bytes": 63251,
-      "sha256": "5875e1a1a64cc03b6e2fd17f2c5fdb4387498720a5ba34697b649a10dc7c76e0"
+      "bytes": 8219,
+      "sha256": "290fdb63b317909ea9b28541d6285817974a0cdf20add739ab79a8d673e53d15"
     },
     {
       "url": "/src/ui/numpad.css",
       "file": "app/src/ui/numpad.css",
       "exists": true,
-      "bytes": 2298,
-      "sha256": "852a791ba90f65b153f9c0147e65d3ad4de9f7124720e8e90e400bd4bd82523a"
+      "bytes": 3050,
+      "sha256": "cd307b3029d683b2be8fca74e82ce9ced9e782336b35caf1eda3faf70c26b1f2"
     },
     {
       "url": "/src/styles/fixes.css",

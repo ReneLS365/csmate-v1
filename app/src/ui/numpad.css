@@ -128,6 +128,45 @@
   }
 }
 
+/* Fullscreen mode on mobile devices (≤768px) */
+@media (max-width: 768px) {
+  .csm-np-overlay {
+    align-items: stretch;
+    background: rgba(0, 0, 0, 0.5);
+  }
+
+  .csm-np {
+    width: 100%;
+    max-width: 100%;
+    max-height: none;
+    height: 100vh;
+    height: 100dvh; /* Use dynamic viewport height for better mobile support */
+    border-radius: 0;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .csm-np-grid {
+    flex: 1;
+    align-content: center;
+  }
+
+  .csm-np-enter {
+    position: sticky;
+    bottom: 0;
+    margin-top: auto;
+  }
+
+  .csm-np-close {
+    top: 16px;
+    right: 16px;
+    width: 44px;
+    height: 44px;
+    font-size: 20px;
+  }
+}
+
 body[data-numpad-closing='1'] * {
   outline: none !important;
 }
