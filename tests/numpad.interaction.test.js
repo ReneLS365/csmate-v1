@@ -82,6 +82,56 @@ describe('numpad interactions', () => {
     expect(document.activeElement).toBe(input)
   })
 
+  it('commits with Enter button click and does NOT jump focus to next field', async () => {
+    const input = document.getElementById('hours')
+    const next = document.getElementById('next')
+    input.value = '8'
+
+    const resultPromise = openNumpad({ startValue: '8', baseValue: 8 })
+    expect(isNumpadOpen()).toBe(true)
+
+    // Simulate clicking the Enter button
+    const enterButton = document.querySelector('button[data-key="enter"]')
+    expect(enterButton).toBeInstanceOf(HTMLElement)
+
+    const pointerEvent = new PointerEvent('pointerdown', {
+      bubbles: true,
+      cancelable: true,
+      pointerId: 1
+    })
+    enterButton.dispatchEvent(pointerEvent)
+
+    const result = await resultPromise
+    expect(result).toBe('8')
+    expect(isNumpadOpen()).toBe(false)
+
+    // Focus should return to the original input, NOT jump to the next field
+    await Promise.resolve()
+    expect(document.activeElement).toBe(input)
+    expect(document.activeElement).not.toBe(next)
+  })
+
+  it('commits with Enter key and does NOT jump focus to next field', async () => {
+    const input = document.getElementById('hours')
+    const next = document.getElementById('next')
+    input.value = '5'
+
+    const resultPromise = openNumpad({ startValue: '5', baseValue: 5 })
+    expect(isNumpadOpen()).toBe(true)
+
+    const enterEvent = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })
+    document.dispatchEvent(enterEvent)
+
+    const result = await resultPromise
+    expect(result).toBe('5')
+    expect(isNumpadOpen()).toBe(false)
+
+    // Focus should return to the original input, NOT jump to the next field
+    await Promise.resolve()
+    expect(document.activeElement).toBe(input)
+    expect(document.activeElement).not.toBe(next)
+  })
+
   it('commits on Tab and focuses the next numpad field', async () => {
     const input = document.getElementById('hours')
     const next = document.getElementById('next')
@@ -128,5 +178,29 @@ describe('numpad interactions', () => {
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
     await promise
     expect(input?.hasAttribute('aria-hidden')).toBe(false)
+  })
+
+  it('falls back to first field on Escape if original field is disabled', async () => {
+    const input = document.getElementById('hours')
+    const next = document.getElementById('next')
+    input.value = '7'
+
+    const resultPromise = openNumpad({ startValue: '7', baseValue: 7 })
+    expect(isNumpadOpen()).toBe(true)
+
+    // Disable the original field while numpad is open
+    input.disabled = true
+
+    const escapeEvent = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })
+    document.dispatchEvent(escapeEvent)
+
+    const result = await resultPromise
+    expect(result).toBeNull()
+    expect(isNumpadOpen()).toBe(false)
+
+    // Focus should fall back to the first available field for accessibility
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(document.activeElement).toBe(next)
   })
 })

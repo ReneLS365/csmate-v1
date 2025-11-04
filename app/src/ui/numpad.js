@@ -1,5 +1,40 @@
 import { devlog } from '../utils/devlog.js'
 
+/**
+ * Numpad Focus Management Fix
+ * ============================
+ *
+ * BUG FIXED: Enter key causing unwanted focus jump to next field
+ *
+ * Root Cause:
+ * - Previously, commitValue was called with focusDirection=null for Enter key/button
+ * - In closeNumpad, when direction was null and previousFocus was unavailable,
+ *   it would fallback to resolveNextField(null, null) which returns currentElement || fields[0]
+ * - This caused focus to jump to the first field after pressing Enter when the original field was not available
+ *
+ * Solution:
+ * - Added new focus direction 'none' to distinguish "no focus change" from null
+ * - Updated applyKey and handleKeydown to use 'none' for Enter key/button
+ * - Modified closeNumpad to handle 'none' direction:
+ *   * Only returns focus to original field if it's still focusable
+ *   * Does NOT fallback to first field if original is unavailable
+ *   * Leaves focus unchanged if original field is not focusable
+ * - Tab/Shift+Tab navigation still works as expected with 'forward'/'backward' directions
+ *
+ * Focus Direction Values:
+ * - 'forward': Tab key - move to next field
+ * - 'backward': Shift+Tab - move to previous field
+ * - 'none': Enter key - close and return focus without fallback
+ * - null: Escape/close button - return focus to original field if available
+ *
+ * Suggestions for Further Improvements:
+ * - Consider memoizing getFocusableElements() result during numpad session
+ * - Add debouncing for rapid key presses to improve performance
+ * - Consider using WeakMap for inertRecords to prevent memory leaks
+ * - Add focus trap timeout to prevent infinite loops in edge cases
+ * - Consider adding telemetry for focus restoration failures
+ */
+
 const overlay = typeof document !== 'undefined' ? document.getElementById('npOverlay') : null
 const screen = typeof document !== 'undefined' ? document.getElementById('npScreen') : null
 
@@ -227,6 +262,11 @@ function currentOperandHasComma () {
   return segment.includes(',')
 }
 
+// Focus direction values:
+// - 'forward': Move focus to next field (Tab)
+// - 'backward': Move focus to previous field (Shift+Tab)
+// - 'none': Keep focus on current field without fallback (Enter)
+// - null: Keep focus on current field if available, otherwise no focus change
 function closeNumpad (commitValue = null, reason = 'close', focusDirection = null) {
   if (!overlay) return
   const reasonLabel = `numpad:close:${reason}`
@@ -257,14 +297,29 @@ function closeNumpad (commitValue = null, reason = 'close', focusDirection = nul
     resolver(null)
   }
 
-  const direction = focusDirection === 'backward' ? 'backward' : (focusDirection === 'forward' ? 'forward' : null)
+  // Handle focus restoration based on direction
+  // - 'none': Return focus to the original field without any fallback
+  // - 'forward'/'backward': Navigate to next/previous field (Tab navigation)
+  // - null: Return focus to original field if available, with fallback for accessibility
+  const direction = ['backward', 'forward'].includes(focusDirection) ? focusDirection : null
   queueMicrotask(() => {
     let candidate = null
     if (direction) {
+      // Tab/Shift+Tab: Navigate to next/previous field
       candidate = resolveNextField(focusTarget, direction)
+    } else if (focusDirection === 'none') {
+      // Enter: Return focus to the original field only if it's still focusable
+      // Do NOT fallback to first field if original is unavailable
+      if (isFocusableField(focusTarget)) {
+        candidate = focusTarget
+      }
+      // If original field is not focusable, candidate remains null (no focus change)
     } else if (isFocusableField(focusTarget)) {
+      // null direction: Return focus to original field if available
       candidate = focusTarget
     } else {
+      // null direction with unavailable original field: Fallback for accessibility
+      // Ensures focus doesn't get stuck on hidden overlay elements
       candidate = resolveNextField(null, null)
     }
     if (candidate) {
@@ -313,9 +368,11 @@ function commitValue (reason = 'commit', focusDirection = null, options = {}) {
 function applyKey (key) {
   switch (key) {
     case 'enter':
+      // Use 'none' direction to prevent focus jump to next field
+      // This ensures Enter commits the value and closes overlay without changing focus
       devlog.mark('numpad:clickOK→close:start')
       devlog.time('numpad:clickOK→close')
-      commitValue('commit-button', null, { guardClose: true })
+      commitValue('commit-button', 'none', { guardClose: true })
       devlog.mark('numpad:clickOK→close:end')
       {
         const measured = devlog.measure('numpad:clickOK→close', 'numpad:clickOK→close:start', 'numpad:clickOK→close:end')
@@ -412,10 +469,12 @@ function handleKeydown (event) {
   }
 
   if (key === 'Enter') {
+    // Use 'none' direction to prevent focus jump to next field
+    // This ensures Enter commits the value and closes overlay without changing focus
     event.preventDefault()
     devlog.mark('numpad:key→close:start')
     devlog.time('numpad:key→close')
-    commitValue('enter-key', null, { guardClose: true })
+    commitValue('enter-key', 'none', { guardClose: true })
     devlog.mark('numpad:key→close:end')
     {
       const measured = devlog.measure('numpad:key→close', 'numpad:key→close:start', 'numpad:key→close:end')
