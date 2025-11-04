@@ -9,8 +9,8 @@ import { devlog } from '../utils/devlog.js'
  * Root Cause:
  * - Previously, commitValue was called with focusDirection=null for Enter key/button
  * - In closeNumpad, when direction was null and previousFocus was unavailable,
- *   it would fallback to resolveNextField(null, null) which returns fields[0]
- * - This caused focus to unexpectedly jump to the first field after pressing Enter
+ *   it would fallback to resolveNextField(null, null) which returns currentElement || fields[0]
+ * - This caused focus to jump to the first field after pressing Enter when the original field was not available
  *
  * Solution:
  * - Added new focus direction 'none' to distinguish "no focus change" from null
@@ -301,7 +301,7 @@ function closeNumpad (commitValue = null, reason = 'close', focusDirection = nul
   // - 'none': Return focus to the original field without any fallback
   // - 'forward'/'backward': Navigate to next/previous field (Tab navigation)
   // - null: Return focus to original field if available
-  const direction = focusDirection === 'backward' ? 'backward' : (focusDirection === 'forward' ? 'forward' : null)
+  const direction = ['backward', 'forward'].includes(focusDirection) ? focusDirection : null
   queueMicrotask(() => {
     let candidate = null
     if (direction) {
