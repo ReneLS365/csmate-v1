@@ -290,27 +290,30 @@
 
   <div class="csm-np-overlay" id="npOverlay" aria-hidden="true" data-testid="numpad-backdrop" data-allow-click>
     <div class="csm-np" role="dialog" aria-modal="true" aria-label="Tal-tastatur" tabindex="-1" data-testid="numpad-dialog">
-      <div class="csm-np-screen" id="npScreen" aria-live="polite">0</div>
-      <div class="csm-np-grid">
-        <button type="button" data-key="7">7</button>
-        <button type="button" data-key="8">8</button>
-        <button type="button" data-key="9">9</button>
-        <button type="button" data-key="×">×</button>
-        <button type="button" data-key="4">4</button>
-        <button type="button" data-key="5">5</button>
-        <button type="button" data-key="6">6</button>
-        <button type="button" data-key="÷">÷</button>
-        <button type="button" data-key="1">1</button>
-        <button type="button" data-key="2">2</button>
-        <button type="button" data-key="3">3</button>
-        <button type="button" data-key="-">-</button>
-        <button type="button" data-key="0">0</button>
-        <button type="button" data-key=",">,</button>
-        <button type="button" data-key="C">C</button>
-        <button type="button" data-key="+">+</button>
+      <div class="csm-np-topbar">
+        <button type="button" class="csm-np-close" data-key="close" aria-label="Luk tastatur" data-testid="numpad-close">×</button>
+        <div class="csm-np-screen" id="npScreen" aria-live="polite">0</div>
       </div>
+      <div class="csm-np-grid">
+        <button type="button" data-key="7" aria-label="7">7</button>
+        <button type="button" data-key="8" aria-label="8">8</button>
+        <button type="button" data-key="9" aria-label="9">9</button>
+        <button type="button" data-key="×" aria-label="gange" class="csm-np-operator">×</button>
+        <button type="button" data-key="4" aria-label="4">4</button>
+        <button type="button" data-key="5" aria-label="5">5</button>
+        <button type="button" data-key="6" aria-label="6">6</button>
+        <button type="button" data-key="÷" aria-label="divider" class="csm-np-operator">÷</button>
+        <button type="button" data-key="1" aria-label="1">1</button>
+        <button type="button" data-key="2" aria-label="2">2</button>
+        <button type="button" data-key="3" aria-label="3">3</button>
+        <button type="button" data-key="-" aria-label="minus" class="csm-np-operator">-</button>
+        <button type="button" data-key="0" aria-label="0">0</button>
+        <button type="button" data-key="," aria-label="komma">,</button>
+        <button type="button" data-key="C" aria-label="clear" class="csm-np-operator">C</button>
+        <button type="button" data-key="+" aria-label="plus" class="csm-np-operator">+</button>
+      </div>
+      <button type="button" class="csm-np-equals" data-key="=" aria-label="equals">=</button>
       <button type="button" class="csm-np-enter" data-key="enter">Enter</button>
-      <button type="button" class="csm-np-close" data-key="close" aria-label="Luk tastatur" data-testid="numpad-close">×</button>
     </div>
   </div>
 

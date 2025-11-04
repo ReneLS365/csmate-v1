@@ -5,27 +5,30 @@ import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
 const overlayMarkup = `
   <div class="csm-np-overlay" id="npOverlay" aria-hidden="true" data-testid="numpad-backdrop">
     <div class="csm-np" role="dialog" aria-modal="true" aria-label="Tal-tastatur" tabindex="-1" data-testid="numpad-dialog">
-      <div class="csm-np-screen" id="npScreen" aria-live="polite">0</div>
-      <div class="csm-np-grid">
-        <button type="button" data-key="7">7</button>
-        <button type="button" data-key="8">8</button>
-        <button type="button" data-key="9">9</button>
-        <button type="button" data-key="×">×</button>
-        <button type="button" data-key="4">4</button>
-        <button type="button" data-key="5">5</button>
-        <button type="button" data-key="6">6</button>
-        <button type="button" data-key="÷">÷</button>
-        <button type="button" data-key="1">1</button>
-        <button type="button" data-key="2">2</button>
-        <button type="button" data-key="3">3</button>
-        <button type="button" data-key="-">-</button>
-        <button type="button" data-key="0">0</button>
-        <button type="button" data-key=",">,</button>
-        <button type="button" data-key="C">C</button>
-        <button type="button" data-key="+">+</button>
+      <div class="csm-np-topbar">
+        <button type="button" class="csm-np-close" data-key="close" aria-label="Luk tastatur" data-testid="numpad-close">×</button>
+        <div class="csm-np-screen" id="npScreen" aria-live="polite">0</div>
       </div>
+      <div class="csm-np-grid">
+        <button type="button" data-key="7" aria-label="7">7</button>
+        <button type="button" data-key="8" aria-label="8">8</button>
+        <button type="button" data-key="9" aria-label="9">9</button>
+        <button type="button" data-key="×" aria-label="gange" class="csm-np-operator">×</button>
+        <button type="button" data-key="4" aria-label="4">4</button>
+        <button type="button" data-key="5" aria-label="5">5</button>
+        <button type="button" data-key="6" aria-label="6">6</button>
+        <button type="button" data-key="÷" aria-label="divider" class="csm-np-operator">÷</button>
+        <button type="button" data-key="1" aria-label="1">1</button>
+        <button type="button" data-key="2" aria-label="2">2</button>
+        <button type="button" data-key="3" aria-label="3">3</button>
+        <button type="button" data-key="-" aria-label="minus" class="csm-np-operator">-</button>
+        <button type="button" data-key="0" aria-label="0">0</button>
+        <button type="button" data-key="," aria-label="komma">,</button>
+        <button type="button" data-key="C" aria-label="clear" class="csm-np-operator">C</button>
+        <button type="button" data-key="+" aria-label="plus" class="csm-np-operator">+</button>
+      </div>
+      <button type="button" class="csm-np-equals" data-key="=" aria-label="equals">=</button>
       <button type="button" class="csm-np-enter" data-key="enter">Enter</button>
-      <button type="button" class="csm-np-close" data-key="close" aria-label="Luk tastatur" data-testid="numpad-close">×</button>
     </div>
   </div>
 `
@@ -202,5 +205,113 @@ describe('numpad interactions', () => {
     await Promise.resolve()
     await Promise.resolve()
     expect(document.activeElement).toBe(next)
+  })
+
+  it('evaluates expression with equals button without closing', async () => {
+    const input = document.getElementById('hours')
+    const resultPromise = openNumpad({ startValue: '12', baseValue: 12 })
+    expect(isNumpadOpen()).toBe(true)
+
+    const screen = document.getElementById('npScreen')
+    expect(screen.textContent).toBe('12')
+
+    // Click the plus button
+    const plusButton = document.querySelector('button[data-key="+"]')
+    plusButton.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, pointerId: 1 }))
+    expect(screen.textContent).toBe('12+')
+
+    // Click 3
+    const threeButton = document.querySelector('button[data-key="3"]')
+    threeButton.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, pointerId: 1 }))
+    expect(screen.textContent).toBe('12+3')
+
+    // Click equals button
+    const equalsButton = document.querySelector('button[data-key="="]')
+    equalsButton.dispatchEvent(new PointerEvent('pointerdown', { bubbles: true, cancelable: true, pointerId: 1 }))
+
+    // Should show result and still be open
+    expect(screen.textContent).toBe('15')
+    expect(isNumpadOpen()).toBe(true)
+
+    // Now commit with Enter
+    const enterEvent = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true })
+    document.dispatchEvent(enterEvent)
+
+    const result = await resultPromise
+    expect(result).toBe('15')
+    expect(isNumpadOpen()).toBe(false)
+  })
+
+  it('evaluates multiplication with equals key', async () => {
+    const resultPromise = openNumpad({ startValue: '10', baseValue: 10 })
+    expect(isNumpadOpen()).toBe(true)
+
+    const screen = document.getElementById('npScreen')
+
+    // Type 10×2 (using * key which maps to ×)
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: '*', bubbles: true }))
+    expect(screen.textContent).toBe('10×')
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: '2', bubbles: true }))
+    expect(screen.textContent).toBe('10×2')
+
+    // Press equals key
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: '=', bubbles: true }))
+
+    // Should show result
+    expect(screen.textContent).toBe('20')
+    expect(isNumpadOpen()).toBe(true)
+
+    // Close without committing
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+    const result = await resultPromise
+    expect(result).toBeNull()
+  })
+
+  it('handles division with decimal result using equals', async () => {
+    const resultPromise = openNumpad({ startValue: '10', baseValue: 10 })
+    expect(isNumpadOpen()).toBe(true)
+
+    const screen = document.getElementById('npScreen')
+
+    // Type 10÷4
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: '÷', bubbles: true }))
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: '4', bubbles: true }))
+
+    // Press equals
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: '=', bubbles: true }))
+
+    // Should show result with comma as decimal separator
+    expect(screen.textContent).toBe('2,5')
+    expect(isNumpadOpen()).toBe(true)
+
+    // Close
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+    await resultPromise
+  })
+
+  it('handles invalid expression with equals gracefully', async () => {
+    const resultPromise = openNumpad({ startValue: '1', baseValue: 1 })
+    expect(isNumpadOpen()).toBe(true)
+
+    const screen = document.getElementById('npScreen')
+
+    // Type invalid expression: 1,,2
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: ',', bubbles: true }))
+    expect(screen.textContent).toBe('1,')
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: ',', bubbles: true }))
+    // Second comma should be ignored by currentOperandHasComma check
+    expect(screen.textContent).toBe('1,')
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: '2', bubbles: true }))
+    expect(screen.textContent).toBe('1,2')
+
+    // Press equals - should work fine with 1.2
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: '=', bubbles: true }))
+    expect(screen.textContent).toBe('1,2')
+    expect(isNumpadOpen()).toBe(true)
+
+    // Close
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+    await resultPromise
   })
 })

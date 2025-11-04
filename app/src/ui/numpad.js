@@ -391,6 +391,22 @@ function applyKey (key) {
         devlog.warnIfSlow('numpad:clickClose', measured || duration, 50)
       }
       return
+    case '=':
+      // Equals button evaluates the expression and updates the display without closing
+      try {
+        const value = evalExpr(buffer, baseValue)
+        // Format the result: convert to string and replace decimal point with comma
+        const formatted = String(value).replace('.', ',')
+        buffer = formatted
+        pristine = false
+        render()
+      } catch (error) {
+        // On error, animate the screen but don't crash
+        if (screen && typeof screen.animate === 'function') {
+          screen.animate([{ opacity: 1 }, { opacity: 0.2 }, { opacity: 1 }], { duration: 160 })
+        }
+      }
+      return
     case 'C':
       buffer = '0'
       pristine = true
@@ -539,6 +555,12 @@ function handleKeydown (event) {
   if (key === '/' || key === '÷') {
     event.preventDefault()
     applyKey('÷')
+    return
+  }
+
+  if (key === '=') {
+    event.preventDefault()
+    applyKey('=')
   }
 }
 

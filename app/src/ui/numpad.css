@@ -19,7 +19,7 @@
   position: relative;
   width: min(560px, 96vw);
   max-height: min(86vh, 640px);
-  padding: 28px 20px 48px;
+  padding: 20px;
   border-radius: 18px;
   background: #1e1f22;
   color: #e7e7e7;
@@ -32,15 +32,22 @@
   outline: none;
 }
 
+.csm-np-topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .csm-np-screen {
-  height: 56px;
+  flex: 1;
+  height: 72px;
   border-radius: 10px;
   background: #2a2c31;
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  padding: 0 12px;
-  font-size: 28px;
+  padding: 0 16px;
+  font-size: 36px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -48,15 +55,17 @@
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
-  grid-auto-rows: minmax(56px, 1fr);
+  grid-auto-rows: minmax(64px, 1fr);
 }
 
 .csm-np-grid button {
   border: 0;
   border-radius: 12px;
-  padding: 14px 0;
+  padding: 0;
   width: 100%;
-  font-size: 20px;
+  min-height: 64px;
+  font-size: 24px;
+  font-weight: 500;
   background: #33363c;
   color: #e7e7e7;
   touch-action: manipulation;
@@ -66,36 +75,44 @@
   contain: content;
 }
 
-.csm-np-grid button[data-key="+"] {
-  background: #44474d;
+.csm-np-operator {
+  background: #44474d !important;
+  font-weight: 600 !important;
 }
 
-.csm-np-grid button[data-key="C"] {
-  background: #454950;
+.csm-np-equals {
+  border: 0;
+  border-radius: 12px;
+  padding: 16px 0;
+  font-size: 24px;
+  font-weight: 600;
+  background: #44474d;
+  color: #fff;
+  touch-action: manipulation;
+  width: 100%;
 }
 
 .csm-np-enter {
   border: 0;
   border-radius: 12px;
   padding: 16px 0;
-  font-size: 20px;
+  font-size: 24px;
   font-weight: 600;
   background: #1d7f2a;
   color: #fff;
   touch-action: manipulation;
+  width: 100%;
 }
 
 .csm-np-close {
-  position: absolute;
-  top: 14px;
-  right: 14px;
-  width: 34px;
-  height: 34px;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
   border: 0;
   border-radius: 999px;
   background: #b43a3a;
   color: #fff;
-  font-size: 18px;
+  font-size: 22px;
   line-height: 1;
   display: grid;
   place-items: center;
@@ -105,6 +122,7 @@
 
 .csm-np-close:focus-visible,
 .csm-np-enter:focus-visible,
+.csm-np-equals:focus-visible,
 .csm-np-grid button:focus-visible {
   outline: 2px solid #61dafb;
   outline-offset: 2px;
@@ -112,7 +130,8 @@
 
 .csm-np button:active,
 .csm-np-close:active,
-.csm-np-enter:active {
+.csm-np-enter:active,
+.csm-np-equals:active {
   transform: scale(0.98);
 }
 
@@ -152,18 +171,15 @@
     align-content: center;
   }
 
+  .csm-np-equals,
   .csm-np-enter {
-    position: sticky;
-    bottom: 0;
     margin-top: auto;
   }
 
   .csm-np-close {
-    top: 16px;
-    right: 16px;
     width: 44px;
     height: 44px;
-    font-size: 20px;
+    font-size: 22px;
   }
 }
 
