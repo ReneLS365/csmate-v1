@@ -25,7 +25,10 @@
     "lh:collect": "lhci collect --config=.lighthouserc.cjs",
     "lh:assert": "lhci assert --config=.lighthouserc.cjs",
     "generate:pwa-assets": "node scripts/generate-pwa-assets.mjs",
-    "prepare": "npm run generate:pwa-assets"
+    "prepare": "npm run generate:pwa-assets",
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio"
   },
   "devDependencies": {
     "@lhci/cli": "^0.13.0",
@@ -42,9 +45,13 @@
     "start-server-and-test": "^2.0.3",
     "vitest": "^1.4.0",
     "wait-on": "^8.0.2",
-    "workbox-build": "^7.0.0"
+    "workbox-build": "^7.0.0",
+    "drizzle-kit": "^0.26.0"
   },
   "dependencies": {
-    "bcryptjs": "^3.0.2"
+    "bcryptjs": "^3.0.2",
+    "drizzle-orm": "^0.36.0",
+    "@neondatabase/serverless": "^0.10.0",
+    "pg": "^8.12.0"
   }
 }

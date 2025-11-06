@@ -68,6 +68,8 @@
 
 [functions]
   included_files = ["app/data/materials.json", "app/data/tenants/*.json"]
+  node_bundler = "esbuild"
+  external_node_modules = ["drizzle-orm", "@neondatabase/serverless", "bcryptjs"]
 
 [context.production.environment]
   FF_MATERIALS_V2 = "false"
