@@ -3,6 +3,7 @@ import { db } from '../../src/lib/db'
 import { tenants, adminKeys, roles } from '../../src/lib/schema'
 import { eq, and, asc } from 'drizzle-orm'
 import bcrypt from 'bcryptjs'
+import { signAdminToken } from '../lib/auth'
 
 const handler = async (event: any) => {
   try {
@@ -60,15 +61,11 @@ const handler = async (event: any) => {
       .from(roles)
       .orderBy(asc(roles.rank))
 
-    const issuedAt = new Date().toISOString()
-    const tokenPayload = {
+    const token = signAdminToken({
       tenantId: tenant.id,
       tenantSlug: tenant.slug,
       matchedKey: matchedKey.label,
-      issuedAt,
-    }
-
-    const token = Buffer.from(JSON.stringify(tokenPayload)).toString('base64')
+    })
 
     return {
       statusCode: 200,
