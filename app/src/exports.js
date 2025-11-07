@@ -1,4 +1,15 @@
 // app/src/exports.js
+let pdfEngine = null
+let ekompletEngine = null
+
+export function registerPDFEngine (engine) {
+  pdfEngine = typeof engine === 'function' ? engine : null
+}
+
+export function registerEkompletEngine (engine) {
+  ekompletEngine = typeof engine === 'function' ? engine : null
+}
+
 export function requireSagsinfo(job) {
   const s = job?.sagsinfo || {}
   return !!(s.kunde && s.adresse && (s.sagsnr || s.sagsnummer || job?.sagsnr || job?.sagsnummer))
@@ -28,13 +39,15 @@ export function toCSV(rows) {
   return rows.map(r => r.map(esc).join(',')).join('\n')
 }
 
-// Hook til eksisterende PDF-generator i appen:
-// Forventede helpers: window.PDF.exportJobPDF(job, {allSystems:true|false})
 export async function buildPDF(job, opts = { allSystems: true }) {
-  if (!window.PDF || !window.PDF.exportJobPDF) {
-    throw new Error('PDF engine missing: window.PDF.exportJobPDF')
+  if (!pdfEngine) {
+    throw new Error('PDF engine missing: registerPDFEngine(fn)')
   }
-  return await window.PDF.exportJobPDF(job, opts)
+  const blob = await pdfEngine(job, opts)
+  if (!(blob instanceof Blob)) {
+    throw new Error('PDF engine must return a Blob')
+  }
+  return blob
 }
 
 export function buildMaterialCSV(job) {
@@ -70,13 +83,17 @@ export function buildLønCSV(job) {
   return new Blob([toCSV(rows)], { type: 'text/csv;charset=utf-8' })
 }
 
-// Genbrug eksisterende E-komplet generator: window.EKOMPLET.exportCSV(job)
-export function buildEkompletCSV(job) {
-  if (!window.EKOMPLET || !window.EKOMPLET.exportCSV) {
-    throw new Error('E-komplet engine missing: window.EKOMPLET.exportCSV')
+export async function buildEkompletCSV(job) {
+  if (!ekompletEngine) {
+    throw new Error('E-komplet engine missing: registerEkompletEngine(fn)')
   }
-  const csv = window.EKOMPLET.exportCSV(job)
-  return new Blob([csv], { type: 'text/csv;charset=utf-8' })
+  const result = ekompletEngine(job)
+  const payload = result instanceof Promise ? await result : result
+  if (payload instanceof Blob) return payload
+  if (typeof payload === 'string') {
+    return new Blob([payload], { type: 'text/csv;charset=utf-8' })
+  }
+  throw new Error('E-komplet engine must return a Blob or CSV string')
 }
 
 export async function exportAll(job) {
@@ -87,7 +104,7 @@ export async function exportAll(job) {
   const pdfBlob = await buildPDF(job, { allSystems: true })
   const matCSV = buildMaterialCSV(job)
   const lonCSV = buildLønCSV(job)
-  const ekCSV = buildEkompletCSV(job)
+  const ekCSV = await buildEkompletCSV(job)
 
   if (window.JSZip) {
     const zip = new window.JSZip()

@@ -6,7 +6,13 @@ import { EXCLUDED_MATERIAL_KEYS, shouldExcludeMaterialEntry } from './src/lib/ma
 import { createMaterialRow } from './src/modules/materialRowTemplate.js'
 import { sha256Hex, constantTimeEquals } from './src/lib/sha256.js'
 import { ensureExportLibs, ensureZipLib, prefetchExportLibs } from './src/features/export/lazy-libs.js'
-import { exportAll as exportAllForJob, exportSingleSheet, requireSagsinfo } from './src/exports.js'
+import {
+  exportAll as exportAllForJob,
+  exportSingleSheet,
+  requireSagsinfo,
+  registerPDFEngine,
+  registerEkompletEngine
+} from './src/exports.js'
 import { wireStatusbar, queueChange } from './src/sync.js'
 import { exportFullBackup } from './src/backup.js'
 import { installLazyNumpad } from './src/ui/numpad.lazy.js'
@@ -3819,17 +3825,26 @@ function attachEkompletButton() {
   button.addEventListener('click', () => downloadEkompletCSV());
 }
 
-function downloadEkompletCSV() {
-  if (!validateSagsinfo()) {
-    setEkompletStatus('Udfyld Sagsinfo før du indberetter til E-komplet.', 'error');
-    updateActionHint('Udfyld Sagsinfo for at indberette.', 'error');
-    return;
+function buildEkompletCSVPayload(options = {}) {
+  const { skipValidation = false, skipBeregn = false, silent = false } = options;
+  if (!skipValidation && !validateSagsinfo()) {
+    if (!silent) {
+      setEkompletStatus('Udfyld Sagsinfo før du indberetter til E-komplet.', 'error');
+      updateActionHint('Udfyld Sagsinfo for at indberette.', 'error');
+    }
+    return null;
+  }
+
+  if (!skipBeregn) {
+    beregnLon();
   }
 
   const data = lastEkompletData;
   if (!data) {
-    setEkompletStatus('Beregn løn først, så alle data er opdaterede.', 'error');
-    return;
+    if (!silent) {
+      setEkompletStatus('Beregn løn først, så alle data er opdaterede.', 'error');
+    }
+    return null;
   }
 
   const rows = [];
@@ -3965,12 +3980,23 @@ function downloadEkompletCSV() {
     .map(row => row.map(cell => escapeCSV(cell ?? '')).join(';'))
     .join('\n');
 
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
   const baseName = sanitizeFilename(sagsinfo.sagsnummer || 'sag') || 'sag';
+  return {
+    content: csvContent,
+    baseName,
+    fileName: `${baseName}-ekomplet.csv`,
+  };
+}
+
+function downloadEkompletCSV() {
+  const payload = buildEkompletCSVPayload();
+  if (!payload) return;
+
+  const blob = new Blob([payload.content], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = `${baseName}-ekomplet.csv`;
+  link.download = payload.fileName;
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
@@ -3979,6 +4005,14 @@ function downloadEkompletCSV() {
   setEkompletStatus('Filen er hentet og klar til upload i E-komplet.', 'success');
   updateActionHint('E-komplet fil er genereret.', 'success');
 }
+
+registerEkompletEngine(() => {
+  const payload = buildEkompletCSVPayload({ skipValidation: true, silent: true });
+  if (!payload) {
+    throw new Error('E-komplet data er ikke tilgængelig');
+  }
+  return new Blob([payload.content], { type: 'text/csv;charset=utf-8;' });
+});
 
 
 // --- CSV-eksport ---
@@ -4413,6 +4447,20 @@ async function exportPDF(customSagsnummer, options = {}) {
   URL.revokeObjectURL(url);
   updateActionHint('PDF er gemt til din enhed.', 'success');
 }
+
+registerPDFEngine(async (job, options = {}) => {
+  const customSagsnummer = job?.sagsinfo?.sagsnr
+    || job?.sagsinfo?.sagsnummer
+    || job?.sagsnr
+    || job?.sagsnummer
+    || job?.id
+    || null;
+  const payload = await exportPDFBlob(customSagsnummer, { ...options, skipValidation: true });
+  if (!payload?.blob) {
+    throw new Error('PDF eksport mislykkedes');
+  }
+  return payload.blob;
+});
 
 async function exportZip() {
   if (!validateSagsinfo()) {
