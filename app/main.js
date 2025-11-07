@@ -6,6 +6,9 @@ import { EXCLUDED_MATERIAL_KEYS, shouldExcludeMaterialEntry } from './src/lib/ma
 import { createMaterialRow } from './src/modules/materialRowTemplate.js'
 import { sha256Hex, constantTimeEquals } from './src/lib/sha256.js'
 import { ensureExportLibs, ensureZipLib, prefetchExportLibs } from './src/features/export/lazy-libs.js'
+import { exportAll as exportAllForJob, exportSingleSheet, requireSagsinfo } from './src/exports.js'
+import { wireStatusbar, queueChange } from './src/sync.js'
+import { exportFullBackup } from './src/backup.js'
 import { installLazyNumpad } from './src/ui/numpad.lazy.js'
 import { createVirtualMaterialsList } from './src/modules/materialsVirtualList.js'
 import { initClickGuard } from './src/ui/Guards/ClickGuard.js'
@@ -309,8 +312,140 @@ let jobAutosaveTimer = null;
 let currentUser = null;
 let lastCapturedMaterials = new Map();
 let lastCapturedLon = {};
+let jobStoreListenerAttached = false;
+let jobStoreListenerInterval = null;
 const DB_NAME = 'csmate_projects';
 const DB_STORE = 'projects';
+
+function resolveActiveJob () {
+  const storeJob = window.JobStore?.getActiveJob?.()
+  if (storeJob) return storeJob
+  return getCurrentJob()
+}
+
+function resolveActiveSystemName (job) {
+  const fromUI = window.UI?.getActiveSystemName?.()
+  if (fromUI) return fromUI
+  const systems = job?.systems
+  if (Array.isArray(systems) && systems.length > 0) {
+    const byId = typeof currentSystemId === 'string' ? currentSystemId : null
+    const match = systems.find(sys => {
+      const name = typeof sys === 'string' ? sys : (sys?.name || sys?.systemName || sys?.id)
+      return byId ? name === byId : false
+    })
+    if (match) {
+      if (typeof match === 'string') return match
+      return match.name || match.systemName || match.id || ''
+    }
+    const first = systems[0]
+    if (typeof first === 'string') return first
+    return first?.name || first?.systemName || first?.id || ''
+  }
+  return typeof currentSystemId === 'string' ? currentSystemId : ''
+}
+
+async function handleGlobalClick (event) {
+  const target = event.target
+  if (!(target instanceof HTMLElement)) return
+
+  if (target.id === 'btn-export-all') {
+    const button = target instanceof HTMLButtonElement ? target : null
+    try {
+      const job = resolveActiveJob()
+      if (!job) {
+        alert('Ingen aktivt job valgt.')
+        return
+      }
+      if (!requireSagsinfo(job)) {
+        alert('Udfyld sagsinfo først.')
+        return
+      }
+      if (button) button.disabled = true
+      await exportAllForJob(job)
+    } catch (err) {
+      console.error(err)
+      alert('Eksport fejlede. Se console.')
+    } finally {
+      if (button) button.disabled = false
+    }
+  } else if (target.id === 'btn-share-sheet') {
+    const button = target instanceof HTMLButtonElement ? target : null
+    const job = resolveActiveJob()
+    if (!job) {
+      alert('Ingen aktivt job valgt.')
+      return
+    }
+    const systemName = resolveActiveSystemName(job)
+    if (!systemName) {
+      alert('Vælg et system først.')
+      return
+    }
+    try {
+      if (button) button.disabled = true
+      const { base } = await exportSingleSheet(job, systemName)
+      const subject = encodeURIComponent(`Akkordseddel: ${base}`)
+      const body = encodeURIComponent(`Filer er downloadet lokalt:\n- ${base}.pdf\n- ${base}-materialer.csv`)
+      window.location.href = `mailto:?subject=${subject}&body=${body}`
+    } catch (err) {
+      console.error(err)
+      alert('Deling fejlede. Se console.')
+    } finally {
+      if (button) button.disabled = false
+    }
+  } else if (target.id === 'btn-backup') {
+    try {
+      exportFullBackup()
+    } catch (err) {
+      console.error(err)
+      alert('Backup eksport fejlede. Se console.')
+    }
+  }
+}
+
+function attachJobStoreListener () {
+  if (jobStoreListenerAttached) return true
+  const store = window.JobStore
+  if (store && typeof store.onChange === 'function') {
+    store.onChange((jobId, change) => {
+      try {
+        queueChange(jobId, change)
+      } catch (error) {
+        console.warn('Queue fail', error)
+      }
+    })
+    jobStoreListenerAttached = true
+    if (jobStoreListenerInterval) {
+      window.clearInterval(jobStoreListenerInterval)
+      jobStoreListenerInterval = null
+    }
+    return true
+  }
+  return false
+}
+
+function scheduleJobStoreListener () {
+  if (typeof window === 'undefined') return
+  if (attachJobStoreListener()) return
+  if (jobStoreListenerInterval) return
+  jobStoreListenerInterval = window.setInterval(() => {
+    if (attachJobStoreListener()) {
+      window.clearInterval(jobStoreListenerInterval)
+      jobStoreListenerInterval = null
+    }
+  }, 1000)
+}
+
+if (typeof document !== 'undefined') {
+  document.addEventListener('click', handleGlobalClick)
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('DOMContentLoaded', () => {
+    wireStatusbar()
+    scheduleJobStoreListener()
+  })
+  scheduleJobStoreListener()
+}
 
 function refreshJobsState() {
   jobsState = loadJobs();
