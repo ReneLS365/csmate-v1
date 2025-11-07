@@ -1,7 +1,7 @@
 {
-  "version": "v20251107T132653",
+  "version": "v20251107T231507",
   "cachePrefix": "csmate",
-  "cacheName": "csmate-v20251107T132653",
+  "cacheName": "csmate-v20251107T231507",
   "precache": [
     {
       "url": "/",
@@ -31,8 +31,8 @@
       "url": "/main.js",
       "file": "app/main.js",
       "exists": true,
-      "bytes": 170049,
-      "sha256": "929aafeeb3ce91fae3602f0e89701f841668f2ccb54d6d1f7bb1725714573086"
+      "bytes": 170103,
+      "sha256": "47ecd36724624a5c7482cf004cf6138eb560406b8d09de0b7681fb020a518005"
     },
     {
       "url": "/style.css",

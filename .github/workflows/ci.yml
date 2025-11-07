@@ -58,10 +58,6 @@ jobs:
         run: npm run build
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
-      - name: Start preview server
-        run: npm run serve:dist &
-      - name: Wait for server
-        run: npx wait-on http://127.0.0.1:4173
       - name: Run E2E
         run: npm run e2e
       - name: Upload Playwright report
