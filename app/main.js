@@ -801,8 +801,7 @@ function applyJobToUI(job, options = {}) {
   if (sheet) {
     applySheetState(currentSystemId, sheet);
   } else {
-    const fallbackSheet = captureSheetState(currentSystemId);
-    applySheetState(currentSystemId, fallbackSheet);
+    applySheetState(currentSystemId, createEmptySheet(currentSystemId));
   }
 
   renderJobBadges(job);
@@ -2046,6 +2045,17 @@ function setupListSelectors() {
       persistCurrentSheetState(currentSystemId, { silent: true });
     }
     currentSystemId = systemId;
+    const job = getCurrentJob();
+    if (job) {
+      const sheet = job.sheets?.[systemId];
+      if (sheet) {
+        applySheetState(systemId, sheet);
+      } else {
+        applySheetState(systemId, createEmptySheet(systemId));
+      }
+    } else {
+      applySheetState(systemId, createEmptySheet(systemId));
+    }
     syncSelectedKeysFromSystem();
     syncSystemSelectorState();
     if (!options.skipRender) {
