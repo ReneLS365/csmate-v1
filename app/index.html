@@ -29,15 +29,80 @@
       <div class="bar">
         <h1 class="ttl">akkordseddel</h1>
         <nav>
-          <button id="btnSagsinfo" data-section="sagsinfo" class="active" type="button">Sagsinfo</button>
+          <button id="btnJobs" data-section="jobs" class="active" type="button">Job</button>
+          <button id="btnSagsinfo" data-section="sagsinfo" type="button">Sagsinfo</button>
           <button id="btnOptaelling" data-section="optaelling" type="button">Optælling</button>
           <button id="btnLon" data-section="lon" type="button">Løn</button>
+          <button id="btnHistorik" data-section="historik" type="button">Historik</button>
         </nav>
+        <div class="user-controls no-print">
+          <span id="currentUserInfo" class="user-label">Ingen bruger</span>
+          <button id="btnOpenUserOverlay" type="button">Skift bruger</button>
+        </div>
       </div>
     </header>
     <div class="app-content">
       <div class="materials-scroll">
         <main id="main">
+  <section id="jobsSection" class="sektion">
+    <div class="job-toolbar">
+      <div class="job-toolbar-left">
+        <label for="jobSearch" class="sr-only">Søg job</label>
+        <input id="jobSearch" type="search" placeholder="Søg efter sagsnummer, navn eller kunde">
+        <label for="jobStatusFilter" class="sr-only">Filtrer status</label>
+        <select id="jobStatusFilter">
+          <option value="alle">Alle statusser</option>
+          <option value="montage">Montage</option>
+          <option value="i_brug">I brug</option>
+          <option value="demontage">Demontage</option>
+          <option value="lukket">Lukket</option>
+        </select>
+        <label class="job-toggle-archived">
+          <input type="checkbox" id="toggleArchived">
+          <span>Vis arkiverede</span>
+        </label>
+      </div>
+      <div class="job-toolbar-right">
+        <button id="btnCreateJob" type="button">Opret nyt job</button>
+      </div>
+    </div>
+    <div class="job-table-wrapper">
+      <table class="job-table" aria-describedby="jobTableCaption">
+        <caption id="jobTableCaption" class="sr-only">Oversigt over jobs</caption>
+        <thead>
+          <tr>
+            <th scope="col">Sagsnummer</th>
+            <th scope="col">Navn</th>
+            <th scope="col">Kunde</th>
+            <th scope="col">Systemer</th>
+            <th scope="col">Status</th>
+            <th scope="col">Sidst opdateret</th>
+            <th scope="col" class="actions">Handlinger</th>
+          </tr>
+        </thead>
+        <tbody id="jobList"></tbody>
+      </table>
+    </div>
+    <section id="archivedJobs" class="archived-jobs" hidden>
+      <h2>Arkiverede jobs</h2>
+      <table class="job-table" aria-describedby="archivedCaption">
+        <caption id="archivedCaption" class="sr-only">Arkiverede jobs</caption>
+        <thead>
+          <tr>
+            <th scope="col">Sagsnummer</th>
+            <th scope="col">Navn</th>
+            <th scope="col">Kunde</th>
+            <th scope="col">Systemer</th>
+            <th scope="col">Status</th>
+            <th scope="col">Sidst opdateret</th>
+            <th scope="col" class="actions">Handlinger</th>
+          </tr>
+        </thead>
+        <tbody id="archivedJobList"></tbody>
+      </table>
+    </section>
+  </section>
+
   <section id="sagsinfoSection" class="sektion">
     <fieldset>
       <legend>Stamdata</legend>
@@ -54,6 +119,10 @@
         <div class="status-indicator">
           <span>Aktuel status</span>
           <strong id="statusIndicator" data-status="kladde" class="status-pill">Kladde</strong>
+        </div>
+        <div class="job-lock-status" aria-live="polite">
+          <span id="jobLockBadge" class="status-pill" hidden>Job låst</span>
+          <span id="jobSentBadge" class="status-pill" hidden>Fremsendt</span>
         </div>
       </div>
       <div class="form-grid grid-3">
@@ -87,6 +156,10 @@
       </div>
       <div class="form-actions no-print">
         <button id="btnOpenGuideModal" type="button">Åbn guide</button>
+        <div class="job-action-group">
+          <button id="btnLockJob" type="button" disabled>Lås akkordseddel</button>
+          <button id="btnMarkSent" type="button" disabled>Marker som fremsendt</button>
+        </div>
       </div>
     </fieldset>
   </section>
@@ -94,7 +167,12 @@
   <section id="optaellingSection" class="sektion" hidden>
     <fieldset>
       <legend>Systemer</legend>
-      <div id="listSelectors" class="row"></div>
+      <div id="systemTabs" class="system-tabs" role="tablist" aria-label="Systemer">
+        <button type="button" data-system="BOSTA70" role="tab" aria-selected="true">BOSTA</button>
+        <button type="button" data-system="HAKI" role="tab" aria-selected="false">HAKI</button>
+        <button type="button" data-system="MODEX" role="tab" aria-selected="false">MODEX</button>
+        <button type="button" data-system="ALFIX_VARIO" role="tab" aria-selected="false">Alfix VARIO</button>
+      </div>
     </fieldset>
 
     <fieldset>
@@ -246,6 +324,28 @@
       </div>
     </fieldset>
   </section>
+
+  <section id="historikSection" class="sektion" hidden>
+    <fieldset>
+      <legend>Historik</legend>
+      <div class="history-actions">
+        <button id="btnExportAudit" type="button" disabled>Eksporter audit-log (CSV)</button>
+      </div>
+      <div class="history-table-wrapper">
+        <table class="history-table">
+          <thead>
+            <tr>
+              <th scope="col">Tidspunkt</th>
+              <th scope="col">Scope</th>
+              <th scope="col">Bruger</th>
+              <th scope="col">Besked</th>
+            </tr>
+          </thead>
+          <tbody id="auditLogBody"></tbody>
+        </table>
+      </div>
+    </fieldset>
+  </section>
         </main>
       </div>
     </div>
@@ -268,6 +368,38 @@
           interne vejledninger.
         </p>
       </div>
+    </div>
+  </div>
+
+  <div id="userOverlay" class="user-overlay" hidden aria-hidden="true">
+    <div class="user-overlay-backdrop" data-overlay-dismiss></div>
+    <div class="user-overlay-dialog" role="dialog" aria-modal="true" aria-labelledby="userOverlayTitle">
+      <button type="button" id="btnCloseUserOverlay" class="user-overlay-close" aria-label="Luk">×</button>
+      <h2 id="userOverlayTitle">Log ind</h2>
+      <form id="userForm">
+        <label>
+          <span>Navn</span>
+          <input id="userName" type="text" autocomplete="name" required>
+        </label>
+        <label>
+          <span>Rolle</span>
+          <select id="userRole" required>
+            <option value="montor">Montør</option>
+            <option value="formand">Formand</option>
+            <option value="firma-admin">Firma-admin</option>
+            <option value="owner">Owner</option>
+          </select>
+        </label>
+        <label id="adminCodeRow" class="admin-code-row" hidden>
+          <span>Adminkode</span>
+          <input id="adminCodeInput" type="password" autocomplete="off" placeholder="StilAce">
+        </label>
+        <p id="userOverlayFeedback" class="status-message" hidden aria-live="polite"></p>
+        <div class="user-overlay-actions">
+          <button id="btnSaveUser" type="submit">Gem / Log ind</button>
+          <button id="btnCancelUser" type="button">Annuller</button>
+        </div>
+      </form>
     </div>
   </div>
 
