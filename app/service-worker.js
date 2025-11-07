@@ -1,5 +1,6 @@
 /* CSMate Service Worker – Workbox-inspired offline shell */
-const VERSION = 'v20251107T053807-0a049da0'; // replaced automatically during build
+const VERSION = 'v20251107T074358'; // replaced automatically during build
+const SW_VERSION = VERSION;
 const CACHE_VERSION = VERSION; // replaced automatically during build
 const CACHE_PREFIX = 'csmate';
 const PRECACHE = [
@@ -17,7 +18,9 @@ const PRECACHE = [
   '/icons/icon-512.png',
   '/icons/icon-512-maskable.png',
   '/src/ui/numpad.css',
-  '/src/styles/fixes.css'
+  '/src/styles/fixes.css',
+  '/src/dev.js',
+  '/src/keyboard.js'
 ];
 
 const DATA_MATCHERS = [/\/data\//, /\.json(?:\?|$)/i];
