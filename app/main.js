@@ -1,4 +1,6 @@
 import './src/features/pctcalc/pctcalc.js'
+import { mountDevIfHash } from './src/dev.js'
+import { wireShortcuts } from './src/keyboard.js'
 import { initMaterialsScrollLock } from './src/modules/materialsScrollLock.js'
 import { calculateTotals } from './src/modules/calculateTotals.js'
 import { normalizeKey } from './src/lib/string-utils.js'
@@ -441,14 +443,39 @@ function scheduleJobStoreListener () {
   }, 1000)
 }
 
+function handleTabNavigation(event) {
+  const btn = event.target.closest('[data-tab]')
+  if (!btn) return
+  const name = btn.getAttribute('data-tab')
+  if (!name) return
+  const tab = document.getElementById(`tab-${name}`)
+  if (!tab) return
+  if (btn.classList.contains('active')) {
+    tab.classList.add('hidden')
+    btn.classList.remove('active')
+    return
+  }
+  document.querySelectorAll('.tab').forEach(el => {
+    el.classList.add('hidden')
+  })
+  document.querySelectorAll('[data-tab]').forEach(b => {
+    b.classList.remove('active')
+  })
+  tab.classList.remove('hidden')
+  btn.classList.add('active')
+}
+
 if (typeof document !== 'undefined') {
   document.addEventListener('click', handleGlobalClick)
+  document.addEventListener('click', handleTabNavigation)
 }
 
 if (typeof window !== 'undefined') {
   window.addEventListener('DOMContentLoaded', () => {
+    wireShortcuts()
     wireStatusbar()
     scheduleJobStoreListener()
+    mountDevIfHash()
   })
   scheduleJobStoreListener()
 }

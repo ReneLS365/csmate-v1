@@ -440,3 +440,7 @@ round:rgba(255,255,255,0.03)}
 .approval-badge[data-status="afvist"]{background:rgba(214,102,102,0.18);color:#ff9b9b;border-color:rgba(214,102,102,0.4)}
 .job-table tr.active-job{background:rgba(142,160,181,0.12)}
 .job-table tr.active-job td{font-weight:600}
+.tab.hidden{display:none}
+.grid.two{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+@media (max-width:800px){.grid.two{grid-template-columns:1fr}}
+kbd{padding:0 0.35rem;border:1px solid #ccc;border-bottom-width:2px;border-radius:4px;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;font-size:0.85em}
