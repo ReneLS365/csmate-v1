@@ -10,12 +10,12 @@ export function registerEkompletEngine (engine) {
   ekompletEngine = typeof engine === 'function' ? engine : null
 }
 
-export function requireSagsinfo(job) {
+export function requireSagsinfo (job) {
   const s = job?.sagsinfo || {}
   return !!(s.kunde && s.adresse && (s.sagsnr || s.sagsnummer || job?.sagsnr || job?.sagsnummer))
 }
 
-export function ts(fmt = 'YYYYMMDD-HHmm') {
+export function ts (fmt = 'YYYYMMDD-HHmm') {
   const d = new Date()
   const p = n => String(n).padStart(2, '0')
   return fmt
@@ -26,7 +26,7 @@ export function ts(fmt = 'YYYYMMDD-HHmm') {
     .replace('mm', p(d.getMinutes()))
 }
 
-export function downloadBlob(name, blob) {
+export function downloadBlob (name, blob) {
   const a = document.createElement('a')
   a.href = URL.createObjectURL(blob)
   a.download = name
@@ -34,12 +34,12 @@ export function downloadBlob(name, blob) {
   setTimeout(() => URL.revokeObjectURL(a.href), 2000)
 }
 
-export function toCSV(rows) {
+export function toCSV (rows) {
   const esc = v => `"${String(v ?? '').replace(/"/g, '""')}"`
   return rows.map(r => r.map(esc).join(',')).join('\n')
 }
 
-export async function buildPDF(job, opts = { allSystems: true }) {
+export async function buildPDF (job, opts = { allSystems: true }) {
   if (!pdfEngine) {
     throw new Error('PDF engine missing: registerPDFEngine(fn)')
   }
@@ -50,7 +50,7 @@ export async function buildPDF(job, opts = { allSystems: true }) {
   return blob
 }
 
-export function buildMaterialCSV(job) {
+export function buildMaterialCSV (job) {
   const rows = [['System', 'Vare', 'Antal', 'Pris', 'Linjetotal']]
   for (const sys of job.systems || []) {
     const systemName = sys?.name || sys?.systemName || sys?.id || 'Ukendt system'
@@ -65,7 +65,7 @@ export function buildMaterialCSV(job) {
   return new Blob([toCSV(rows)], { type: 'text/csv;charset=utf-8' })
 }
 
-export function buildLønCSV(job) {
+export function buildLønCSV (job) {
   const rows = [['System', 'Timer', 'Km', 'Tillæg%', 'Montage', 'Demontage', 'Sum']]
   for (const sys of job.systems || []) {
     const systemName = sys?.name || sys?.systemName || sys?.id || 'Ukendt system'
@@ -83,7 +83,7 @@ export function buildLønCSV(job) {
   return new Blob([toCSV(rows)], { type: 'text/csv;charset=utf-8' })
 }
 
-export async function buildEkompletCSV(job) {
+export async function buildEkompletCSV (job) {
   if (!ekompletEngine) {
     throw new Error('E-komplet engine missing: registerEkompletEngine(fn)')
   }
@@ -96,7 +96,7 @@ export async function buildEkompletCSV(job) {
   throw new Error('E-komplet engine must return a Blob or CSV string')
 }
 
-export async function exportAll(job) {
+export async function exportAll (job) {
   if (!requireSagsinfo(job)) throw new Error('Mangler sagsinfo')
   const stamp = ts()
   const base = `job-${job.id || 'ukendt'}-${stamp}`
@@ -122,7 +122,7 @@ export async function exportAll(job) {
   }
 }
 
-export async function exportSingleSheet(job, systemName) {
+export async function exportSingleSheet (job, systemName) {
   const systems = job.systems || []
   const sys = systems.find(s => (s?.name || s?.systemName || s?.id) === systemName)
   if (!sys) throw new Error('System ikke fundet')
