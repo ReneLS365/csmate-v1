@@ -1,6 +1,7 @@
 import './src/features/pctcalc/pctcalc.js'
 import { mountDevIfHash } from './src/dev.js'
 import { wireShortcuts } from './src/keyboard.js'
+import { registerJobStoreHooks } from './src/globals.js'
 import { initMaterialsScrollLock } from './src/modules/materialsScrollLock.js'
 import { calculateTotals } from './src/modules/calculateTotals.js'
 import { normalizeKey } from './src/lib/string-utils.js'
@@ -21,8 +22,6 @@ import { installLazyNumpad } from './src/ui/numpad.lazy.js'
 import { createVirtualMaterialsList } from './src/modules/materialsVirtualList.js'
 import { initClickGuard } from './src/ui/Guards/ClickGuard.js'
 import { setAdminOk, setLock } from './src/state/admin.js'
-import { mountDevIfHash } from './src/dev.js'
-import { wireShortcuts } from './src/keyboard.js'
 import {
   loadJobs,
   getJobs,
@@ -4942,6 +4941,21 @@ function initApp() {
   document.getElementById('btnMarkSent')?.addEventListener('click', () => markCurrentJobSent());
   document.getElementById('btnExportAudit')?.addEventListener('click', () => exportAuditLogCsv());
 }
+
+registerJobStoreHooks({
+  resolveActiveJob: () => getCurrentJob(),
+  setActiveJob: jobId => {
+    if (!jobId) {
+      return null;
+    }
+    setCurrentJob(jobId, { force: true });
+    return getCurrentJob();
+  },
+  saveActiveJob: () => {
+    persistCurrentJobState({ silent: false });
+    return getCurrentJob();
+  }
+});
 
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initApp, { once: true });
