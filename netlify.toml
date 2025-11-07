@@ -2,6 +2,13 @@
   command = "npm run build"
   publish = "dist"
 
+[build.environment]
+  NODE_VERSION = "20"
+  NODE_OPTIONS = "--max-old-space-size=4096"
+  NPM_FLAGS = "--prefer-offline --no-audit --progress=false"
+  NETLIFY_USE_YARN = "false"
+  npm_config_fund = "false"
+
 [[plugins]]
   package = "netlify-plugin-minify-html"
 
