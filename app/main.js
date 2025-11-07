@@ -10,6 +10,19 @@ import { installLazyNumpad } from './src/ui/numpad.lazy.js'
 import { createVirtualMaterialsList } from './src/modules/materialsVirtualList.js'
 import { initClickGuard } from './src/ui/Guards/ClickGuard.js'
 import { setAdminOk, setLock } from './src/state/admin.js'
+import {
+  loadJobs,
+  getJobs,
+  saveJobs,
+  createJob,
+  updateJob,
+  deleteJob,
+  findJobById,
+  appendAuditLog,
+  lockJob as lockJobPersisted,
+  markJobSent,
+  setAuditUserResolver
+} from './jobs.js'
 
 const IOS_INSTALL_PROMPT_DISMISSED_KEY = 'csmate.iosInstallPromptDismissed'
 let DEFAULT_ADMIN_CODE_HASH = ''
@@ -213,6 +226,70 @@ function formatNumber(value) {
 }
 
 // --- Global Variables ---
+const SYSTEM_IDS = ['BOSTA70', 'HAKI', 'MODEX', 'ALFIX_VARIO'];
+const SYSTEM_KEY_BY_ID = {
+  BOSTA70: 'bosta',
+  HAKI: 'haki',
+  MODEX: 'modex',
+  ALFIX_VARIO: 'alfix'
+};
+const SYSTEM_ID_BY_KEY = {
+  bosta: 'BOSTA70',
+  haki: 'HAKI',
+  modex: 'MODEX',
+  alfix: 'ALFIX_VARIO'
+};
+const USER_STORAGE_KEY = 'csmate.user.v1';
+const DEFAULT_JOB_NAME = 'Migreret job';
+const DEFAULT_SYSTEM_ID = 'BOSTA70';
+const DEFAULT_ACTION_HINT = 'Udfyld Sagsinfo for at fortsætte.';
+const ROLE_PERMISSIONS = {
+  owner: {
+    canEditGlobalTemplates: true,
+    canEditPrices: true,
+    canEditWages: true,
+    canCreateJobs: true,
+    canDeleteJobs: true,
+    canLockJobs: true,
+    canSendJobs: true,
+    canEditMaterials: true,
+    canEditLon: true
+  },
+  'firma-admin': {
+    canEditGlobalTemplates: false,
+    canEditPrices: true,
+    canEditWages: true,
+    canCreateJobs: true,
+    canDeleteJobs: true,
+    canLockJobs: true,
+    canSendJobs: true,
+    canEditMaterials: true,
+    canEditLon: true
+  },
+  formand: {
+    canEditGlobalTemplates: false,
+    canEditPrices: false,
+    canEditWages: false,
+    canCreateJobs: true,
+    canDeleteJobs: false,
+    canLockJobs: true,
+    canSendJobs: true,
+    canEditMaterials: true,
+    canEditLon: true
+  },
+  montor: {
+    canEditGlobalTemplates: false,
+    canEditPrices: false,
+    canEditWages: false,
+    canCreateJobs: false,
+    canDeleteJobs: false,
+    canLockJobs: false,
+    canSendJobs: false,
+    canEditMaterials: true,
+    canEditLon: false
+  }
+};
+
 let admin = false;
 let workerCount = 0;
 let laborEntries = [];
@@ -222,9 +299,1220 @@ let lastEkompletData = null;
 let currentStatus = 'kladde';
 let recentCasesCache = [];
 let cachedDBPromise = null;
-const DEFAULT_ACTION_HINT = 'Udfyld Sagsinfo for at fortsætte.';
+let jobsState = [];
+let currentJobId = null;
+let currentSystemId = DEFAULT_SYSTEM_ID;
+let jobSearchTerm = '';
+let jobStatusFilter = 'alle';
+let showArchivedJobs = false;
+let jobAutosaveTimer = null;
+let currentUser = null;
+let lastCapturedMaterials = new Map();
+let lastCapturedLon = {};
 const DB_NAME = 'csmate_projects';
 const DB_STORE = 'projects';
+
+function refreshJobsState() {
+  jobsState = loadJobs();
+  return jobsState;
+}
+
+function getJobIndex(jobId) {
+  if (!jobId) return -1;
+  return jobsState.findIndex(job => job.id === jobId);
+}
+
+function getCurrentJob() {
+  if (!currentJobId) return null;
+  return jobsState.find(job => job.id === currentJobId) || null;
+}
+
+function updateJobStateEntry(updatedJob) {
+  if (!updatedJob || !updatedJob.id) return;
+  const index = getJobIndex(updatedJob.id);
+  if (index !== -1) {
+    jobsState[index] = updatedJob;
+  }
+}
+
+function recordAudit(jobId, entry, options = {}) {
+  if (!jobId) return null;
+  const updated = appendAuditLog(jobId, entry);
+  if (updated) {
+    updateJobStateEntry(updated);
+    if (jobId === currentJobId && !options.silent) {
+      renderAuditLog();
+    }
+  }
+  return updated;
+}
+
+function cloneMaterialList(list) {
+  if (!Array.isArray(list)) return [];
+  return list.map(item => {
+    if (!item || typeof item !== 'object') return item;
+    return { ...item };
+  });
+}
+
+function applyMaterialList(target, source, systemId) {
+  if (!Array.isArray(target)) return;
+  target.length = 0;
+  if (!Array.isArray(source)) return;
+  source.forEach(item => {
+    if (!item || typeof item !== 'object') return;
+    const copy = { ...item };
+    if (!copy.systemKey && systemId && SYSTEM_KEY_BY_ID[systemId]) {
+      copy.systemKey = SYSTEM_KEY_BY_ID[systemId];
+    }
+    target.push(copy);
+  });
+}
+
+function captureManualMaterials() {
+  return cloneMaterialList(manualMaterials);
+}
+
+function applyManualMaterials(list) {
+  if (!Array.isArray(list)) return;
+  manualMaterials.length = 0;
+  list.forEach(item => {
+    if (!item || typeof item !== 'object') return;
+    manualMaterials.push({ ...item, manual: true });
+  });
+  while (manualMaterials.length < 3) {
+    manualMaterials.push({
+      id: `manual-${manualMaterials.length + 1}`,
+      name: '',
+      price: 0,
+      quantity: 0,
+      manual: true,
+    });
+  }
+}
+
+function cloneLonState(state = {}) {
+  return {
+    jobType: state.jobType || 'montage',
+    extraFields: { ...(state.extraFields || {}) },
+    workers: Array.isArray(state.workers) ? state.workers.map(worker => ({ ...worker })) : [],
+    totals: {
+      material: state.totals?.material ?? 0,
+      lon: state.totals?.lon ?? 0,
+    },
+  };
+}
+
+const JOB_EXTRA_FIELD_IDS = [
+  'montagepris',
+  'demontagepris',
+  'slaebePct',
+  'km',
+  'antalBoringHuller',
+  'antalLukHuller',
+  'antalBoringBeton',
+  'antalOpskydeligt',
+  'traelleloeft35',
+  'traelleloeft50',
+];
+
+const SAGSINFO_AUDIT_FIELDS = [
+  { id: 'sagsnummer', key: 'sagsnummer', label: 'Sagsnummer' },
+  { id: 'sagsnavn', key: 'navn', label: 'Navn/opgave' },
+  { id: 'sagsadresse', key: 'adresse', label: 'Adresse' },
+  { id: 'sagskunde', key: 'kunde', label: 'Kunde' },
+  { id: 'sagsdato', key: 'dato', label: 'Dato' },
+  { id: 'sagsmontoer', key: 'montorer', label: 'Montørnavne' },
+];
+
+function captureExtraFieldValues() {
+  const values = {};
+  JOB_EXTRA_FIELD_IDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      values[id] = el.value || '';
+    }
+  });
+  const showSelected = document.getElementById('showSelectedOnly');
+  values.showSelectedOnly = !!showSelected?.checked;
+  return values;
+}
+
+function applyExtraFieldValues(values = {}) {
+  JOB_EXTRA_FIELD_IDS.forEach(id => {
+    const el = document.getElementById(id);
+    if (el && Object.prototype.hasOwnProperty.call(values, id)) {
+      el.value = values[id] ?? '';
+    }
+  });
+  const showSelected = document.getElementById('showSelectedOnly');
+  if (showSelected) {
+    showSelected.checked = !!values.showSelectedOnly;
+  }
+}
+
+function captureWorkers() {
+  const rows = document.querySelectorAll('.worker-row');
+  if (!rows.length) return [];
+  return Array.from(rows).map(row => {
+    const hours = row.querySelector('.worker-hours');
+    const udd = row.querySelector('.worker-udd');
+    const tillaeg = row.querySelector('.worker-tillaeg');
+    const legend = row.querySelector('legend');
+    return {
+      name: legend?.textContent?.trim() || '',
+      hours: hours?.value || '',
+      udd: udd?.value || 'udd1',
+      tillaeg: tillaeg?.value || '',
+    };
+  });
+}
+
+function applyWorkers(workers = []) {
+  const container = document.getElementById('workers');
+  if (!container) return;
+  container.innerHTML = '';
+  workerCount = 0;
+  if (!Array.isArray(workers) || workers.length === 0) {
+    addWorker();
+    return;
+  }
+  workers.forEach(worker => {
+    addWorker();
+    const row = container.lastElementChild;
+    if (!row) return;
+    const hours = row.querySelector('.worker-hours');
+    const udd = row.querySelector('.worker-udd');
+    const tillaeg = row.querySelector('.worker-tillaeg');
+    if (hours) hours.value = worker.hours ?? '';
+    if (udd) udd.value = worker.udd ?? 'udd1';
+    if (tillaeg) tillaeg.value = worker.tillaeg ?? '';
+  });
+}
+
+function captureLonState() {
+  const jobTypeEl = document.getElementById('jobType');
+  return {
+    jobType: jobTypeEl?.value || 'montage',
+    extraFields: captureExtraFieldValues(),
+    workers: captureWorkers(),
+    totals: {
+      material: lastMaterialSum,
+      lon: lastLoensum,
+    },
+  };
+}
+
+function applyLonState(state = {}) {
+  const jobTypeEl = document.getElementById('jobType');
+  if (jobTypeEl && state.jobType) {
+    jobTypeEl.value = state.jobType;
+  }
+  applyExtraFieldValues(state.extraFields || {});
+  applyWorkers(Array.isArray(state.workers) ? state.workers : []);
+  renderCurrency('[data-total="material"]', state.totals?.material ?? lastMaterialSum);
+  renderCurrency('[data-total="labor"]', state.totals?.lon ?? lastLoensum);
+}
+
+function captureSheetState(systemId) {
+  return {
+    materials: cloneMaterialList(getDatasetForSystem(systemId)),
+    manualMaterials: captureManualMaterials(),
+    lon: captureLonState(),
+    totals: {
+      material: lastMaterialSum,
+      lon: lastLoensum,
+    },
+  };
+}
+
+function applySheetState(systemId, sheet = {}) {
+  const option = getSystemOptionById(systemId);
+  if (option && Array.isArray(sheet.materials)) {
+    applyMaterialList(option.dataset, sheet.materials, systemId);
+  }
+  if (Array.isArray(sheet.manualMaterials)) {
+    applyManualMaterials(sheet.manualMaterials);
+  }
+  if (sheet.lon) {
+    applyLonState(sheet.lon);
+  }
+}
+
+function createEmptySheet(systemId) {
+  const option = getSystemOptionById(systemId);
+  const materials = option ? option.dataset.map(item => ({ ...item, quantity: 0 })) : [];
+  const manual = Array.from({ length: 3 }, (_, index) => ({
+    id: `manual-${index + 1}`,
+    name: '',
+    price: 0,
+    quantity: 0,
+    manual: true,
+  }));
+  return {
+    materials,
+    manualMaterials: manual,
+    lon: cloneLonState({ jobType: 'montage', extraFields: { showSelectedOnly: false }, workers: [] }),
+    totals: { material: 0, lon: 0 },
+  };
+}
+
+function persistCurrentSheetState(systemId, options = {}) {
+  if (!currentJobId || !systemId) return;
+  const index = getJobIndex(currentJobId);
+  if (index === -1) return;
+  const job = { ...jobsState[index] };
+  if (!job.sheets || typeof job.sheets !== 'object') {
+    job.sheets = {};
+  }
+  job.sheets = { ...job.sheets };
+  job.sheets[systemId] = captureSheetState(systemId);
+  if (!Array.isArray(job.systems)) job.systems = [];
+  if (!job.systems.includes(systemId)) {
+    job.systems = job.systems.concat(systemId);
+  }
+  job.currentSystemId = systemId;
+  const updated = updateJob(currentJobId, job);
+  if (updated) {
+    jobsState[index] = updated;
+  }
+  if (!options.silent) {
+    scheduleJobAutosave();
+  }
+}
+
+function syncMaterialAuditState(systemId) {
+  lastCapturedMaterials.clear();
+  const dataset = getDatasetForSystem(systemId);
+  dataset.forEach(item => {
+    const key = `${systemId}:${item.id}`;
+    lastCapturedMaterials.set(key, {
+      quantity: toNumber(item.quantity),
+      price: toNumber(item.price),
+    });
+  });
+  manualMaterials.forEach(item => {
+    const key = `manual:${item.id}`;
+    lastCapturedMaterials.set(key, {
+      quantity: toNumber(item.quantity),
+      price: toNumber(item.price),
+    });
+  });
+}
+
+function syncLonAuditState() {
+  lastCapturedLon = {
+    jobType: document.getElementById('jobType')?.value || 'montage',
+    fields: captureExtraFieldValues(),
+    workers: captureWorkers(),
+  };
+}
+
+function persistCurrentJobState(options = {}) {
+  if (!currentJobId) return;
+  const index = getJobIndex(currentJobId);
+  if (index === -1) return;
+  const sagsinfo = collectSagsinfo();
+  persistCurrentSheetState(currentSystemId, { silent: true });
+  const job = { ...jobsState[index] };
+  const jobTypeEl = document.getElementById('jobType');
+  let nextStatus = job.status || 'montage';
+  if (job.status !== 'lukket') {
+    const typeValue = jobTypeEl?.value || 'montage';
+    nextStatus = typeValue === 'demontage' ? 'demontage' : 'montage';
+  }
+  Object.assign(job, {
+    sagsnummer: sagsinfo.sagsnummer || '',
+    navn: sagsinfo.navn || '',
+    adresse: sagsinfo.adresse || '',
+    kunde: sagsinfo.kunde || '',
+    dato: sagsinfo.dato || '',
+    montorer: sagsinfo.montoer || '',
+    status: nextStatus,
+    metaStatus: currentStatus,
+    currentSystemId,
+    updatedAt: Date.now(),
+  });
+  const updated = updateJob(currentJobId, job);
+  if (updated) {
+    jobsState[index] = updated;
+  }
+  if (!options.silent) {
+    renderJobList();
+  }
+}
+
+function scheduleJobAutosave() {
+  if (jobAutosaveTimer) {
+    clearTimeout(jobAutosaveTimer);
+  }
+  jobAutosaveTimer = setTimeout(() => {
+    jobAutosaveTimer = null;
+    persistCurrentJobState({ silent: false });
+  }, 250);
+}
+
+function migrateLegacyState() {
+  if (typeof localStorage === 'undefined') return false;
+  const legacyKeys = ['csmate.state', 'csmateState'];
+  let found = false;
+  legacyKeys.forEach(key => {
+    if (localStorage.getItem(key)) {
+      found = true;
+      localStorage.removeItem(key);
+    }
+  });
+  if (!found) return false;
+  const previousSystem = currentSystemId;
+  currentSystemId = DEFAULT_SYSTEM_ID;
+  const sheet = captureSheetState(DEFAULT_SYSTEM_ID);
+  currentSystemId = previousSystem;
+  const job = createJob({
+    navn: DEFAULT_JOB_NAME,
+    status: 'montage',
+    systems: [DEFAULT_SYSTEM_ID],
+    currentSystemId: DEFAULT_SYSTEM_ID,
+    sheets: { [DEFAULT_SYSTEM_ID]: sheet },
+    auditLog: [],
+  });
+  refreshJobsState();
+  currentJobId = job?.id || null;
+  return true;
+}
+
+function ensureJobsInitialised() {
+  refreshJobsState();
+  if (jobsState.length === 0) {
+    const migrated = migrateLegacyState();
+    if (!migrated) {
+      const previousSystem = currentSystemId;
+      currentSystemId = DEFAULT_SYSTEM_ID;
+      const sheet = captureSheetState(DEFAULT_SYSTEM_ID);
+      currentSystemId = previousSystem;
+      const job = createJob({
+        navn: DEFAULT_JOB_NAME,
+        status: 'montage',
+        systems: [DEFAULT_SYSTEM_ID],
+        currentSystemId: DEFAULT_SYSTEM_ID,
+        sheets: { [DEFAULT_SYSTEM_ID]: sheet },
+        auditLog: [],
+      });
+      refreshJobsState();
+      currentJobId = job?.id || null;
+    } else {
+      refreshJobsState();
+    }
+  }
+  if (!currentJobId && jobsState.length > 0) {
+    currentJobId = jobsState[0].id;
+  }
+  if (!currentSystemId) {
+    currentSystemId = getCurrentJob()?.currentSystemId || DEFAULT_SYSTEM_ID;
+  }
+  syncSelectedKeysFromSystem();
+}
+
+function renderJobBadges(job) {
+  const lockBadge = document.getElementById('jobLockBadge');
+  const sentBadge = document.getElementById('jobSentBadge');
+  if (lockBadge) {
+    if (job?.isLocked) {
+      lockBadge.textContent = 'Job låst';
+      lockBadge.removeAttribute('hidden');
+    } else {
+      lockBadge.setAttribute('hidden', '');
+    }
+  }
+  if (sentBadge) {
+    if (job?.sentToOfficeAt) {
+      const date = new Date(job.sentToOfficeAt);
+      sentBadge.textContent = `Fremsendt ${date.toLocaleDateString('da-DK')} ${date.toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' })}`;
+      sentBadge.removeAttribute('hidden');
+    } else {
+      sentBadge.setAttribute('hidden', '');
+    }
+  }
+}
+
+function updateLockControls(job) {
+  const lockButton = document.getElementById('btnLockJob');
+  const sendButton = document.getElementById('btnMarkSent');
+  const lockPerm = requirePermission('canLockJobs');
+  const sendPerm = requirePermission('canSendJobs');
+  if (lockButton) {
+    lockButton.disabled = !lockPerm || !currentJobId || job?.isLocked;
+  }
+  if (sendButton) {
+    sendButton.disabled = !sendPerm || !currentJobId;
+  }
+}
+
+function applyJobLockState(job) {
+  const isLocked = !!job?.isLocked;
+  const canEditMaterials = requirePermission('canEditMaterials') && !isLocked;
+  const canEditPrices = requirePermission('canEditPrices') && !isLocked;
+  const materialInputs = document.querySelectorAll('#optaellingSection input, #optaellingSection textarea, #optaellingSection select');
+  materialInputs.forEach(input => {
+    if (!(input instanceof HTMLInputElement || input instanceof HTMLTextAreaElement || input instanceof HTMLSelectElement)) return;
+    if (input.type === 'button' || input.type === 'submit') return;
+    if (input.id === 'showSelectedOnly') {
+      input.disabled = isLocked;
+      input.classList.toggle('disabled-field', input.disabled);
+      return;
+    }
+    let allowed = canEditMaterials;
+    if (input.classList.contains('csm-price') || input.classList.contains('price')) {
+      allowed = canEditPrices;
+    }
+    input.disabled = !allowed;
+    input.classList.toggle('disabled-field', input.disabled);
+  });
+
+  const lonInputs = document.querySelectorAll('#lonSection input, #lonSection textarea, #lonSection select');
+  lonInputs.forEach(input => {
+    if (!(input instanceof HTMLInputElement || input instanceof HTMLTextAreaElement || input instanceof HTMLSelectElement)) return;
+    if (input.type === 'button' || input.type === 'submit') return;
+    const allowed = requirePermission('canEditLon') && !isLocked;
+    input.disabled = !allowed;
+    input.classList.toggle('disabled-field', input.disabled);
+  });
+}
+
+function applyJobToUI(job, options = {}) {
+  if (!job) return;
+  currentJobId = job.id;
+  currentSystemId = job.currentSystemId || job.systems?.[0] || DEFAULT_SYSTEM_ID;
+  syncSelectedKeysFromSystem();
+
+  setSagsinfoField('sagsnummer', job.sagsnummer || '');
+  setSagsinfoField('sagsnavn', job.navn || '');
+  setSagsinfoField('sagsadresse', job.adresse || '');
+  setSagsinfoField('sagskunde', job.kunde || '');
+  setSagsinfoField('sagsdato', job.dato || '');
+  const montorField = document.getElementById('sagsmontoer');
+  if (montorField) {
+    montorField.value = job.montorer || '';
+  }
+
+  currentStatus = job.metaStatus || 'kladde';
+  syncStatusUI(currentStatus);
+
+  const sheet = job.sheets?.[currentSystemId];
+  if (sheet) {
+    applySheetState(currentSystemId, sheet);
+  } else {
+    const fallbackSheet = captureSheetState(currentSystemId);
+    applySheetState(currentSystemId, fallbackSheet);
+  }
+
+  renderJobBadges(job);
+  syncMaterialAuditState(currentSystemId);
+  syncLonAuditState();
+  renderOptaelling();
+  updateTotals(true);
+  validateSagsinfo();
+  renderAuditLog();
+  updatePermissionControls();
+}
+
+function setCurrentJob(jobId, options = {}) {
+  if (!jobId) return;
+  if (jobId === currentJobId && !options.force) {
+    applyJobToUI(getCurrentJob(), options);
+    return;
+  }
+  if (currentJobId && !options.skipPersist) {
+    persistCurrentJobState({ silent: true });
+  }
+  const job = jobsState.find(item => item.id === jobId);
+  if (!job) return;
+  applyJobToUI(job, options);
+  renderJobList();
+}
+
+function formatJobStatus(status) {
+  const labels = {
+    montage: 'Montage',
+    i_brug: 'I brug',
+    demontage: 'Demontage',
+    lukket: 'Lukket',
+  };
+  if (!status) return 'Montage';
+  return labels[status] || (status.charAt(0).toUpperCase() + status.slice(1));
+}
+
+function formatJobTimestamp(timestamp) {
+  if (!timestamp) return '-';
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return '-';
+  return `${date.toLocaleDateString('da-DK')} ${date.toLocaleTimeString('da-DK', { hour: '2-digit', minute: '2-digit' })}`;
+}
+
+function renderJobList() {
+  const listBody = document.getElementById('jobList');
+  const archivedBody = document.getElementById('archivedJobList');
+  const archivedSection = document.getElementById('archivedJobs');
+  if (!listBody || !archivedBody) return;
+
+  listBody.innerHTML = '';
+  archivedBody.innerHTML = '';
+
+  const search = jobSearchTerm.trim().toLowerCase();
+  const statusFilter = jobStatusFilter;
+
+  const shouldInclude = job => {
+    const matchesSearch = !search || [job.sagsnummer, job.navn, job.kunde]
+      .filter(Boolean)
+      .some(value => value.toLowerCase().includes(search));
+    const matchesStatus = statusFilter === 'alle' || (job.status || 'montage') === statusFilter;
+    return matchesSearch && matchesStatus;
+  };
+
+  jobsState.forEach(job => {
+    if (!shouldInclude(job)) return;
+    const isArchived = (job.status || '').toLowerCase() === 'lukket';
+    if (isArchived && !showArchivedJobs) return;
+
+    const systems = Array.isArray(job.systems)
+      ? job.systems.map(id => systemLabelMap.get(id) || id).join(', ')
+      : '';
+    const statusLabel = formatJobStatus(job.status);
+    const updatedLabel = formatJobTimestamp(job.updatedAt);
+    const actions = [];
+    actions.push(`<button type="button" data-action="open" data-job="${job.id}">Åbn</button>`);
+    if (requirePermission('canCreateJobs')) {
+      actions.push(`<button type="button" data-action="duplicate" data-job="${job.id}">Duplikér</button>`);
+    }
+    const canArchive = requirePermission('canDeleteJobs');
+    if (isArchived) {
+      if (canArchive) {
+        actions.push(`<button type="button" data-action="restore" data-job="${job.id}">Genåbn</button>`);
+      }
+    } else if (canArchive) {
+      actions.push(`<button type="button" data-action="archive" data-job="${job.id}">Arkivér</button>`);
+    }
+
+    const targetBody = isArchived ? archivedBody : listBody;
+    const activeClass = job.id === currentJobId ? ' class="active-job"' : '';
+    targetBody.insertAdjacentHTML('beforeend', `
+      <tr${activeClass}>
+        <td>${job.sagsnummer || ''}</td>
+        <td>${job.navn || ''}</td>
+        <td>${job.kunde || ''}</td>
+        <td>${systems}</td>
+        <td>${statusLabel}${job.isLocked ? ' 🔒' : ''}</td>
+        <td>${updatedLabel}</td>
+        <td class="actions">${actions.join(' ')}</td>
+      </tr>
+    `);
+  });
+
+  if (archivedSection) {
+    const hasArchived = archivedBody.children.length > 0;
+    if (showArchivedJobs && hasArchived) {
+      archivedSection.removeAttribute('hidden');
+    } else {
+      archivedSection.setAttribute('hidden', '');
+    }
+  }
+}
+
+function createNewJob() {
+  if (currentJobId) {
+    persistCurrentJobState({ silent: true });
+  }
+  const sheet = createEmptySheet(DEFAULT_SYSTEM_ID);
+  const job = createJob({
+    navn: '',
+    status: 'montage',
+    systems: [DEFAULT_SYSTEM_ID],
+    currentSystemId: DEFAULT_SYSTEM_ID,
+    sheets: { [DEFAULT_SYSTEM_ID]: sheet },
+    auditLog: [],
+  });
+  refreshJobsState();
+  if (job?.id) {
+    recordAudit(job.id, { scope: 'job', message: 'Oprettede nyt job' });
+    setCurrentJob(job.id, { force: true, skipPersist: true });
+    renderJobList();
+  }
+}
+
+function duplicateJob(jobId) {
+  const source = jobsState.find(job => job.id === jobId);
+  if (!source) return;
+  const sheets = {};
+  if (source.sheets && typeof source.sheets === 'object') {
+    Object.keys(source.sheets).forEach(systemId => {
+      const sheet = source.sheets[systemId];
+      sheets[systemId] = {
+        materials: cloneMaterialList(sheet?.materials || []),
+        manualMaterials: cloneMaterialList(sheet?.manualMaterials || []),
+        lon: cloneLonState(sheet?.lon || {}),
+        totals: { ...(sheet?.totals || {}) },
+      };
+    });
+  }
+  const job = createJob({
+    navn: source.navn || '',
+    adresse: source.adresse || '',
+    kunde: source.kunde || '',
+    montorer: source.montorer || '',
+    status: source.status || 'montage',
+    systems: Array.isArray(source.systems) ? source.systems.slice() : [DEFAULT_SYSTEM_ID],
+    currentSystemId: source.currentSystemId || DEFAULT_SYSTEM_ID,
+    sheets,
+    sagsnummer: '',
+    dato: '',
+    auditLog: [],
+  });
+  refreshJobsState();
+  if (job?.id) {
+    recordAudit(job.id, { scope: 'job', message: `Duplikerede job fra ${source.sagsnummer || source.id}` });
+    setCurrentJob(job.id, { force: true, skipPersist: true });
+    renderJobList();
+  }
+}
+
+function updateJobStatus(jobId, status, auditMessage) {
+  const updated = updateJob(jobId, job => {
+    const next = { ...job };
+    next.status = status;
+    if (status !== 'lukket' && !next.metaStatus) {
+      next.metaStatus = 'kladde';
+    }
+    next.updatedAt = Date.now();
+    return next;
+  });
+  refreshJobsState();
+  if (updated) {
+    const loggedJob = recordAudit(jobId, { scope: 'status', message: auditMessage });
+    const jobForUi = loggedJob || updated;
+    if (jobId === currentJobId) {
+      applyJobToUI(jobForUi, { force: true, skipPersist: true });
+    }
+    renderJobList();
+  }
+}
+
+function archiveJob(jobId) {
+  updateJobStatus(jobId, 'lukket', 'Job arkiveret');
+}
+
+function restoreJob(jobId) {
+  updateJobStatus(jobId, 'montage', 'Job genåbnet');
+}
+
+function handleJobTableClick(event) {
+  const button = event.target.closest('button[data-action][data-job]');
+  if (!button) return;
+  const jobId = button.dataset.job;
+  const action = button.dataset.action;
+  if (!jobId) return;
+  switch (action) {
+    case 'open':
+      setCurrentJob(jobId);
+      break;
+    case 'duplicate':
+      if (requirePermission('canCreateJobs')) duplicateJob(jobId);
+      break;
+    case 'archive':
+      if (requirePermission('canDeleteJobs')) archiveJob(jobId);
+      break;
+    case 'restore':
+      if (requirePermission('canDeleteJobs')) restoreJob(jobId);
+      break;
+    default:
+      break;
+  }
+}
+
+function setupJobUI() {
+  const searchInput = document.getElementById('jobSearch');
+  if (searchInput) {
+    searchInput.addEventListener('input', event => {
+      jobSearchTerm = event.target.value || '';
+      renderJobList();
+    });
+  }
+
+  const statusSelect = document.getElementById('jobStatusFilter');
+  if (statusSelect) {
+    statusSelect.addEventListener('change', event => {
+      jobStatusFilter = event.target.value || 'alle';
+      renderJobList();
+    });
+  }
+
+  const archivedToggle = document.getElementById('toggleArchived');
+  if (archivedToggle) {
+    archivedToggle.addEventListener('change', event => {
+      showArchivedJobs = !!event.target.checked;
+      renderJobList();
+    });
+  }
+
+  const createBtn = document.getElementById('btnCreateJob');
+  if (createBtn) {
+    createBtn.disabled = !requirePermission('canCreateJobs');
+    createBtn.addEventListener('click', () => {
+      if (!requirePermission('canCreateJobs')) return;
+      createNewJob();
+    });
+  }
+
+  const jobTables = [document.getElementById('jobList'), document.getElementById('archivedJobList')];
+  jobTables.forEach(table => {
+    table?.addEventListener('click', handleJobTableClick);
+  });
+
+  renderJobList();
+}
+
+function setupSagsinfoAudit() {
+  SAGSINFO_AUDIT_FIELDS.forEach(({ id }) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.addEventListener('change', handleSagsinfoChange);
+      el.addEventListener('blur', handleSagsinfoChange);
+    }
+  });
+}
+
+function setupMaterialAuditListeners() {
+  const container = document.getElementById('optaellingContainer');
+  container?.addEventListener('input', handleMaterialInput);
+}
+
+function setupLonAuditListeners() {
+  const jobTypeEl = document.getElementById('jobType');
+  jobTypeEl?.addEventListener('change', handleLonFieldChange);
+  JOB_EXTRA_FIELD_IDS.forEach(id => {
+    const el = document.getElementById(id);
+    el?.addEventListener('change', handleLonFieldChange);
+    el?.addEventListener('blur', handleLonFieldChange);
+  });
+  const workersContainer = document.getElementById('workers');
+  workersContainer?.addEventListener('input', handleWorkerFieldChange);
+  workersContainer?.addEventListener('change', handleWorkerFieldChange);
+}
+
+function handleMaterialInput(event) {
+  if (!currentJobId) return;
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement)) return;
+  const row = target.closest('.material-row');
+  if (!row) return;
+  const itemId = row.dataset.itemId;
+  if (!itemId) return;
+  const systemKey = row.dataset.system || ''; // e.g. 'bosta'
+  const systemId = SYSTEM_ID_BY_KEY[systemKey] || (systemKey === 'manual' ? 'manual' : currentSystemId);
+  const key = systemId === 'manual' ? `manual:${itemId}` : `${systemId}:${itemId}`;
+  const entry = lastCapturedMaterials.get(key) || { quantity: 0, price: 0 };
+  if (target.classList.contains('csm-qty')) {
+    const newQty = toNumber(target.value);
+    if (entry.quantity !== newQty) {
+      recordAudit(currentJobId, {
+        scope: 'materiale',
+        message: `Opdaterede antal for ${itemId}`,
+        diff: { type: 'quantity', itemId, systemId, before: entry.quantity, after: newQty },
+      });
+      entry.quantity = newQty;
+      lastCapturedMaterials.set(key, entry);
+      scheduleJobAutosave();
+    }
+  } else if (target.classList.contains('csm-price')) {
+    const newPrice = toNumber(target.value);
+    if (entry.price !== newPrice) {
+      recordAudit(currentJobId, {
+        scope: 'materiale',
+        message: `Opdaterede pris for ${itemId}`,
+        diff: { type: 'price', itemId, systemId, before: entry.price, after: newPrice },
+      });
+      entry.price = newPrice;
+      lastCapturedMaterials.set(key, entry);
+      scheduleJobAutosave();
+    }
+  }
+}
+
+function handleLonFieldChange(event) {
+  if (!currentJobId) return;
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement || target instanceof HTMLSelectElement || target instanceof HTMLTextAreaElement)) return;
+  const job = getCurrentJob();
+  if (!job) return;
+  const id = target.id;
+  if (id === 'jobType') {
+    const newValue = target.value || 'montage';
+    const prev = lastCapturedLon.jobType || 'montage';
+    if (newValue !== prev) {
+      recordAudit(currentJobId, {
+        scope: 'lon',
+        message: `Skiftede arbejdstype til ${newValue}`,
+        diff: { field: 'jobType', before: prev, after: newValue },
+      });
+      lastCapturedLon.jobType = newValue;
+      persistCurrentJobState({ silent: true });
+    }
+    return;
+  }
+  if (JOB_EXTRA_FIELD_IDS.includes(id)) {
+    const newValue = target.value || '';
+    const prev = lastCapturedLon.fields?.[id] || '';
+    if (newValue !== prev) {
+      recordAudit(currentJobId, {
+        scope: 'lon',
+        message: `Opdaterede ${id}`,
+        diff: { field: id, before: prev, after: newValue },
+      });
+      if (!lastCapturedLon.fields) lastCapturedLon.fields = {};
+      lastCapturedLon.fields[id] = newValue;
+      persistCurrentJobState({ silent: true });
+    }
+  }
+}
+
+function handleWorkerFieldChange(event) {
+  if (!currentJobId) return;
+  const target = event.target;
+  const row = target.closest('.worker-row');
+  if (!row) return;
+  const workers = Array.from(document.querySelectorAll('.worker-row'));
+  const index = workers.indexOf(row);
+  if (index === -1) return;
+  const workerName = row.querySelector('legend')?.textContent?.trim() || `Mand ${index + 1}`;
+  const prevWorker = Array.isArray(lastCapturedLon.workers) ? lastCapturedLon.workers[index] : null;
+  if (!prevWorker) {
+    syncLonAuditState();
+    return;
+  }
+  const hoursInput = row.querySelector('.worker-hours');
+  const uddSelect = row.querySelector('.worker-udd');
+  const tillaegInput = row.querySelector('.worker-tillaeg');
+  let changed = false;
+  const diffs = [];
+  if (hoursInput && hoursInput === target) {
+    const newHours = hoursInput.value || '';
+    if (newHours !== prevWorker.hours) {
+      diffs.push({ field: 'hours', before: prevWorker.hours, after: newHours });
+      prevWorker.hours = newHours;
+      changed = true;
+    }
+  }
+  if (uddSelect && uddSelect === target) {
+    const newUdd = uddSelect.value || '';
+    if (newUdd !== prevWorker.udd) {
+      diffs.push({ field: 'udd', before: prevWorker.udd, after: newUdd });
+      prevWorker.udd = newUdd;
+      changed = true;
+    }
+  }
+  if (tillaegInput && tillaegInput === target) {
+    const newTillaeg = tillaegInput.value || '';
+    if (newTillaeg !== prevWorker.tillaeg) {
+      diffs.push({ field: 'tillaeg', before: prevWorker.tillaeg, after: newTillaeg });
+      prevWorker.tillaeg = newTillaeg;
+      changed = true;
+    }
+  }
+  if (changed) {
+    recordAudit(currentJobId, {
+      scope: 'lon',
+      message: `Opdaterede ${workerName}`,
+      diff: { worker: workerName, changes: diffs },
+    });
+    lastCapturedLon.workers[index] = prevWorker;
+    persistCurrentJobState({ silent: true });
+  }
+}
+
+function updatePermissionControls() {
+  const createBtn = document.getElementById('btnCreateJob');
+  if (createBtn) {
+    createBtn.disabled = !requirePermission('canCreateJobs');
+  }
+  const addWorkerBtn = document.getElementById('btnAddWorker');
+  if (addWorkerBtn) {
+    const job = getCurrentJob();
+    const locked = !!job?.isLocked;
+    addWorkerBtn.disabled = !requirePermission('canEditLon') || locked;
+  }
+  updateLockControls(getCurrentJob());
+  applyJobLockState(getCurrentJob());
+}
+
+function lockCurrentJob() {
+  if (!currentJobId || !requirePermission('canLockJobs')) return;
+  const result = lockJobPersisted(currentJobId);
+  refreshJobsState();
+  if (result) {
+    applyJobToUI(result, { force: true, skipPersist: true });
+    renderJobList();
+  }
+}
+
+function markCurrentJobSent() {
+  if (!currentJobId || !requirePermission('canSendJobs')) return;
+  const result = markJobSent(currentJobId);
+  refreshJobsState();
+  if (result) {
+    applyJobToUI(result, { force: true, skipPersist: true });
+    renderJobList();
+  }
+}
+
+function renderAuditLog() {
+  const body = document.getElementById('auditLogBody');
+  if (!body) return;
+  body.innerHTML = '';
+  const job = getCurrentJob();
+  const exportBtn = document.getElementById('btnExportAudit');
+  if (!job || !Array.isArray(job.auditLog)) {
+    if (exportBtn) exportBtn.disabled = true;
+    return;
+  }
+  const entries = job.auditLog.slice().sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+  if (exportBtn) {
+    exportBtn.disabled = entries.length === 0;
+  }
+  entries.forEach(entry => {
+    const ts = entry.timestamp ? formatJobTimestamp(entry.timestamp) : '-';
+    const scope = entry.scope || '';
+    const user = entry.user || '';
+    const message = entry.message || '';
+    body.insertAdjacentHTML('beforeend', `
+      <tr>
+        <td>${ts}</td>
+        <td>${scope}</td>
+        <td>${user}</td>
+        <td>${message}</td>
+      </tr>
+    `);
+  });
+}
+
+function exportAuditLogCsv() {
+  const job = getCurrentJob();
+  if (!job || !Array.isArray(job.auditLog) || job.auditLog.length === 0) return;
+  const rows = job.auditLog.map(entry => {
+    const diff = entry.diff != null ? JSON.stringify(entry.diff) : '';
+    const iso = entry.timestamp ? new Date(entry.timestamp).toISOString() : '';
+    return [iso, entry.scope || '', entry.user || '', (entry.message || '').replace(/\r?\n/g, ' '), diff].map(value => {
+      const safe = String(value).replace(/"/g, '""');
+      return `"${safe}"`;
+    }).join(';');
+  });
+  const header = '"timestamp_iso";"scope";"user";"message";"diff"';
+  const csv = [header].concat(rows).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  const base = job.sagsnummer?.trim() || job.navn?.trim() || job.id;
+  link.download = `auditlog-${base}.csv`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+  recordAudit(job.id, { scope: 'export', message: 'Eksporterede audit-log (CSV)' });
+}
+
+function handleSagsinfoChange(event) {
+  if (!currentJobId) return;
+  const target = event.target;
+  const fieldConfig = SAGSINFO_AUDIT_FIELDS.find(item => item.id === target.id);
+  if (!fieldConfig) return;
+  const job = getCurrentJob();
+  if (!job) return;
+  const newValue = target.value || '';
+  const oldValue = job[fieldConfig.key] || '';
+  if (newValue === oldValue) return;
+  recordAudit(currentJobId, {
+    scope: 'job',
+    message: `Opdaterede ${fieldConfig.label}`,
+    diff: { field: fieldConfig.key, before: oldValue, after: newValue },
+  });
+  persistCurrentJobState({ silent: true });
+  renderJobList();
+}
+
+function loadStoredUser() {
+  if (typeof localStorage === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(USER_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object' && parsed.name && parsed.role) {
+      return parsed;
+    }
+  } catch (error) {
+    console.warn('Kunne ikke læse bruger fra storage', error);
+  }
+  return null;
+}
+
+function loadCurrentUserState() {
+  currentUser = loadStoredUser();
+  setAuditUserResolver(getCurrentUserNameOrNull);
+  updateUserUI();
+}
+
+function saveCurrentUserState(user) {
+  currentUser = user;
+  if (typeof localStorage !== 'undefined') {
+    try {
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
+    } catch (error) {
+      console.warn('Kunne ikke gemme bruger', error);
+    }
+  }
+  setAuditUserResolver(getCurrentUserNameOrNull);
+  updateUserUI();
+  renderJobList();
+}
+
+function getCurrentUserNameOrNull() {
+  return currentUser ? currentUser.name : null;
+}
+
+function getPermissions() {
+  if (!currentUser) return {};
+  return ROLE_PERMISSIONS[currentUser.role] || {};
+}
+
+function requirePermission(key) {
+  const perms = getPermissions();
+  return !!perms[key];
+}
+
+function formatRoleLabel(role) {
+  const map = {
+    owner: 'Owner',
+    'firma-admin': 'Firma-admin',
+    formand: 'Formand',
+    montor: 'Montør',
+  };
+  return map[role] || role;
+}
+
+function updateUserUI() {
+  const label = document.getElementById('currentUserInfo');
+  if (label) {
+    if (currentUser) {
+      label.textContent = `Bruger: ${currentUser.name} (${formatRoleLabel(currentUser.role)})`;
+    } else {
+      label.textContent = 'Ingen bruger';
+    }
+  }
+  updatePermissionControls();
+}
+
+function openUserOverlay() {
+  const overlay = document.getElementById('userOverlay');
+  if (!overlay) return;
+  overlay.removeAttribute('hidden');
+  overlay.setAttribute('aria-hidden', 'false');
+  const nameInput = document.getElementById('userName');
+  if (nameInput) {
+    nameInput.value = currentUser?.name || '';
+    nameInput.focus();
+  }
+  const roleSelect = document.getElementById('userRole');
+  if (roleSelect) {
+    roleSelect.value = currentUser?.role || 'montor';
+  }
+  updateOverlayAdminRow();
+}
+
+function closeUserOverlay() {
+  const overlay = document.getElementById('userOverlay');
+  if (!overlay) return;
+  overlay.setAttribute('hidden', '');
+  overlay.setAttribute('aria-hidden', 'true');
+  const feedback = document.getElementById('userOverlayFeedback');
+  if (feedback) {
+    feedback.setAttribute('hidden', '');
+    feedback.textContent = '';
+  }
+}
+
+function hasStoredOwner() {
+  const stored = loadStoredUser();
+  return stored?.role === 'owner';
+}
+
+function updateOverlayAdminRow() {
+  const roleSelect = document.getElementById('userRole');
+  const adminRow = document.getElementById('adminCodeRow');
+  const adminInput = document.getElementById('adminCodeInput');
+  if (!roleSelect || !adminRow || !adminInput) return;
+  const role = roleSelect.value;
+  const needsCode = role === 'owner' || (role === 'firma-admin' && !hasStoredOwner());
+  adminRow.hidden = !needsCode;
+  if (!needsCode) {
+    adminInput.value = '';
+  }
+}
+
+function setupUserOverlay() {
+  const openBtn = document.getElementById('btnOpenUserOverlay');
+  const closeBtn = document.getElementById('btnCloseUserOverlay');
+  const cancelBtn = document.getElementById('btnCancelUser');
+  const overlay = document.getElementById('userOverlay');
+  const form = document.getElementById('userForm');
+  const roleSelect = document.getElementById('userRole');
+  const adminInput = document.getElementById('adminCodeInput');
+  const feedback = document.getElementById('userOverlayFeedback');
+
+  openBtn?.addEventListener('click', () => openUserOverlay());
+  closeBtn?.addEventListener('click', () => closeUserOverlay());
+  cancelBtn?.addEventListener('click', () => closeUserOverlay());
+  overlay?.addEventListener('click', event => {
+    if (event.target instanceof HTMLElement && event.target.dataset.overlayDismiss !== undefined) {
+      closeUserOverlay();
+    }
+  });
+  roleSelect?.addEventListener('change', () => updateOverlayAdminRow());
+
+  form?.addEventListener('submit', event => {
+    event.preventDefault();
+    if (!roleSelect) return;
+    const nameInput = document.getElementById('userName');
+    const name = nameInput?.value.trim();
+    const role = roleSelect.value;
+    const adminCode = adminInput?.value?.trim() || '';
+    if (!name) {
+      if (feedback) {
+        feedback.textContent = 'Angiv navn.';
+        feedback.removeAttribute('hidden');
+      }
+      return;
+    }
+    if (role === 'owner' && adminCode !== 'StilAce') {
+      if (feedback) {
+        feedback.textContent = 'Forkert adminkode.';
+        feedback.removeAttribute('hidden');
+      }
+      return;
+    }
+    if (role === 'firma-admin' && !hasStoredOwner() && adminCode !== 'StilAce') {
+      if (feedback) {
+        feedback.textContent = 'Adminkode kræves for firma-admin.';
+        feedback.removeAttribute('hidden');
+      }
+      return;
+    }
+    if (feedback) {
+      feedback.setAttribute('hidden', '');
+      feedback.textContent = '';
+    }
+    saveCurrentUserState({ name, role });
+    closeUserOverlay();
+  });
+
+  updateOverlayAdminRow();
+}
 const TRAELLE_RATE35 = 10.44;
 const TRAELLE_RATE50 = 14.62;
 const BORING_HULLER_RATE = 4.70;
@@ -509,10 +1797,10 @@ dataAlfix.forEach(item => {
 });
 
 const systemOptions = [
-  { key: 'bosta', label: 'Bosta', dataset: dataBosta },
-  { key: 'haki', label: 'HAKI', dataset: dataHaki },
-  { key: 'modex', label: 'MODEX', dataset: dataModex },
-  { key: 'alfix', label: 'Alfix', dataset: dataAlfix },
+  { key: 'bosta', id: 'BOSTA70', label: 'BOSTA', dataset: dataBosta },
+  { key: 'haki', id: 'HAKI', label: 'HAKI', dataset: dataHaki },
+  { key: 'modex', id: 'MODEX', label: 'MODEX', dataset: dataModex },
+  { key: 'alfix', id: 'ALFIX_VARIO', label: 'Alfix VARIO', dataset: dataAlfix },
 ];
 
 systemOptions.forEach(option => {
@@ -524,7 +1812,18 @@ systemOptions.forEach(option => {
   });
 });
 
-const systemLabelMap = new Map(systemOptions.map(option => [option.key, option.label]));
+const systemLabelMap = new Map(systemOptions.map(option => [option.id, option.label]));
+
+function getSystemOptionById(systemId) {
+  const normalized = systemId && typeof systemId === 'string' ? systemId : DEFAULT_SYSTEM_ID;
+  return systemOptions.find(option => option.id === normalized) || systemOptions[0];
+}
+
+function getDatasetForSystem(systemId) {
+  const option = getSystemOptionById(systemId);
+  if (!option || !Array.isArray(option.dataset)) return [];
+  return option.dataset;
+}
 
 const selectedSystemKeys = new Set(systemOptions.length ? [systemOptions[0].key] : []);
 
@@ -539,30 +1838,12 @@ function getSelectedSystemKeys() {
   return Array.from(selectedSystemKeys);
 }
 
-function getDatasetForSelectedSystems(selected) {
-  const lists = [];
-  const rawSelection = Array.isArray(selected)
-    ? selected
-    : (selected && typeof selected[Symbol.iterator] === 'function'
-      ? Array.from(selected)
-      : []);
-  const normalizedSelection = rawSelection.map(value => normalizeKey(value));
-  const selectionSet = new Set(normalizedSelection);
-
-  const addIfSelected = (synonyms, dataset) => {
-    if (!Array.isArray(dataset)) return;
-    const match = synonyms.some(key => selectionSet.has(normalizeKey(key)));
-    if (match) {
-      lists.push(dataset);
-    }
-  };
-
-  addIfSelected(['bosta', 'bostadata'], dataBosta);
-  addIfSelected(['haki', 'hakidata'], dataHaki);
-  addIfSelected(['modex', 'modexdata'], dataModex);
-  addIfSelected(['alfix', 'alfixdata'], dataAlfix);
-
-  return lists.flat();
+function syncSelectedKeysFromSystem() {
+  selectedSystemKeys.clear();
+  const option = getSystemOptionById(currentSystemId);
+  if (option) {
+    selectedSystemKeys.add(option.key);
+  }
 }
 
 function toggleDuplicateWarning(duplicates = [], conflicts = []) {
@@ -588,46 +1869,12 @@ function toggleDuplicateWarning(duplicates = [], conflicts = []) {
 }
 
 function aggregateSelectedSystemData() {
-  const datasets = getDatasetForSelectedSystems(getSelectedSystemKeys());
+  const datasets = getDatasetForSystem(currentSystemId) || [];
   const aggregated = [];
-  const seenIds = new Map();
-  const seenNames = new Map();
-  const duplicateNames = new Set();
-  const conflictingIds = new Set();
-
   datasets.forEach(item => {
-    if (!item) return;
-    const idKey = item.id != null ? String(item.id) : null;
-    const nameKey = item.name ? normalizeKey(item.name) : null;
-    const existingByName = nameKey ? seenNames.get(nameKey) : null;
-    if (existingByName && existingByName !== item) {
-      duplicateNames.add(existingByName.name);
-      duplicateNames.add(item.name);
-      return;
-    }
-
-    const existingById = idKey ? seenIds.get(idKey) : null;
-    if (existingById && existingById !== item) {
-      const existingNameKey = existingById.name ? normalizeKey(existingById.name) : null;
-      if (existingNameKey && nameKey && existingNameKey === nameKey) {
-        duplicateNames.add(existingById.name);
-        duplicateNames.add(item.name);
-        return;
-      }
-      conflictingIds.add(existingById.name);
-      conflictingIds.add(item.name);
-    }
-
-    aggregated.push(item);
-    if (idKey) {
-      seenIds.set(idKey, item);
-    }
-    if (nameKey) {
-      seenNames.set(nameKey, item);
-    }
+    if (item) aggregated.push(item);
   });
-
-  toggleDuplicateWarning(Array.from(duplicateNames), Array.from(conflictingIds));
+  toggleDuplicateWarning([], []);
   return aggregated;
 }
 
@@ -784,67 +2031,57 @@ function findMaterialById(id) {
 
 // --- UI for List Selection ---
 function setupListSelectors() {
-  const container = document.getElementById('listSelectors');
+  const container = document.getElementById('systemTabs');
   if (!container) return;
-  const warningId = 'systemSelectionWarning';
-  const duplicateWarningId = 'systemDuplicateWarning';
-  const optionsHtml = systemOptions
-    .map(option => {
-      const checked = selectedSystemKeys.has(option.key) ? 'checked' : '';
-      return `
-        <label class="system-option">
-          <input type="checkbox" value="${option.key}" ${checked}>
-          <span>${option.label}</span>
-        </label>
-      `;
-    })
-    .join('');
+  const buttons = Array.from(container.querySelectorAll('button[data-system]'));
+  if (!buttons.length) return;
 
-  container.innerHTML = `
-    <div class="system-selector" role="group" aria-labelledby="systemSelectorLabel">
-      <span id="systemSelectorLabel" class="cell-label">Systemer</span>
-      <div class="system-selector-options">${optionsHtml}</div>
-    </div>
-    <p id="${warningId}" class="hint system-warning" hidden>Vælg mindst ét system.</p>
-    <p id="${duplicateWarningId}" class="hint system-warning" hidden></p>
-  `;
-
-  syncSystemSelectorState();
-  const warning = document.getElementById(warningId);
-
-  container.addEventListener('change', event => {
-    const target = event.target;
-    if (!(target instanceof HTMLInputElement) || target.type !== 'checkbox') return;
-
-    const { value } = target;
-    if (target.checked) {
-      selectedSystemKeys.add(value);
-    } else {
-      selectedSystemKeys.delete(value);
-      if (selectedSystemKeys.size === 0) {
-        warning?.removeAttribute('hidden');
-        selectedSystemKeys.add(value);
-        target.checked = true;
-        updateActionHint('Vælg mindst ét system for at fortsætte optællingen.', 'error');
+  const activate = (systemId, options = {}) => {
+    if (!systemId) return;
+    if (!options.force) {
+      if (systemId === currentSystemId) {
+        syncSystemSelectorState();
         return;
       }
+      persistCurrentSheetState(currentSystemId, { silent: true });
     }
+    currentSystemId = systemId;
+    syncSelectedKeysFromSystem();
+    syncSystemSelectorState();
+    if (!options.skipRender) {
+      renderOptaelling();
+      updateTotals(true);
+    }
+    if (!options.silent && currentJobId) {
+      recordAudit(currentJobId, {
+        scope: 'sheet',
+        message: `Skiftede system til ${systemId}`
+      });
+    }
+    scheduleJobAutosave();
+  };
 
-    warning?.setAttribute('hidden', '');
-    const hint = document.getElementById('actionHint');
-    if (hint && hint.textContent === 'Vælg mindst ét system for at fortsætte optællingen.') {
-      updateActionHint('');
-    }
-    renderOptaelling();
-    updateTotals(true);
+  buttons.forEach(button => {
+    button.addEventListener('click', () => {
+      activate(button.dataset.system);
+    });
   });
+
+  if (!SYSTEM_IDS.includes(currentSystemId)) {
+    currentSystemId = buttons[0]?.dataset.system || DEFAULT_SYSTEM_ID;
+  }
+  syncSelectedKeysFromSystem();
+  activate(currentSystemId, { force: true, skipRender: true, silent: true });
 }
 
 function syncSystemSelectorState() {
-  const container = document.getElementById('listSelectors');
+  const container = document.getElementById('systemTabs');
   if (!container) return;
-  container.querySelectorAll('input[type="checkbox"]').forEach(input => {
-    input.checked = selectedSystemKeys.has(input.value);
+  container.querySelectorAll('button[data-system]').forEach(button => {
+    const isActive = button.dataset.system === currentSystemId;
+    button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+    button.classList.toggle('active', isActive);
+    button.disabled = isActive;
   });
 }
 
@@ -1234,8 +2471,29 @@ function updateStatus(value, options = {}) {
     updateActionHint('Kun kontor kan godkende/afvise.', 'error');
     return;
   }
+  const previous = currentStatus;
+  if (previous === next) {
+    currentStatus = next;
+    syncStatusUI(currentStatus);
+    return;
+  }
   currentStatus = next;
   syncStatusUI(currentStatus);
+  if (!currentJobId) return;
+  const updated = updateJob(currentJobId, job => {
+    const nextJob = { ...job };
+    nextJob.metaStatus = next;
+    return nextJob;
+  });
+  if (updated) {
+    updateJobStateEntry(updated);
+    recordAudit(currentJobId, {
+      scope: 'status',
+      message: `Skiftede status til ${formatStatusLabel(next)}`,
+      diff: { field: 'metaStatus', before: previous, after: next },
+    });
+    renderJobList();
+  }
 }
 
 function initStatusControls() {
@@ -2044,6 +3302,7 @@ function addWorker() {
     <div class="worker-output" aria-live="polite"></div>
   `;
   document.getElementById("workers").appendChild(w);
+  syncLonAuditState();
 }
 
 
@@ -3296,12 +4555,14 @@ function initApp() {
   if (appInitialized) return;
   appInitialized = true;
 
-  vis('sagsinfo');
+  vis('jobs');
 
   const navConfig = [
+    { id: 'btnJobs', section: 'jobs', onActivate: () => renderJobList() },
     { id: 'btnSagsinfo', section: 'sagsinfo' },
     { id: 'btnOptaelling', section: 'optaelling' },
     { id: 'btnLon', section: 'lon' },
+    { id: 'btnHistorik', section: 'historik', onActivate: () => renderAuditLog() },
   ];
 
   navConfig.forEach(({ id, section, onActivate }) => {
@@ -3422,6 +4683,23 @@ function initApp() {
       }
     });
   }
+
+  setupJobUI();
+  setupSagsinfoAudit();
+  setupMaterialAuditListeners();
+  setupLonAuditListeners();
+  setupUserOverlay();
+  loadCurrentUserState();
+  ensureJobsInitialised();
+  const job = getCurrentJob();
+  if (job) {
+    applyJobToUI(job, { force: true, skipPersist: true });
+  } else {
+    renderJobList();
+  }
+  document.getElementById('btnLockJob')?.addEventListener('click', () => lockCurrentJob());
+  document.getElementById('btnMarkSent')?.addEventListener('click', () => markCurrentJobSent());
+  document.getElementById('btnExportAudit')?.addEventListener('click', () => exportAuditLogCsv());
 }
 
 if (document.readyState === 'loading') {

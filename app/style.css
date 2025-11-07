@@ -43,6 +43,9 @@ header .ttl{font-weight:700}
 nav{display:flex;gap:6px;flex-wrap:wrap;padding:4px 0}
 nav button{background:#34353b;color:var(--text);border:1px solid var(--border);border-radius:10px;padding:6px 12px;min-height:36px;font-size:0.95rem;line-height:1.2}
 nav button.active{outline:2px solid var(--accent)}
+.user-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.user-controls button{min-width:auto;padding:6px 12px}
+.user-label{font-size:0.85rem;color:var(--muted);font-weight:600}
 button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .material-row input:focus-visible,.csm-row input:focus-visible{outline:2px solid var(--accent)}
 main{padding:var(--pad);display:flex;flex-direction:column;gap:var(--gap)}
@@ -55,11 +58,13 @@ label span{color:var(--muted);font-size:0.85rem}
 .status-indicator{display:flex;flex-direction:column;gap:6px;min-width:180px}
 .status-indicator span{color:var(--muted);font-size:0.85rem}
 .status-pill{display:inline-flex;align-items:center;justify-content:center;padding:8px 14px;border-radius:999px;border:1px solid var(--border);background:rgba(255,255,255,0.05);text-transform:capitalize;font-weight:600;min-width:140px;text-align:center}
+.job-lock-status{display:flex;gap:8px;align-items:center;margin-left:auto}
 .status-pill[data-status="afventer"]{background:rgba(255,196,38,0.12);color:#ffd66c;border-color:rgba(255,196,38,0.4)}
 .status-pill[data-status="godkendt"]{background:rgba(93,201,133,0.18);color:#8adbae;border-color:rgba(93,201,133,0.4)}
 .status-pill[data-status="afvist"]{background:rgba(214,102,102,0.18);color:#ff9b9b;border-color:rgba(214,102,102,0.4)}
-.form-actions{margin-top:var(--gap);display:flex;justify-content:flex-end}
-.form-actions button{min-width:160px}
+.form-actions{margin-top:var(--gap);display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.form-actions button{min-width:140px}
+.job-action-group{display:flex;gap:8px;flex-wrap:wrap}
 .date-field .date-input-wrapper{display:flex;align-items:center;gap:8px}
 .date-field .date-input-wrapper input[type=date]{flex:1}
 .date-picker-trigger{display:inline-flex;align-items:center;justify-content:center;min-height:44px;min-width:44px;padding:0 12px;font-size:1.25rem;line-height:1;border:1px solid var(--border);background:var(--elev)}
@@ -69,6 +74,32 @@ textarea{resize:vertical}
 button{cursor:pointer}
 .sektion{display:flex;flex-direction:column;gap:var(--gap)}
 .sektion.active{display:flex!important;}
+.job-toolbar{display:flex;flex-direction:column;gap:var(--gap);margin-bottom:var(--gap)}
+.job-toolbar-left{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.job-toolbar-right{display:flex;gap:8px;flex-wrap:wrap}
+.job-toggle-archived{display:inline-flex;align-items:center;gap:6px;font-size:0.85rem;color:var(--muted)}
+.job-toggle-archived input{width:auto;min-height:auto}
+@media(min-width:768px){
+  .job-toolbar{flex-direction:row;align-items:center;justify-content:space-between}
+}
+.job-table-wrapper{overflow-x:auto;border:1px solid var(--border);border-radius:12px;background:var(--panel)}
+.job-table{width:100%;border-collapse:collapse;font-size:0.95rem}
+.job-table th,.job-table td{padding:10px 12px;border-bottom:1px solid var(--border);text-align:left;white-space:nowrap}
+.job-table th{color:var(--muted);text-transform:uppercase;font-size:0.75rem;letter-spacing:0.08em}
+.job-table tbody tr:hover{background:rgba(255,255,255,0.04)}
+.job-table td.actions{display:flex;gap:6px;flex-wrap:wrap}
+.job-table td.actions button{min-width:auto;padding:6px 10px}
+.job-table .actions{min-width:200px}
+.archived-jobs{margin-top:var(--gap);display:flex;flex-direction:column;gap:var(--gap)}
+.archived-jobs[hidden]{display:none}
+.system-tabs{display:flex;gap:8px;flex-wrap:wrap}
+.system-tabs button{padding:8px 14px;border-radius:999px;background:var(--panel);border:1px solid var(--border);font-weight:600}
+.system-tabs button[aria-selected="true"]{background:var(--accent);color:#10131a;border-color:var(--accent)}
+.history-actions{display:flex;justify-content:flex-end;margin-bottom:var(--gap)}
+.history-table-wrapper{overflow-x:auto;border:1px solid var(--border);border-radius:12px;background:var(--panel)}
+.history-table{width:100%;border-collapse:collapse;font-size:0.95rem}
+.history-table th,.history-table td{padding:10px 12px;border-bottom:1px solid var(--border);text-align:left}
+.history-table th{color:var(--muted);text-transform:uppercase;font-size:0.75rem;letter-spacing:0.08em}
 .row{display:flex;gap:8px;flex-wrap:wrap}
 .btn-group{display:flex;gap:8px;flex-wrap:wrap}
 .grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--gap)}
@@ -158,6 +189,15 @@ button{cursor:pointer}
 round:rgba(255,255,255,0.03)}
 
 .overview{background:var(--elev);border:1px solid var(--border);border-radius:12px;padding:var(--pad)}
+.user-overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;z-index:900}
+.user-overlay[hidden]{display:none}
+.user-overlay-backdrop{position:absolute;inset:0;background:rgba(10,11,14,0.72)}
+.user-overlay-dialog{position:relative;background:var(--panel);border:1px solid var(--border);border-radius:16px;padding:24px;width:min(420px,92vw);display:flex;flex-direction:column;gap:16px;box-shadow:0 30px 80px rgba(0,0,0,0.45)}
+.user-overlay-dialog form{display:flex;flex-direction:column;gap:12px}
+.user-overlay-close{position:absolute;top:12px;right:12px;width:32px;height:32px;border-radius:50%;background:transparent;border:1px solid var(--border)}
+.user-overlay-actions{display:flex;gap:8px;justify-content:flex-end}
+.admin-code-row{display:flex;flex-direction:column;gap:6px}
+.disabled-field input,.disabled-field textarea,.disabled-field select,input.disabled-field,textarea.disabled-field,select.disabled-field{pointer-events:none;opacity:0.55}
 .totals{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--gap)}
 .totals div{display:flex;flex-direction:column;gap:4px;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:12px}
 .totals span{color:var(--muted);font-size:0.85rem}
@@ -384,3 +424,5 @@ round:rgba(255,255,255,0.03)}
 .approval-badge[data-status="afventer"]{background:rgba(255,196,38,0.12);color:#ffd66c;border-color:rgba(255,196,38,0.4)}
 .approval-badge[data-status="godkendt"]{background:rgba(93,201,133,0.18);color:#8adbae;border-color:rgba(93,201,133,0.4)}
 .approval-badge[data-status="afvist"]{background:rgba(214,102,102,0.18);color:#ff9b9b;border-color:rgba(214,102,102,0.4)}
+.job-table tr.active-job{background:rgba(142,160,181,0.12)}
+.job-table tr.active-job td{font-weight:600}
