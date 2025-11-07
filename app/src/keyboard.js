@@ -1,7 +1,14 @@
 function focused() {
   const el = document.activeElement;
   if (!el) return false;
+  if (el.isContentEditable) return true;
   return ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName);
+}
+
+function globalFocusTarget() {
+  const el = document.activeElement;
+  if (!el) return true;
+  return el === document.body || el === document.documentElement;
 }
 
 export function wireShortcuts() {
@@ -20,6 +27,7 @@ export function wireShortcuts() {
     }
 
     if (e.key === 'Enter') {
+      if (!globalFocusTarget()) return;
       e.preventDefault();
       window.UI?.goNext?.();
     }
