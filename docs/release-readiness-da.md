@@ -135,7 +135,7 @@ Test Suites: 0 failed, 15 passed
 - **Status**: ✅ Klar til udgivelse (no blockers)
 - **Version tag**: `v1.0.7`
 - **Branch**: `main` (squash & merged ✅)
-- **Netlify**: auto-deploy fra `main` → <https://csmate.netlify.app>
+- **Netlify**: auto-deploy fra `main`
 - **CI**: `npm run ci` grøn ✅
 - **Lighthouse**: `91 / 93 / 100 / 100`
 

@@ -8,7 +8,7 @@
 
 2) Sæt PROD_URL (din hosted PWA – HTTPS)  
    ```bash
-   export PROD_URL="https://csmate.netlify.app"   # skift til endeligt domæne
+   export PROD_URL="YOUR_PRODUCTION_URL"   # skift til endeligt domæne
    ```
 
 3) Init TWA (første gang)  
