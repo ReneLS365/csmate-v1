@@ -5,6 +5,10 @@ function focused () {
   return ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName)
 }
 
+function numpadIsOpen () {
+  return Boolean(document.querySelector('.csm-np-overlay.open, .numpad.open'))
+}
+
 function hasNativeEnterBehavior (el) {
   if (!el || el === document.body || el === document.documentElement) return false
   if (el.isContentEditable) return true
@@ -23,7 +27,7 @@ function allowsGlobalEnter (el) {
 
 export function wireShortcuts () {
   window.addEventListener('keydown', (e) => {
-    if (document.querySelector('.csm-np-overlay.open')) return
+    if (numpadIsOpen()) return
     if (focused()) return
 
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
