@@ -118,6 +118,12 @@ button{cursor:pointer}
 .btn-group{display:flex;gap:8px;flex-wrap:wrap}
 .grid-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--gap)}
 .grid-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--gap)}
+.tab.hidden{display:none;}
+.grid.two{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+@media (max-width:800px){
+  .grid.two{grid-template-columns:1fr;}
+}
+kbd{padding:0 0.35rem;border:1px solid #ccc;border-bottom-width:2px;border-radius:4px;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;font-size:0.85em;}
 .form-grid{padding:var(--pad);background:var(--panel);border-radius:12px}
 .col-span-3{grid-column:1/-1}
 .materials{

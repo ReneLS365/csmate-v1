@@ -40,7 +40,7 @@
           <button id="btnOptaelling" data-section="optaelling" type="button">Optælling</button>
           <button id="btnLon" data-section="lon" type="button">Løn</button>
           <button id="btnHistorik" data-section="historik" type="button">Historik</button>
-          <button data-tab="help" id="tab-btn-help" type="button">Hjælp</button>
+          <button data-tab="help" data-section="help" id="tab-btn-help" type="button">Hjælp</button>
         </nav>
         <div class="user-controls no-print">
           <span id="currentUserInfo" class="user-label">Ingen bruger</span>
@@ -359,6 +359,72 @@
         </table>
       </div>
     </fieldset>
+  </section>
+
+  <section id="helpSection" class="sektion" hidden>
+    <section id="tab-help" class="tab hidden">
+      <h2>Hjælp</h2>
+      <div class="grid two">
+        <div>
+          <h3>Kom hurtigt i gang</h3>
+          <ol>
+            <li>Opret job</li>
+            <li>Vælg system</li>
+            <li>Tæl materialer</li>
+            <li>Udfyld løn</li>
+            <li>Eksportér akkordseddel</li>
+          </ol>
+        </div>
+        <div>
+          <h3>FAQ</h3>
+          <details>
+            <summary>Zoom på mobil</summary>
+            <p>Brug to-finger pinch eller “Vis desktopsite” i browsermenu.</p>
+          </details>
+          <details>
+            <summary>Installer som app (Android)</summary>
+            <p>Chrome → menu → “Føj til startskærm”.</p>
+          </details>
+          <details>
+            <summary>Installer som app (iOS/Safari)</summary>
+            <p>Del-ikon → “Føj til hjemmeskærm”.</p>
+          </details>
+          <h3>Genveje</h3>
+          <ul>
+            <li><kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>S</kbd> Gem aktivt job</li>
+            <li><kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>P</kbd> Eksport/print</li>
+            <li><kbd>Enter</kbd> Næste handling</li>
+          </ul>
+        </div>
+      </div>
+      <hr/>
+      <section id="scafbook">
+        <h3>Book of Scaf Knowledge</h3>
+        <div class="grid two">
+          <div>
+            <h4>Formler (kort)</h4>
+            <ul>
+              <li>Vindlast: brug kursusformel og lokale data.</li>
+              <li>Søjletryk: input = egenvægt, nyttelast, areal.</li>
+              <li>Transport: 15 m inkl., +7 % pr. 10 m til 55 m.</li>
+              <li>Slæb: iht. virksomhedens skema.</li>
+            </ul>
+          </div>
+          <div>
+            <h4>Regler</h4>
+            <ul>
+              <li>Transporttillæg: hvornår udløses.</li>
+              <li>Særskilt akkord: typiske cases.</li>
+            </ul>
+            <h4>Links</h4>
+            <ul>
+              <li>HP3 Provinsen (PDF)</li>
+              <li>Overenskomst 2024–2026 (PDF)</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    </section>
   </section>
         </main>
       </div>

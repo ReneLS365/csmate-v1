@@ -21,6 +21,8 @@ import { installLazyNumpad } from './src/ui/numpad.lazy.js'
 import { createVirtualMaterialsList } from './src/modules/materialsVirtualList.js'
 import { initClickGuard } from './src/ui/Guards/ClickGuard.js'
 import { setAdminOk, setLock } from './src/state/admin.js'
+import { mountDevIfHash } from './src/dev.js'
+import { wireShortcuts } from './src/keyboard.js'
 import {
   loadJobs,
   getJobs,
@@ -117,6 +119,18 @@ function vis(id) {
     const isActive = buttonTarget === activeId;
     btn.classList.toggle('active', isActive);
     btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+  });
+}
+
+function activateTabByName(name) {
+  if (!name || typeof document === 'undefined') return;
+  const tab = document.getElementById(`tab-${name}`);
+  if (!tab) return;
+  document.querySelectorAll('.tab').forEach(el => el.classList.add('hidden'));
+  tab.classList.remove('hidden');
+  document.querySelectorAll('[data-tab]').forEach(btn => {
+    const isActive = btn.getAttribute('data-tab') === name;
+    btn.classList.toggle('active', isActive);
   });
 }
 
@@ -467,7 +481,12 @@ function handleTabNavigation(event) {
 
 if (typeof document !== 'undefined') {
   document.addEventListener('click', handleGlobalClick)
-  document.addEventListener('click', handleTabNavigation)
+  document.addEventListener('click', event => {
+    const btn = event.target.closest('[data-tab]')
+    if (!btn) return
+    const name = btn.getAttribute('data-tab')
+    activateTabByName(name)
+  })
 }
 
 if (typeof window !== 'undefined') {
@@ -475,6 +494,7 @@ if (typeof window !== 'undefined') {
     wireShortcuts()
     wireStatusbar()
     scheduleJobStoreListener()
+    wireShortcuts()
     mountDevIfHash()
   })
   scheduleJobStoreListener()
@@ -4783,6 +4803,7 @@ function initApp() {
     { id: 'btnOptaelling', section: 'optaelling' },
     { id: 'btnLon', section: 'lon' },
     { id: 'btnHistorik', section: 'historik', onActivate: () => renderAuditLog() },
+    { id: 'tab-btn-help', section: 'help', onActivate: () => activateTabByName('help') },
   ];
 
   navConfig.forEach(({ id, section, onActivate }) => {
