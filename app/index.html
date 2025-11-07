@@ -20,6 +20,12 @@
 </head>
 <body>
   <a class="skip-to-content" href="#main">Spring til indhold</a>
+  <div id="statusbar" class="statusbar offline">
+    <span class="status-dot offline" id="status-dot"></span>
+    <span id="status-text">Offline</span>
+    <span class="muted">Sidst synkroniseret: <span id="last-sync">-</span></span>
+    <button id="btn-sync-now" class="btn small">Synkronisér nu</button>
+  </div>
   <div id="iosInstallPrompt" class="ios-install-prompt" role="region" aria-live="polite" hidden>
     <p>Tilføj CSMate til hjemmeskærmen: Tryk på delingsknappen og vælg <strong>Føj til hjemmeskærm</strong>.</p>
     <button type="button" id="iosInstallDismiss" class="ios-install-dismiss" aria-label="Skjul iOS installationshint">✕</button>
@@ -162,6 +168,11 @@
         </div>
       </div>
     </fieldset>
+    <section id="job-export" class="card">
+      <h3>Eksport</h3>
+      <button id="btn-export-all" class="btn primary">Eksportér alt for dette job</button>
+      <small id="export-help" class="muted">Kræver udfyldt sagsinfo</small>
+    </section>
   </section>
 
   <section id="optaellingSection" class="sektion" hidden>
@@ -233,6 +244,7 @@
       </div>
       <p id="adminFeedback" class="status-message" hidden aria-live="polite"></p>
       <button id="btnHardResetApp" type="button" hidden>Nulstil app-data</button>
+      <button id="btn-backup" class="btn" type="button">Eksportér al data (ZIP/JSON)</button>
     </fieldset>
   </section>
 
@@ -310,6 +322,7 @@
     <div class="row no-print btn-group">
       <button id="btnBeregnLon" type="button">Beregn løn</button>
       <button id="btnPrint" type="button" disabled>Print</button>
+      <button id="btn-share-sheet" class="btn" type="button">Del denne akkordseddel</button>
     </div>
     <fieldset>
       <legend>Resultat</legend>
