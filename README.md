@@ -28,6 +28,28 @@ Service worker registreres automatisk i produktion; ved lokale tests kan den cac
 - **Manuelle materialer**: Tre tomme rækker nederst i materialelisten kan navngives og indtastes manuelt og tælles med i summer, PDF og CSV.
 - **Nye totaler i overblik**: `Materialesum`, `Lønsum` (akkord fordelt på medarbejdere) og `Projektsum`. Tralleløft-data, hvis udfyldt i Løn-fanen, føjes automatisk til totaler og CSV.
 
+## Nye features (Hjælp, /dev, genveje)
+- **Hjælp-fane**
+  - Quickstart-guide: Opret job → vælg system → tæl materialer → udfyld løn → eksportér akkordseddel.
+  - Mini-FAQ om zoom og PWA-installation på Android/iOS.
+  - Tastatur-genveje for desktop.
+- **ScafBook**
+  - Kort oversigt over vindlast, søjletryk, transport, slæb.
+  - Links til HP3 Provinsen og overenskomst 2024–2026.
+- **/dev-panel**
+  - Vises ved `#dev` i URL.
+  - Meta: app-version, SW-version, aktiv template, user agent, viewport, storage.
+  - Health-check med ✅/❌ for JobStore, TemplateStore og beregningsbaseline.
+  - Audit-viewer med de seneste 50 log-poster.
+- **Genveje**
+  - `Ctrl/⌘ + S` gemmer aktivt job.
+  - `Ctrl/⌘ + P` åbner eksport/print.
+  - `Enter` triggere næste logiske handling, så længe numpad ikke er åben og fokus ikke er i et input.
+- **Tests og CI**
+  - Unit-tests: `npm test`
+  - E2E-tests: `npm run e2e`
+  - Lighthouse CI: `npx lhci collect && npx lhci assert --config=.lighthouserc.cjs`
+
 ## Eksport og print
 - **Del til E-komplet (CSV)**: Eksporterer en semikolon-separeret fil med Sagsinfo, materialer (inkl. manuelle og tralleløft), lønlinjer og totaler. Tal skrives med komma-decimaler.
 - **Eksportér PDF + CSV**: Genererer først CSV (som ovenfor), beregner løn (kører `Beregn løn`) og laver derefter en PDF med Sagsinfo, materialetabel, lønoversigt, totaler samt den aktuelle resultatsektion.

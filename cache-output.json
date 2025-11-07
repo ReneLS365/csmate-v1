@@ -1,7 +1,7 @@
 {
-  "version": "v20251107T061920",
+  "version": "v20251108T120000",
   "cachePrefix": "csmate",
-  "cacheName": "csmate-v20251107T061920",
+  "cacheName": "csmate-v20251108T120000",
   "precache": [
     {
       "url": "/",
@@ -31,8 +31,8 @@
       "url": "/main.js",
       "file": "app/main.js",
       "exists": true,
-      "bytes": 169035,
-      "sha256": "8866a3ba9151e6a35509229148cbbea12cd0f0e4dff35cc3551ffeec6ba775ad"
+      "bytes": 170049,
+      "sha256": "929aafeeb3ce91fae3602f0e89701f841668f2ccb54d6d1f7bb1725714573086"
     },
     {
       "url": "/style.css",
@@ -110,6 +110,13 @@
       "exists": true,
       "bytes": 2337,
       "sha256": "1163a0839555715e9c9e347830cf3d451019203c977539bc092253f1087d9e5f"
+    },
+    {
+      "url": "/src/globals.js",
+      "file": "app/src/globals.js",
+      "exists": true,
+      "bytes": 6971,
+      "sha256": "50b0f98812c10cf2886fe67e0cc440d8e6310a1afdfe19485b1552cdfed982a9"
     },
     {
       "url": "/src/dev.js",

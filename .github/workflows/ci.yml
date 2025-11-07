@@ -18,10 +18,14 @@ jobs:
         with:
           node-version: 20
           cache: 'npm'
-      - run: npm ci
-      - run: npm run lint --if-present
-      - run: npm run test --if-present
-      - run: npm run build --if-present
+      - name: Install dependencies
+        run: npm ci
+      - name: Lint
+        run: npm run lint
+      - name: Unit tests
+        run: npm run test
+      - name: Build app
+        run: npm run build
       - name: CI summary
         run: node scripts/ci-summary.js
       - name: Upload unit artifacts (if any)
@@ -48,10 +52,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: npm ci
+      - name: Install dependencies
+        run: npm ci
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
-      - name: Start server
+      - name: Start preview server
         run: npm run serve:ci &
       - name: Wait for server
         run: npx wait-on http://127.0.0.1:4173
@@ -85,7 +90,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - run: npm ci
+      - name: Install dependencies
+        run: npm ci
+      - name: Build app
+        run: npm run build
 
       - name: Install Playwright Chromium (with deps)
         run: npx playwright install --with-deps chromium
@@ -99,7 +107,7 @@ jobs:
           echo "Resolved Chrome path: $CHROME_BIN"
           "$CHROME_BIN" --version || true
 
-      - name: Start server
+      - name: Start preview server
         run: npm run serve:ci &
       - name: Wait for server
         run: npx wait-on http://127.0.0.1:4173
@@ -109,13 +117,15 @@ jobs:
           node -e "console.log('CHROME_PATH:', process.env.CHROME_PATH)"
           node -e "console.log(require('./.lighthouserc.cjs'))"
 
-      - name: Run Lighthouse CI (collect via config)
+      - name: Lighthouse collect
         run: |
           npx lhci collect --config=.lighthouserc.cjs || {
             echo "::error::Lighthouse failed, dumping logs"
             cat /tmp/lighthouse*/chrome-err.log || true
             exit 1
           }
+      - name: Lighthouse assert
+        run: npx lhci assert --config=.lighthouserc.cjs
 
       - name: Upload Lighthouse artifacts
         uses: actions/upload-artifact@v4
