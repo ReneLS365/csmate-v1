@@ -26,20 +26,34 @@ export const ConfigSchema = {
     }
   },
   auth: {
-    provider: 'ekomplet',
+    provider: 'auth0',
     oidc: {
       authority: '',
       clientId: '',
       redirectUri: `${origin}/auth/callback`,
       postLogoutRedirectUri: `${origin}/`,
       audience: '',
-      scopes: 'openid profile email offline_access'
+      scopes: 'openid profile email offline_access',
+      connection: '',
+      organization: '',
+      permissionClaim: 'https://csmate.app/permissions',
+      logoutPath: 'v2/logout',
+      logoutUsesReturnTo: true
     },
     roleMapping: {
       rules: [
         { claim: 'roles', contains: 'csmate_admin', to: 'admin' },
         { claim: 'roles', contains: 'csmate_foreman', to: 'foreman' },
-        { claim: 'roles', contains: 'csmate_worker', to: 'worker' }
+        { claim: 'roles', contains: 'csmate_worker', to: 'worker' },
+        { claim: 'https://csmate.app/roles', contains: 'csmate_admin', to: 'admin' },
+        { claim: 'https://csmate.app/roles', contains: 'csmate_foreman', to: 'foreman' },
+        { claim: 'https://csmate.app/roles', contains: 'csmate_worker', to: 'worker' },
+        { claim: 'permissions', contains: 'csmate:admin', to: 'admin' },
+        { claim: 'permissions', contains: 'csmate:foreman', to: 'foreman' },
+        { claim: 'permissions', contains: 'csmate:worker', to: 'worker' },
+        { claim: 'https://csmate.app/permissions', contains: 'csmate:admin', to: 'admin' },
+        { claim: 'https://csmate.app/permissions', contains: 'csmate:foreman', to: 'foreman' },
+        { claim: 'https://csmate.app/permissions', contains: 'csmate:worker', to: 'worker' }
       ],
       fallback: 'worker'
     },
