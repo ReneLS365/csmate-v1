@@ -108,7 +108,7 @@ export async function startLogin() {
   const oidc = ensureConfig();
   const verifier = base64UrlEncode(crypto.getRandomValues(new Uint8Array(32)));
   const challenge = base64UrlEncode(await sha256(verifier));
-  sessionStorage.setItem('pkce_verifier', verifier);
+  setSessionVerifier(verifier);
 
   const params = new URLSearchParams({
     client_id: oidc.clientId,
@@ -140,8 +140,10 @@ export async function handleCallback() {
   roleClaimNames.add('roles');
   const url = new URL(globalThis.location.href);
   const code = url.searchParams.get('code');
-  const verifier = sessionStorage.getItem('pkce_verifier');
-  if (!code || !verifier) return false;
+  const verifier = popSessionVerifier();
+  if (!code || !verifier) {
+    return false;
+  }
 
   const tokenUrl = `${oidc.authority.replace(/\/?$/, '')}/oauth/token`;
   const body = new URLSearchParams({
@@ -202,7 +204,7 @@ export async function handleCallback() {
       orgId: typeof orgId === 'string' ? orgId : null,
       roles
     },
-    idToken: tokens.id_token,
+    idToken,
     accessToken: tokens.access_token ?? null,
     refreshToken: tokens.refresh_token ?? null,
     tokenType: tokens.token_type ?? 'Bearer',
@@ -216,7 +218,7 @@ export async function handleCallback() {
   };
 
   saveSession(session);
-  sessionStorage.removeItem('pkce_verifier');
+  cleanupCallbackUrl(globalThis.location.href);
   return session;
 }
 
