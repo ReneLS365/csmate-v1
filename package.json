@@ -17,9 +17,9 @@
     "twa:update": "cd twa && npx bubblewrap update",
     "twa:build": "cd twa && npx bubblewrap build",
     "serve:ci": "http-server -p 4173 -c-1 . >/dev/null 2>&1",
-    "e2e": "playwright test --project=chromium",
-    "e2e:headed": "playwright test --headed --project=chromium",
-    "test:e2e": "playwright test --reporter=line",
+    "e2e": "start-server-and-test serve:dist http://127.0.0.1:4173 \"playwright test --project=chromium\"",
+    "e2e:headed": "start-server-and-test serve:dist http://127.0.0.1:4173 \"playwright test --headed --project=chromium\"",
+    "test:e2e": "start-server-and-test serve:dist http://127.0.0.1:4173 \"playwright test --reporter=line\"",
     "ci": "npm run lint && npm run test -- --coverage && npm run build",
     "lhci": "npm run build && lhci autorun --collect.url=http://127.0.0.1:4173 --collect.numberOfRuns=1 --collect.startServerCommand=\"npm run serve:dist\" --collect.settings.chromeFlags=\"--no-sandbox --headless=new --disable-gpu --disable-dev-shm-usage\" --assert.preset=lighthouse:recommended --upload.target=filesystem",
     "lh:collect": "lhci collect --config=.lighthouserc.cjs",
@@ -28,12 +28,14 @@
     "prepare": "npm run generate:pwa-assets",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "auth:user": "node scripts/neon-auth-check.js"
   },
   "devDependencies": {
     "@lhci/cli": "^0.13.0",
     "@playwright/test": "^1.47.2",
     "@vitest/coverage-v8": "^1.6.1",
+    "drizzle-kit": "^0.26.0",
     "eslint": "^8.57.0",
     "eslint-config-standard": "^17.1.0",
     "eslint-plugin-import": "^2.29.1",
@@ -45,13 +47,13 @@
     "start-server-and-test": "^2.0.3",
     "vitest": "^1.4.0",
     "wait-on": "^8.0.2",
-    "workbox-build": "^7.0.0",
-    "drizzle-kit": "^0.26.0"
+    "workbox-build": "^7.0.0"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^0.10.0",
+    "@stackframe/js": "^2.8.49",
     "bcryptjs": "^3.0.2",
     "drizzle-orm": "^0.36.0",
-    "@neondatabase/serverless": "^0.10.0",
     "pg": "^8.12.0"
   }
 }

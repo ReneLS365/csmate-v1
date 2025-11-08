@@ -9,11 +9,11 @@
     <main class="admin-shell">
       <header class="admin-header">
         <h1>CSMate admin</h1>
-        <p class="admin-subtitle">Konfigurer Hulmose-standard og E-Komplet login.</p>
+        <p class="admin-subtitle">Konfigurer Hulmose-standard og SSO via Auth0/E-Komplet.</p>
       </header>
       <section id="login-gate" class="admin-gate hidden">
-        <p>For at ændre indstillinger skal du logge ind som administrator via E-Komplet.</p>
-        <button id="loginBtn" type="button" class="btn">Log ind via E-Komplet</button>
+        <p>For at ændre indstillinger skal du logge ind som administrator via din SSO-udbyder.</p>
+        <button id="loginBtn" type="button" class="btn">Log ind via SSO</button>
       </section>
       <form id="configForm" class="admin-form hidden">
         <fieldset>
@@ -21,6 +21,7 @@
           <label class="field">
             <span>Login-provider</span>
             <select id="provider" name="provider">
+              <option value="auth0">Auth0</option>
               <option value="ekomplet">E-Komplet</option>
               <option value="local">Lokal</option>
             </select>
@@ -44,6 +45,30 @@
           <label class="field">
             <span>Scopes</span>
             <input id="scopes" name="scopes" type="text" autocomplete="off">
+          </label>
+          <label class="field">
+            <span>Audience (API identifier)</span>
+            <input id="audience" name="audience" type="text" autocomplete="off" placeholder="https://csmate/api">
+          </label>
+          <label class="field">
+            <span>Connection (valgfri)</span>
+            <input id="connection" name="connection" type="text" autocomplete="off" placeholder="Auth0 database navn">
+          </label>
+          <label class="field">
+            <span>Organisation (valgfri)</span>
+            <input id="organization" name="organization" type="text" autocomplete="off" placeholder="Auth0 org ID">
+          </label>
+          <label class="field">
+            <span>Tilladelses-claim</span>
+            <input id="permissionClaim" name="permissionClaim" type="text" autocomplete="off" placeholder="https://csmate.app/permissions">
+          </label>
+          <label class="field">
+            <span>Logout-path</span>
+            <input id="logoutPath" name="logoutPath" type="text" autocomplete="off" placeholder="v2/logout">
+          </label>
+          <label class="field checkbox">
+            <input id="logoutReturnTo" name="logoutReturnTo" type="checkbox">
+            <span>Brug Auth0 returnTo + client_id ved logout</span>
           </label>
           <div class="field">
             <span>Rollemapping (claim → rolle)</span>

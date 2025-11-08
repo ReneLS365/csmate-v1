@@ -22,6 +22,7 @@ import { installLazyNumpad } from './src/ui/numpad.lazy.js'
 import { createVirtualMaterialsList } from './src/modules/materialsVirtualList.js'
 import { initClickGuard } from './src/ui/Guards/ClickGuard.js'
 import { setAdminOk, setLock } from './src/state/admin.js'
+import { canPerformAction } from './src/utils/permissions.js'
 import {
   loadJobs,
   getJobs,
@@ -1240,9 +1241,9 @@ function setupJobUI() {
 
   const createBtn = document.getElementById('btnCreateJob');
   if (createBtn) {
-    createBtn.disabled = !requirePermission('canCreateJobs');
+    createBtn.disabled = !!currentUser && !requirePermission('canCreateJobs');
     createBtn.addEventListener('click', () => {
-      if (!requirePermission('canCreateJobs')) return;
+      if (currentUser && !requirePermission('canCreateJobs')) return;
       createNewJob();
     });
   }
@@ -1416,7 +1417,7 @@ function handleWorkerFieldChange(event) {
 function updatePermissionControls() {
   const createBtn = document.getElementById('btnCreateJob');
   if (createBtn) {
-    createBtn.disabled = !requirePermission('canCreateJobs');
+    createBtn.disabled = !!currentUser && !requirePermission('canCreateJobs');
   }
   const addWorkerBtn = document.getElementById('btnAddWorker');
   if (addWorkerBtn) {
@@ -1562,14 +1563,12 @@ function getCurrentUserNameOrNull() {
   return currentUser ? currentUser.name : null;
 }
 
-function getPermissions() {
-  if (!currentUser) return {};
-  return ROLE_PERMISSIONS[currentUser.role] || {};
-}
-
 function requirePermission(key) {
-  const perms = getPermissions();
-  return !!perms[key];
+  return canPerformAction({
+    user: currentUser,
+    action: key,
+    rolePermissions: ROLE_PERMISSIONS,
+  });
 }
 
 function formatRoleLabel(role) {

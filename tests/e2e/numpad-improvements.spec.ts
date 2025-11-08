@@ -1,37 +1,24 @@
 import { test, expect } from '@playwright/test'
+import { primeTestUser } from './utils/test-user'
+import { prepareJobWithWageSection, openNumpadOverlay } from './utils/numpad'
 
 test.describe('Numpad improvements', () => {
+  let workerFields
+
   test.beforeEach(async ({ page }) => {
-    await page.goto('/')
-    await page.waitForLoadState('networkidle')
-    await page.waitForSelector('#npOverlay')
-
-    // Prepare sections
-    await page.evaluate(() => {
-      document.querySelectorAll('.sektion').forEach(section => {
-        section.hidden = false
-        section.setAttribute('aria-hidden', 'false')
-        section instanceof HTMLElement && (section.style.display = 'flex')
-      })
-      document.getElementById('btnLon')?.click()
-      document.getElementById('btnAddWorker')?.click()
-    })
-
-    await page.waitForFunction(() => {
-      const fields = Array.from(document.querySelectorAll('input[data-numpad="true"]'))
-      return fields.length > 0 && fields.every(field => field.dataset.npBound === 'true')
-    })
+    await primeTestUser(page)
+    const { workerHours } = await prepareJobWithWageSection(page, { workerCount: 2 })
+    workerFields = workerHours
   })
 
   test('red cross button closes numpad without focus jump', async ({ page }) => {
-    const field1 = page.locator('input[data-numpad-field]').nth(0)
-    const field2 = page.locator('input[data-numpad-field]').nth(1)
+    const field1 = workerFields.nth(0)
+    const field2 = workerFields.nth(1)
 
-    await field1.scrollIntoViewIfNeeded()
-    await field1.click()
+    await expect(field1).toBeVisible()
+    await expect(field2).toBeVisible()
 
-    const overlay = page.locator('#npOverlay')
-    await overlay.waitFor({ state: 'visible' })
+    const overlay = await openNumpadOverlay(page, field1)
 
     // Click the red cross button
     await page.getByTestId('numpad-close').click()
@@ -41,17 +28,14 @@ test.describe('Numpad improvements', () => {
     await expect(field1).toBeFocused()
 
     // Verify field2 is not focused
-    const field2IsFocused = await field2.evaluate(el => el === document.activeElement)
-    expect(field2IsFocused).toBe(false)
+    await expect(field2).not.toBeFocused()
   })
 
   test('enter key commits value and closes numpad', async ({ page }) => {
-    const field = page.locator('input[data-numpad-field]').first()
-    await field.scrollIntoViewIfNeeded()
+    const field = workerFields.first()
+    await expect(field).toBeVisible()
 
-    const overlay = page.locator('#npOverlay')
-    await field.click()
-    await overlay.waitFor({ state: 'visible' })
+    const overlay = await openNumpadOverlay(page, field)
 
     // Type a value
     await page.keyboard.type('456')
@@ -68,16 +52,13 @@ test.describe('Numpad improvements', () => {
     expect(Math.abs(numeric - 456)).toBeLessThan(0.01)
   })
 
-  test('mobile fullscreen layout on small viewport', async ({ page, context }) => {
+  test('mobile fullscreen layout on small viewport', async ({ page }) => {
     // Set mobile viewport size
     await page.setViewportSize({ width: 390, height: 800 })
 
-    const field = page.locator('input[data-numpad-field]').first()
-    await field.scrollIntoViewIfNeeded()
-    await field.click()
-
-    const overlay = page.locator('#npOverlay')
-    await overlay.waitFor({ state: 'visible' })
+    const field = workerFields.first()
+    await expect(field).toBeVisible()
+    const overlay = await openNumpadOverlay(page, field)
 
     const numpadSheet = page.locator('.csm-np')
 
@@ -101,12 +82,9 @@ test.describe('Numpad improvements', () => {
   test('numpad buttons are responsive on mobile', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 800 })
 
-    const field = page.locator('input[data-numpad-field]').first()
-    await field.scrollIntoViewIfNeeded()
-    await field.click()
-
-    const overlay = page.locator('#npOverlay')
-    await overlay.waitFor({ state: 'visible' })
+    const field = workerFields.first()
+    await expect(field).toBeVisible()
+    const overlay = await openNumpadOverlay(page, field)
 
     // Click on numpad buttons
     const button7 = page.locator('.csm-np button[data-key="7"]')
@@ -129,13 +107,34 @@ test.describe('Numpad improvements', () => {
 
 test.describe('Admin lock functionality', () => {
   test.beforeEach(async ({ page }) => {
+    await primeTestUser(page)
+    await page.route('**/data/tenants/hulmose.json', async route => {
+      const response = await route.fetch()
+      const json = await response.json()
+      const patched = {
+        ...json,
+        _meta: {
+          ...json._meta,
+          admin_code: 'ff0a69fa196820f9529e3c20cfa809545e6697f5796527f7657a83bb7e6acd0d'
+        }
+      }
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(patched)
+      })
+    })
+    const tenantConfig = page.waitForResponse(response => response.url().includes('/data/tenants/hulmose.json') && response.ok())
     await page.goto('/')
+    await tenantConfig
     await page.waitForLoadState('networkidle')
   })
 
   test('admin code unlocks non-input interactions', async ({ page }) => {
+    await page.getByRole('button', { name: /opret nyt job/i }).click()
     // Navigate to the admin section
     await page.click('#btnOptaelling')
+    await expect(page.locator('#adminCode')).toBeEnabled()
 
     // Try to enter admin code (using the tenant default which is hashed in the app)
     // The actual verification happens via the existing SHA-256 hash system

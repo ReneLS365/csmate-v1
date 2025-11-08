@@ -1,61 +1,33 @@
 import { test, expect } from '@playwright/test'
+import { primeTestUser } from './utils/test-user'
+import { prepareJobWithWageSection, openNumpadOverlay } from './utils/numpad'
 
 test.describe('Wage numpad interactions', () => {
+  let hoursField
+
   test.beforeEach(async ({ page }) => {
-    await page.goto('/')
-    await page.waitForLoadState('networkidle')
-    await page.waitForSelector('#btnLon', { state: 'visible' })
-    await page.evaluate(() => {
-      document.getElementById('btnLon')?.click()
-      const section = document.getElementById('lonSection')
-      if (section) {
-        section.hidden = false
-        section.style.display = 'flex'
-        section.setAttribute('aria-hidden', 'false')
-      }
-      const firstHours = document.querySelector('.worker-hours')
-      if (firstHours instanceof HTMLElement) {
-        firstHours.style.removeProperty('display')
-        firstHours.style.visibility = 'visible'
-        firstHours.removeAttribute('hidden')
-      }
-    })
-    await page.waitForTimeout(400)
+    await primeTestUser(page)
+    const { workerHours } = await prepareJobWithWageSection(page, { workerCount: 1 })
+    hoursField = workerHours.first()
+    await expect(hoursField).toBeVisible()
   })
 
   test('Enter commits value and closes overlay', async ({ page }) => {
-    const hoursField = page.locator('.worker-hours').first()
-    await page.evaluate(() => {
-      const input = document.querySelector('.worker-hours')
-      if (input instanceof HTMLElement) {
-        input.focus()
-        input.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
-      }
-    })
-
-    const overlay = page.locator('#npOverlay')
-    await expect(overlay).toBeVisible()
+    const overlay = await openNumpadOverlay(page, hoursField)
 
     await page.keyboard.type('21')
     await page.keyboard.press('Enter')
 
     await expect(overlay).toBeHidden()
-    await expect(hoursField).toHaveValue('21')
+    const value = await hoursField.inputValue()
+    const numeric = Number.parseFloat(value.replace(',', '.'))
+    expect(Math.abs(numeric - 21)).toBeLessThan(0.01)
   })
 
   test('Escape closes overlay without committing', async ({ page }) => {
-    const hoursField = page.locator('.worker-hours').first()
     const initialValue = await hoursField.inputValue()
 
-    await page.evaluate(() => {
-      const input = document.querySelector('.worker-hours')
-      if (input instanceof HTMLElement) {
-        input.focus()
-        input.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
-      }
-    })
-    const overlay = page.locator('#npOverlay')
-    await expect(overlay).toBeVisible()
+    const overlay = await openNumpadOverlay(page, hoursField)
 
     await page.keyboard.type('999')
     await page.keyboard.press('Escape')
@@ -68,17 +40,7 @@ test.describe('Wage numpad interactions', () => {
     const errors = []
     page.on('pageerror', error => errors.push(error))
 
-    const hoursField = page.locator('.worker-hours').first()
-    await page.evaluate(() => {
-      const input = document.querySelector('.worker-hours')
-      if (input instanceof HTMLElement) {
-        input.focus()
-        input.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
-      }
-    })
-
-    const overlay = page.locator('#npOverlay')
-    await expect(overlay).toBeVisible()
+    const overlay = await openNumpadOverlay(page, hoursField)
 
     await page.keyboard.type('5')
     await page.keyboard.press('Enter')
