@@ -1,0 +1,15 @@
+[
+  {
+    "url": "http://127.0.0.1:4173/",
+    "isRepresentativeRun": true,
+    "htmlPath": "/workspace/csmate-v1/.lighthouse/127_0_0_1-_-2025_11_08_17_02_22.report.html",
+    "jsonPath": "/workspace/csmate-v1/.lighthouse/127_0_0_1-_-2025_11_08_17_02_22.report.json",
+    "summary": {
+      "performance": 0.74,
+      "accessibility": 0.95,
+      "best-practices": 0.96,
+      "seo": 1,
+      "pwa": 1
+    }
+  }
+]
