@@ -1,7 +1,7 @@
 {
-  "version": "v20251108T175619-12987e5f",
+  "version": "v20251108T180254-12987e5f",
   "cachePrefix": "csmate",
-  "cacheName": "csmate-v20251108T175619-12987e5f",
+  "cacheName": "csmate-v20251108T180254-12987e5f",
   "precache": [
     {
       "url": "/",
