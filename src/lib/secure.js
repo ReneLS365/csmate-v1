@@ -11,6 +11,14 @@ export function can(action) {
   const session = loadSession();
   const role = session?.role || 'guest';
   const rules = Array.isArray(cfg?.admin?.roles?.[role]) ? cfg.admin.roles[role] : [];
+  const permissions = new Set(
+    (Array.isArray(session?.permissions) ? session.permissions : [])
+      .map((entry) => String(entry).toLowerCase())
+  );
+  const key = String(action).toLowerCase();
+  if (permissions.has('*') || permissions.has(key) || permissions.has(`csmate:${key}`)) {
+    return true;
+  }
   if (rules.includes('*') || rules.includes(action)) return true;
   if (role === 'admin') return true;
   return false;

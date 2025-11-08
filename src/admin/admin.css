@@ -45,6 +45,18 @@ body {
   gap: 0.5rem;
 }
 
+.field.checkbox {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.field.checkbox input[type='checkbox'] {
+  width: 1.1rem;
+  height: 1.1rem;
+  accent-color: #0a66c2;
+}
+
 .field span {
   font-weight: 500;
 }

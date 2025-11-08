@@ -1,5 +1,5 @@
 /**
- * @purpose Render the admin configuration console for Hulmose defaults and E-Komplet SSO setup.
+ * @purpose Render the admin configuration console for Hulmose defaults and Auth0/E-Komplet SSO setup.
  * @inputs Stored configuration and session tokens resolved from local storage.
  * @outputs Mutated config persisted via storage helpers plus UI feedback for administrators.
  */
@@ -18,9 +18,30 @@ function ensureConfig() {
   const stored = loadConfig();
   const base = stored ? clone(stored) : clone(ConfigSchema);
   if (!base.auth) base.auth = clone(ConfigSchema.auth);
+  if (!base.auth.provider) base.auth.provider = ConfigSchema.auth.provider;
   if (!base.auth.oidc) base.auth.oidc = clone(ConfigSchema.auth.oidc);
   if (!base.auth.roleMapping) base.auth.roleMapping = clone(ConfigSchema.auth.roleMapping);
+  if (!('audience' in base.auth.oidc)) base.auth.oidc.audience = ConfigSchema.auth.oidc.audience;
+  if (!('connection' in base.auth.oidc)) base.auth.oidc.connection = ConfigSchema.auth.oidc.connection;
+  if (!('organization' in base.auth.oidc)) base.auth.oidc.organization = ConfigSchema.auth.oidc.organization;
+  if (!('permissionClaim' in base.auth.oidc)) base.auth.oidc.permissionClaim = ConfigSchema.auth.oidc.permissionClaim;
+  if (!('logoutPath' in base.auth.oidc)) base.auth.oidc.logoutPath = ConfigSchema.auth.oidc.logoutPath;
+  if (!('logoutUsesReturnTo' in base.auth.oidc)) {
+    base.auth.oidc.logoutUsesReturnTo = ConfigSchema.auth.oidc.logoutUsesReturnTo;
+  }
   if (!Array.isArray(base.auth.roleMapping.rules)) base.auth.roleMapping.rules = [];
+  const defaultRuleKeys = new Set(
+    base.auth.roleMapping.rules
+      .filter((rule) => rule && typeof rule === 'object')
+      .map((rule) => `${(rule.claim ?? '').toLowerCase()}|${(rule.contains ?? '').toLowerCase()}|${(rule.to ?? '').toLowerCase()}`)
+  );
+  for (const rule of ConfigSchema.auth.roleMapping.rules) {
+    const key = `${(rule.claim ?? '').toLowerCase()}|${(rule.contains ?? '').toLowerCase()}|${(rule.to ?? '').toLowerCase()}`;
+    if (!defaultRuleKeys.has(key)) {
+      base.auth.roleMapping.rules.push({ ...rule });
+      defaultRuleKeys.add(key);
+    }
+  }
   if (!Array.isArray(base.auth.domainRules)) base.auth.domainRules = [];
   if (!base.admin) base.admin = clone(ConfigSchema.admin);
   if (!base.company) base.company = clone(ConfigSchema.company);
@@ -44,6 +65,12 @@ const clientIdEl = document.querySelector('#clientId');
 const redirectEl = document.querySelector('#redirectUri');
 const postLogoutEl = document.querySelector('#postLogoutRedirectUri');
 const scopesEl = document.querySelector('#scopes');
+const audienceEl = document.querySelector('#audience');
+const connectionEl = document.querySelector('#connection');
+const organizationEl = document.querySelector('#organization');
+const permissionClaimEl = document.querySelector('#permissionClaim');
+const logoutPathEl = document.querySelector('#logoutPath');
+const logoutReturnEl = document.querySelector('#logoutReturnTo');
 const codeHashEl = document.querySelector('#codeHash');
 const companyNameEl = document.querySelector('#companyName');
 const appNameEl = document.querySelector('#appName');
@@ -149,12 +176,18 @@ function renderDomainRules() {
 }
 
 function fillForm() {
-  providerEl.value = config.auth.provider ?? 'ekomplet';
+  providerEl.value = config.auth.provider ?? 'auth0';
   authorityEl.value = config.auth.oidc.authority ?? '';
   clientIdEl.value = config.auth.oidc.clientId ?? '';
   redirectEl.value = config.auth.oidc.redirectUri ?? '';
   postLogoutEl.value = config.auth.oidc.postLogoutRedirectUri ?? '';
   scopesEl.value = config.auth.oidc.scopes ?? '';
+  audienceEl.value = config.auth.oidc.audience ?? '';
+  connectionEl.value = config.auth.oidc.connection ?? '';
+  organizationEl.value = config.auth.oidc.organization ?? '';
+  permissionClaimEl.value = config.auth.oidc.permissionClaim ?? ConfigSchema.auth.oidc.permissionClaim;
+  logoutPathEl.value = config.auth.oidc.logoutPath ?? '';
+  logoutReturnEl.checked = Boolean(config.auth.oidc.logoutUsesReturnTo);
   codeHashEl.value = config.admin.codeHash ?? '';
   companyNameEl.value = config.company.name ?? '';
   appNameEl.value = config.branding.appName ?? '';
@@ -168,6 +201,12 @@ function updateConfigFromForm() {
   config.auth.oidc.authority = authorityEl.value.trim();
   config.auth.oidc.clientId = clientIdEl.value.trim();
   config.auth.oidc.scopes = scopesEl.value.trim();
+  config.auth.oidc.audience = audienceEl.value.trim();
+  config.auth.oidc.connection = connectionEl.value.trim();
+  config.auth.oidc.organization = organizationEl.value.trim();
+  config.auth.oidc.permissionClaim = permissionClaimEl.value.trim() || ConfigSchema.auth.oidc.permissionClaim;
+  config.auth.oidc.logoutPath = logoutPathEl.value.trim() || ConfigSchema.auth.oidc.logoutPath;
+  config.auth.oidc.logoutUsesReturnTo = logoutReturnEl.checked;
   config.admin.codeHash = codeHashEl.value.trim();
   config.company.name = companyNameEl.value.trim();
   config.branding.appName = appNameEl.value.trim();
