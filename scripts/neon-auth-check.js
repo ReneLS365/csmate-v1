@@ -48,16 +48,28 @@ async function main () {
       process.exitCode = 1
       return
     }
+
+    const emails = []
+    if (Array.isArray(user.emails)) {
+      for (const entry of user.emails) {
+        emails.push({
+          email: entry.email,
+          verified: Boolean(entry.verified)
+        })
+      }
+    }
+
+    const lastActiveAt = user.lastActiveAt instanceof Date
+      ? user.lastActiveAt.toISOString()
+      : null
+
     const output = {
       id: user.id,
       primaryEmail: user.primaryEmail ?? null,
-      emails: Array.isArray(user.emails) ? user.emails.map((entry) => ({
-        email: entry.email,
-        verified: Boolean(entry.verified)
-      })) : [],
+      emails,
       profile: user.profile ?? null,
       serverMetadata: user.serverMetadata ?? null,
-      lastActiveAt: user.lastActiveAt instanceof Date ? user.lastActiveAt.toISOString() : null
+      lastActiveAt
     }
 
     if (flags.json) {
