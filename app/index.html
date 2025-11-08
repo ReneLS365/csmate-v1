@@ -14,12 +14,18 @@
   <meta property="og:url" content="/">
   <meta property="og:type" content="website">
   <meta property="og:image" content="/icons/icon-512x512.png">
+  <meta property="og:image:width" content="512">
+  <meta property="og:image:height" content="512">
+  <meta property="og:image:alt" content="CSMate - Stilladsoptælling og akkord">
+  <meta name="robots" content="index, follow">
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="CSMate – Stilladsoptælling og akkord">
   <meta name="twitter:description" content="Optæl stillads, beregn akkord og del til E-komplet.">
   <meta name="theme-color" content="#0f172a">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="preload" href="style.css" as="style">
+  <link rel="preload" href="main.js" as="script">
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="src/ui/numpad.css">
   <link rel="stylesheet" href="print.css" media="print">
@@ -27,6 +33,20 @@
   <link rel="stylesheet" href="/css/pwa.css">
   <link rel="manifest" href="/manifest.webmanifest" crossorigin="anonymous">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    "name": "CSMate",
+    "description": "Professionelt værktøj til stilladsoptælling, akkord- og lønberegning",
+    "applicationCategory": "BusinessApplication",
+    "operatingSystem": "All",
+    "offers": {
+      "@type": "Offer",
+      "price": "0"
+    }
+  }
+  </script>
 </head>
 <body>
   <a class="skip-to-content" href="#main">Spring til indhold</a>
@@ -523,191 +543,12 @@
   </div>
 
 <script type="module" src="main.js"></script>
-<script>
-  // ===== Materials UI init (decimal-safe, da-DK) =====
-  (function initMaterialsUI(){
-    const container = document.getElementById('optaellingContainer');
-    if (!container) return;
-
-    const fmtDK = new Intl.NumberFormat('da-DK', { style: 'currency', currency: 'DKK' });
-
-    container.querySelectorAll('.mat-row').forEach(updateLine);
-
-    container.addEventListener('input', (e) => {
-      if (!e.target.classList.contains('mat-qty')) return;
-      const row = e.target.closest('.mat-row');
-      updateLine(row);
-
-      if (typeof recalcTotals === 'function') {
-        recalcTotals();
-      } else if (typeof updateTotals === 'function') {
-        updateTotals();
-      }
-    });
-
-    const observer = new MutationObserver(mutations => {
-      let needsUpdate = false;
-      mutations.forEach(mutation => {
-        if (mutation.type === 'childList') {
-          mutation.addedNodes.forEach(node => {
-            if (node instanceof Element && (node.classList.contains('mat-row') || node.querySelector('.mat-row'))) {
-              needsUpdate = true;
-            }
-          });
-        } else if (mutation.type === 'attributes' && mutation.attributeName === 'data-price') {
-          needsUpdate = true;
-        }
-      });
-      if (needsUpdate) {
-        container.querySelectorAll('.mat-row').forEach(updateLine);
-      }
-    });
-
-    observer.observe(container, { childList: true, subtree: true, attributes: true, attributeFilter: ['data-price'] });
-
-    // ===== helpers =====
-
-    function parseQty(value){
-      if (value == null) return 0;
-
-      let s = String(value).trim();
-
-      s = s.replace(/\s+/g, '');
-
-      const lastComma = s.lastIndexOf(',');
-      const lastDot   = s.lastIndexOf('.');
-
-      if (lastComma > -1 && lastDot > -1){
-        if (lastComma > lastDot){
-          // decimal = ',', fjern alle '.' (tusind)
-          s = s.replace(/\./g, '').replace(',', '.');
-        } else {
-          // decimal = '.', fjern alle ',' (tusind)
-          s = s.replace(/,/g, '');
-        }
-      } else {
-        // Kun én type eller ingen: gør ',' til '.'
-        s = s.replace(',', '.');
-      }
-
-      // Drop alt der ikke er tal eller et enkelt '.' (behold første '.' )
-      s = s.replace(/[^0-9.]/g, '');
-      const firstDot = s.indexOf('.');
-      if (firstDot !== -1){
-        // fjern øvrige '.' efter første
-        s = s.slice(0, firstDot + 1) + s.slice(firstDot + 1).replace(/\./g, '');
-      }
-
-      // Tom/kun '.' => 0
-      if (s === '' || s === '.') return 0;
-
-      const n = parseFloat(s);
-      if (!Number.isFinite(n) || n < 0) return 0;
-
-      return n;
-    }
-
-    // Vis Antal i dansk stil (komma) med “pæn” trimming af nuller (fx 7,10 -> 7,1)
-    function formatQtyDK(n){
-      // behold op til 6 decimaler i visning (kan justeres)
-      const str = n.toFixed(6).replace(/0+$/,'').replace(/\.$/,''); // trim trailing zeros
-      // skift til dansk komma
-      return str.replace('.', ',');
-    }
-
-    // Penge: rund til 2 decimaler korrekt (undgår FP-støj)
-    function round2(n){ return Math.round(n * 100) / 100; }
-
-    function updateLine(row){
-      if (!row) return;
-
-      const qtyEl   = row.querySelector('.mat-qty');
-      const priceEl = row.querySelector('.mat-price');
-      const lineEl  = row.querySelector('.mat-line');
-      if (!qtyEl || !priceEl || !lineEl) return;
-
-      const qty   = parseQty(qtyEl.value);
-      let price   = parseFloat(priceEl.dataset.price || '');
-      if (!Number.isFinite(price)) {
-        price = parseQty(priceEl.value);
-      }
-      const line  = round2(qty * (Number.isFinite(price) ? price : 0));
-
-      const qtyFormatted = formatQtyDK(qty);
-      qtyEl.value = qtyEl.type === 'number'
-        ? qtyFormatted.replace(',', '.')
-        : qtyFormatted;
-
-      const hasQty = qty > 0;
-      row.toggleAttribute('data-has-qty', hasQty);
-      row.dataset.hasQty = hasQty ? 'true' : 'false';
-
-      if (Number.isFinite(price)) {
-        const priceFormatted = price.toFixed(2);
-        priceEl.value = priceEl.type === 'number'
-          ? priceFormatted
-          : priceFormatted.replace('.', ',');
-      } else if (priceEl.value) {
-        if (priceEl.type === 'number') {
-          const fallbackPrice = parseQty(priceEl.value);
-          priceEl.value = Number.isFinite(fallbackPrice) ? String(fallbackPrice) : '';
-        } else {
-          priceEl.value = String(priceEl.value).replace('.', ',');
-        }
-      } else {
-        priceEl.value = '';
-      }
-
-      const formattedLine = fmtDK.format(line);
-      const lineText = `${formattedLine} kr`;
-      if (lineEl instanceof HTMLInputElement) {
-        lineEl.value = lineText;
-      } else {
-        lineEl.textContent = lineText;
-      }
-    }
-
-    window.parseQty = parseQty;
-    window.formatQtyDK = formatQtyDK;
-    window.round2 = round2;
-    window.updateMaterialLine = row => updateLine(row);
-  })();
-</script>
+<script defer src="src/materials-ui-init.js"></script>
 
   <div class="pwa-install-wrap" role="presentation">
     <button id="installBtn" class="pwa-install-btn" type="button" hidden>Installer app</button>
   </div>
 
-<script>
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker
-        .register('/service-worker.js', { scope: '/' })
-        .catch(async error => {
-          const offline = navigator.onLine === false;
-          const networkErrorNames = new Set(['AbortError', 'NetworkError']);
-          const message = typeof error?.message === 'string' ? error.message : '';
-          const isNetworkFailure =
-            offline ||
-            (typeof error === 'object' && error !== null && networkErrorNames.has(error.name)) ||
-            /(?:offline|network)/i.test(message);
-
-          if (isNetworkFailure) {
-            console.warn('Service worker registration failed due to network issues; keeping existing worker', error);
-            return;
-          }
-
-          try {
-            const regs = await navigator.serviceWorker.getRegistrations();
-            await Promise.all(regs.map(r => r.unregister()));
-          } finally {
-            const url = new URL(window.location.href);
-            url.searchParams.set('no-sw', Date.now().toString());
-            window.location.replace(url.toString());
-          }
-        });
-    });
-  }
-</script>
+<script defer src="src/sw-register.js"></script>
 </body>
 </html>
