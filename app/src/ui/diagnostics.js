@@ -81,11 +81,32 @@ export async function initialiseDiagnostics ({ calc, panel: _panel, numpad: _num
     if (!panelEl) {
       panelEl = document.createElement('aside')
       panelEl.className = 'csmate-diagnostics'
-      panelEl.innerHTML = '<h2>Diagnostics</h2><ul></ul>'
+      const heading = document.createElement('h2')
+      heading.textContent = 'Diagnostics'
+      const list = document.createElement('ul')
+      panelEl.append(heading, list)
       root.append(panelEl)
     }
     const list = panelEl.querySelector('ul')
-    list.innerHTML = log.map(item => `<li>${item.ok ? '✅' : '❌'} ${item.label}${item.detail ? ` – ${item.detail}` : ''}</li>`).join('')
+    if (!list) return
+
+    while (list.firstChild) {
+      list.removeChild(list.firstChild)
+    }
+
+    for (const item of log) {
+      const entry = document.createElement('li')
+      const iconText = item.ok ? '✅' : '❌'
+      entry.append(document.createTextNode(`${iconText} ${item.label}`))
+
+      const hasDetail = item.detail !== undefined && item.detail !== null && item.detail !== ''
+      if (hasDetail) {
+        const detailText = typeof item.detail === 'string' ? item.detail : String(item.detail)
+        entry.append(document.createTextNode(` – ${detailText}`))
+      }
+
+      list.append(entry)
+    }
   }
 
   render()
