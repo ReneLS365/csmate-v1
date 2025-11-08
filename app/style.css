@@ -9,6 +9,9 @@
   --gap:12px;
   --pad:12px;
 }
+:root,html{color-scheme:dark;}
+html{font-size:100%;}
+body{font-size:1rem;line-height:1.5;}
 :focus-visible{outline:2px solid currentColor;outline-offset:2px}
 .skip-to-content{position:absolute;left:-9999px;top:0;background:var(--panel);color:var(--text);padding:8px 14px;border-radius:10px;z-index:1000;box-shadow:0 12px 30px rgba(0,0,0,0.4)}
 .skip-to-content:focus{left:1rem;top:1rem}
@@ -40,11 +43,11 @@ html,body{margin:0;height:100%;width:100%;max-width:100vw;overflow-x:hidden;back
 header{position:sticky;top:0;background:var(--elev);border-bottom:1px solid var(--border);z-index:5}
 header .bar{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:6px 10px;min-height:40px}
 header .ttl{font-weight:700}
-nav{display:flex;gap:6px;flex-wrap:wrap;padding:4px 0}
-nav button{background:#34353b;color:var(--text);border:1px solid var(--border);border-radius:10px;padding:6px 12px;min-height:36px;font-size:0.95rem;line-height:1.2}
+nav{display:flex;gap:8px;flex-wrap:wrap;padding:4px 0}
+nav button{background:#34353b;color:var(--text);border:1px solid var(--border);border-radius:999px;padding:0.55rem 0.9rem;min-height:44px;min-width:44px;font-size:0.95rem;line-height:1.2}
 nav button.active{outline:2px solid var(--accent)}
 .user-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.user-controls button{min-width:auto;padding:6px 12px}
+.user-controls button{min-width:44px;padding:0.55rem 0.9rem}
 .user-label{font-size:0.85rem;color:var(--muted);font-weight:600}
 button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .material-row input:focus-visible,.csm-row input:focus-visible{outline:2px solid var(--accent)}
@@ -58,7 +61,7 @@ label span{color:var(--muted);font-size:0.85rem}
 .card h3{margin:0;font-size:1rem}
 .btn{display:inline-flex;align-items:center;justify-content:center;font-weight:600;text-align:center;gap:6px}
 .btn.primary{background:var(--accent);color:#10131a;border-color:var(--accent)}
-.btn.small{min-height:32px;padding:4px 12px;font-size:0.85rem}
+.btn.small{min-height:44px;padding:0.45rem 0.9rem;font-size:0.9rem}
 #job-export .btn.primary{width:100%}
 .statusbar{position:sticky;top:0;z-index:5;padding:.5rem 1rem;font-size:.9rem;display:flex;gap:1rem;align-items:center;background:var(--panel);border-bottom:1px solid var(--border)}
 .statusbar.online{background:#e6ffed;border-bottom:1px solid #b2f5bf;color:#14532d}
@@ -91,8 +94,12 @@ button{cursor:pointer}
 .job-toolbar{display:flex;flex-direction:column;gap:var(--gap);margin-bottom:var(--gap)}
 .job-toolbar-left{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .job-toolbar-right{display:flex;gap:8px;flex-wrap:wrap}
-.job-toggle-archived{display:inline-flex;align-items:center;gap:6px;font-size:0.85rem;color:var(--muted)}
-.job-toggle-archived input{width:auto;min-height:auto}
+.job-toggle-archived{position:relative;display:inline-flex;align-items:center;gap:0.75rem;padding:0.5rem 1rem 0.5rem 3.25rem;font-size:0.95rem;color:var(--muted);border:1px solid var(--border);border-radius:999px;min-height:44px;background:var(--panel);line-height:1.2;cursor:pointer}
+.job-toggle-archived input{appearance:none;position:absolute;left:0.75rem;top:50%;transform:translateY(-50%);width:44px;height:44px;margin:0;border-radius:12px;border:2px solid var(--border);background:var(--elev);display:grid;place-items:center;transition:border-color .2s ease,background .2s ease,box-shadow .2s ease}
+.job-toggle-archived input::after{content:"";display:block;width:18px;height:18px;border-radius:6px;background:var(--accent);transform:scale(0);transition:transform .2s ease}
+.job-toggle-archived input:checked{border-color:var(--accent);background:rgba(142,160,181,0.16)}
+.job-toggle-archived input:checked::after{transform:scale(1)}
+.job-toggle-archived input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 @media(min-width:768px){
   .job-toolbar{flex-direction:row;align-items:center;justify-content:space-between}
 }
