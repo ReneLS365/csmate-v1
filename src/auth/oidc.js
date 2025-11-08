@@ -167,7 +167,7 @@ export async function handleCallback() {
   }
 
   const tokens = await response.json();
-  const claims = decodeJwtPayload(tokens.id_token);
+  const idClaims = decodeJwtPayload(tokens.id_token);
   const accessClaims = tokens.access_token ? decodeJwtPayload(tokens.access_token) : {};
   const permissionClaim = oidc.permissionClaim || 'permissions';
   const permissionCandidates = new Set([
@@ -175,7 +175,9 @@ export async function handleCallback() {
     ...claimNameVariants('permissions')
   ]);
   const permissions = collectUniqueStrings(
-    Array.from(permissionCandidates).flatMap((candidate) => normaliseClaimArray(getClaimValue(accessClaims, candidate)))
+    Array.from(permissionCandidates).flatMap((candidate) =>
+      normaliseClaimArray(getClaimValue({ ...accessClaims, ...idClaims }, candidate))
+    )
   );
 
   const roles = collectUniqueStrings(
@@ -193,10 +195,10 @@ export async function handleCallback() {
 
   const session = {
     user: {
-      sub: claims.sub,
-      email: claims.email ?? null,
-      username: claims.preferred_username ?? claims.email ?? claims.sub,
-      name: claims.name ?? claims.given_name ?? claims.family_name ?? '',
+      sub: idClaims.sub,
+      email: idClaims.email ?? null,
+      username: idClaims.preferred_username ?? idClaims.email ?? idClaims.sub,
+      name: idClaims.name ?? idClaims.given_name ?? idClaims.family_name ?? '',
       orgId: typeof orgId === 'string' ? orgId : null,
       roles
     },
@@ -208,7 +210,7 @@ export async function handleCallback() {
     permissions,
     roles,
     claims: {
-      id: claims,
+      id: idClaims,
       access: accessClaims
     }
   };
