@@ -1,4 +1,5 @@
 import { AUTH0_DOMAIN, AUTH0_CLIENT_ID, AUTH0_REDIRECT_URI } from './auth0-config.js'
+import { ensureUserFromAuth0, setCurrentUser } from './state/users.js'
 
 let auth0Client = null
 let authState = {
@@ -81,6 +82,14 @@ async function refreshAuthState () {
   try {
     const isAuthenticated = await auth0Client.isAuthenticated()
     const user = isAuthenticated ? await auth0Client.getUser() : null
+    if (isAuthenticated && user) {
+      const storedUser = ensureUserFromAuth0(user)
+      if (!storedUser) {
+        setCurrentUser(null)
+      }
+    } else {
+      setCurrentUser(null)
+    }
     authState = { isAuthenticated, user }
   } catch (error) {
     console.error('Failed to refresh Auth0 state', error)
