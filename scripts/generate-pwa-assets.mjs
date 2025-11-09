@@ -73,6 +73,38 @@ function encodePng (image) {
   ])
 }
 
+function encodeIco (images) {
+  if (!Array.isArray(images) || images.length === 0) {
+    throw new Error('encodeIco requires at least one image buffer')
+  }
+
+  const header = Buffer.alloc(6)
+  header.writeUInt16LE(0, 0)
+  header.writeUInt16LE(1, 2)
+  header.writeUInt16LE(images.length, 4)
+
+  let offset = header.length + (images.length * 16)
+  const directory = images.map(({ width, height, data }) => {
+    if (!data || typeof data.length !== 'number') {
+      throw new Error('Invalid image buffer provided to encodeIco')
+    }
+
+    const entry = Buffer.alloc(16)
+    entry[0] = width === 256 ? 0 : width
+    entry[1] = height === 256 ? 0 : height
+    entry[2] = 0
+    entry[3] = 0
+    entry.writeUInt16LE(1, 4)
+    entry.writeUInt16LE(32, 6)
+    entry.writeUInt32LE(data.length, 8)
+    entry.writeUInt32LE(offset, 12)
+    offset += data.length
+    return entry
+  })
+
+  return Buffer.concat([header, ...directory, ...images.map((image) => image.data)])
+}
+
 class PngImage {
   constructor (width, height) {
     this.width = width
@@ -383,14 +415,51 @@ async function writePng (relativePath, png) {
   return absolute
 }
 
+async function writeIco (relativePath, icons) {
+  if (!Array.isArray(icons) || icons.length === 0) {
+    throw new Error('writeIco requires at least one icon image')
+  }
+
+  const absolute = resolve(projectRoot, relativePath)
+  await mkdir(dirname(absolute), { recursive: true })
+
+  const prepared = icons.map((icon) => {
+    const image = icon?.png ?? icon
+    if (!image || typeof image.width !== 'number' || typeof image.height !== 'number') {
+      throw new Error('Icon entries must include a png with width and height')
+    }
+    return {
+      width: image.width,
+      height: image.height,
+      data: encodePng(image)
+    }
+  })
+
+  const buffer = encodeIco(prepared)
+  await writeFile(absolute, buffer)
+  return absolute
+}
+
 async function ensureAssets () {
+  const icon16 = drawScaffoldIcon(16)
+  const icon32 = drawScaffoldIcon(32)
+  const icon192 = drawScaffoldIcon(192)
+  const icon192Maskable = drawScaffoldIcon(192, { maskable: true })
+  const icon512 = drawScaffoldIcon(512)
+  const icon512Maskable = drawScaffoldIcon(512, { maskable: true })
+  const portraitScreenshot = drawScreenshot(1080, 1920, { layout: 'portrait' })
+  const landscapeScreenshot = drawScreenshot(1920, 1080, { layout: 'landscape' })
+
   return await Promise.all([
-    writePng('public/icons/icon-192.png', drawScaffoldIcon(192)),
-    writePng('public/icons/icon-192-maskable.png', drawScaffoldIcon(192, { maskable: true })),
-    writePng('public/icons/icon-512.png', drawScaffoldIcon(512)),
-    writePng('public/icons/icon-512-maskable.png', drawScaffoldIcon(512, { maskable: true })),
-    writePng('public/screenshots/home-1080x1920.png', drawScreenshot(1080, 1920, { layout: 'portrait' })),
-    writePng('public/screenshots/home-1920x1080.png', drawScreenshot(1920, 1080, { layout: 'landscape' }))
+    writePng('public/icons/icon-16.png', icon16),
+    writePng('public/icons/icon-32.png', icon32),
+    writePng('public/icons/icon-192.png', icon192),
+    writePng('public/icons/icon-192-maskable.png', icon192Maskable),
+    writePng('public/icons/icon-512.png', icon512),
+    writePng('public/icons/icon-512-maskable.png', icon512Maskable),
+    writePng('public/screenshots/home-1080x1920.png', portraitScreenshot),
+    writePng('public/screenshots/home-1920x1080.png', landscapeScreenshot),
+    writeIco('public/favicon.ico', [icon16, icon32])
   ])
 }
 
