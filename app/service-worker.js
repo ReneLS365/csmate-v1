@@ -1,5 +1,5 @@
 /* CSMate Service Worker – Workbox-inspired offline shell */
-const VERSION = 'v20251108T182607-eb74bad9'; // replaced automatically during build
+const VERSION = 'v20251109T075648-693f07cf'; // replaced automatically during build
 const SW_VERSION = VERSION;
 const CACHE_VERSION = VERSION; // replaced automatically during build
 const CACHE_PREFIX = 'csmate';

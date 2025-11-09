@@ -17,36 +17,32 @@
   <meta property="og:image:width" content="512">
   <meta property="og:image:height" content="512">
   <meta property="og:image:alt" content="CSMate - Stilladsoptælling og akkord">
-  <meta name="robots" content="index, follow">
+  <meta property="og:site_name" content="CSMate">
+  <meta property="og:locale" content="da_DK">
+  <meta name="robots" content="index, follow, max-image-preview:large">
   <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="CSMate – Stilladsoptælling og akkord">
   <meta name="twitter:description" content="Optæl stillads, beregn akkord og del til E-komplet.">
+  <meta name="twitter:image" content="/icons/icon-512x512.png">
+  <meta name="format-detection" content="telephone=no">
   <meta name="theme-color" content="#0f172a">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="CSMate">
   <link rel="preload" href="style.css" as="style">
   <link rel="preload" href="main.js" as="script">
+  <style>:root{--bg:#1e1f22;--elev:#26272b;--panel:#2d2f34;--text:#f4f4f6;--muted:#c8c9ce;--border:#3b3d45;--accent:#8ea0b5}body{margin:0;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,sans-serif}</style>
   <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="src/ui/numpad.css">
+  <link rel="stylesheet" href="src/ui/numpad.css" media="print" onload="this.media='all'">
   <link rel="stylesheet" href="print.css" media="print">
-  <link rel="stylesheet" href="src/styles/fixes.css">
-  <link rel="stylesheet" href="/css/pwa.css">
+  <link rel="stylesheet" href="src/styles/fixes.css" media="print" onload="this.media='all'">
+  <link rel="stylesheet" href="/css/pwa.css" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="src/ui/numpad.css"><link rel="stylesheet" href="src/styles/fixes.css"><link rel="stylesheet" href="/css/pwa.css"></noscript>
   <link rel="manifest" href="/manifest.webmanifest" crossorigin="anonymous">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "WebApplication",
-    "name": "CSMate",
-    "description": "Professionelt værktøj til stilladsoptælling, akkord- og lønberegning",
-    "applicationCategory": "BusinessApplication",
-    "operatingSystem": "All",
-    "offers": {
-      "@type": "Offer",
-      "price": "0"
-    }
-  }
-  </script>
+  <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512x512.png">
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebApplication","name":"CSMate","description":"Professionelt værktøj til stilladsoptælling, akkord- og lønberegning","applicationCategory":"BusinessApplication","operatingSystem":"All","browserRequirements":"Requires JavaScript. Requires HTML5.","offers":{"@type":"Offer","price":"0","priceCurrency":"DKK"},"inLanguage":"da","url":"/","image":"/icons/icon-512x512.png"}</script>
 </head>
 <body>
   <a class="skip-to-content" href="#main">Spring til indhold</a>
@@ -542,8 +538,8 @@
     </div>
   </div>
 
-<script type="module" src="main.js"></script>
-<script defer src="src/materials-ui-init.js"></script>
+<script type="module" src="main.js" defer></script>
+<script src="src/materials-ui-init.js" defer></script>
 
   <div class="pwa-install-wrap" role="presentation">
     <button id="installBtn" class="pwa-install-btn" type="button" hidden>Installer app</button>
