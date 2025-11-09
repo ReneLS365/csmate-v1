@@ -1,13 +1,15 @@
 import { AUTH0_DOMAIN, AUTH0_CLIENT_ID, AUTH0_REDIRECT_URI } from './auth0-config.js'
 import { ensureUserFromAuth0, setCurrentUser } from './state/users.js'
 
+const defaultState = Object.freeze({ isAuthenticated: false, user: null })
+
 let auth0Client = null
-let authState = {
-  isAuthenticated: false,
-  user: null
-}
+let initPromise = null
+let authState = cloneAuthState(defaultState)
 const authStateListeners = new Set()
 let labelResolver = null
+let activeStoredUser = null
+let redirectHandled = false
 
 function cloneAuthState (state) {
   if (!state) return { isAuthenticated: false, user: null }
@@ -71,80 +73,100 @@ async function createClient () {
   }
 }
 
-async function refreshAuthState () {
-  if (!auth0Client) {
-    authState = { isAuthenticated: false, user: null }
-    updateAuthUI()
+function setWindowActiveUser (user) {
+  activeStoredUser = user || null
+  if (typeof window === 'undefined') return
+  const target = window.csmate
+  if (!target || typeof target.setActiveUser !== 'function') return
+
+  try {
+    target.setActiveUser(activeStoredUser)
+  } catch (error) {
+    console.error('setActiveUser failed', error)
+  }
+}
+
+function clearStoredUser () {
+  setCurrentUser(null)
+  setWindowActiveUser(null)
+}
+
+function applyStoredUserFromAuth0 (authUser) {
+  if (!authUser) {
+    clearStoredUser()
+    return null
+  }
+
+  try {
+    const storedUser = ensureUserFromAuth0(authUser)
+    if (storedUser) {
+      setWindowActiveUser(storedUser)
+      return storedUser
+    }
+  } catch (error) {
+    console.error('ensureUserFromAuth0 failed', error)
+  }
+
+  clearStoredUser()
+  return null
+}
+
+async function synchronizeAuthState (client) {
+  if (!client) {
+    authState = cloneAuthState(defaultState)
+    clearStoredUser()
+    updateAuthUi()
     notifyAuthStateListeners()
     return authState
   }
 
+  let isAuthenticated = false
+  let user = null
+
   try {
-    const isAuthenticated = await auth0Client.isAuthenticated()
-    const user = isAuthenticated ? await auth0Client.getUser() : null
+    isAuthenticated = await client.isAuthenticated()
+    user = isAuthenticated ? await client.getUser() : null
     if (isAuthenticated && user) {
-      const storedUser = ensureUserFromAuth0(user)
-      if (!storedUser) {
-        setCurrentUser(null)
-      }
+      applyStoredUserFromAuth0(user)
     } else {
-      setCurrentUser(null)
+      clearStoredUser()
     }
-    authState = { isAuthenticated, user }
   } catch (error) {
-    console.error('Failed to refresh Auth0 state', error)
-    authState = { isAuthenticated: false, user: null }
+    console.error('Failed to synchronize Auth0 state', error)
+    isAuthenticated = false
+    user = null
+    clearStoredUser()
   }
 
-  updateAuthUI()
+  authState = { isAuthenticated, user }
+  updateAuthUi()
   notifyAuthStateListeners()
   return authState
 }
 
-async function handleRedirectIfPresent () {
-  if (typeof window === 'undefined') return
+async function handleRedirectIfPresent (client) {
+  if (redirectHandled || typeof window === 'undefined') return
   const query = window.location.search || ''
-  if (!query.includes('code=') || !query.includes('state=')) return
+  if (!query.includes('code=') || !query.includes('state=')) {
+    redirectHandled = true
+    return
+  }
 
   try {
-    await auth0Client.handleRedirectCallback()
+    await client.handleRedirectCallback()
+  } catch (error) {
+    console.error('Auth0 redirect error', error)
+  }
+
+  try {
     const url = new URL(window.location.href)
     url.search = ''
     window.history.replaceState({}, document.title, url.toString())
   } catch (error) {
-    console.error('Auth0 redirect error', error)
-  }
-}
-
-export async function initAuth () {
-  if (auth0Client) return auth0Client
-
-  auth0Client = await createClient()
-  if (!auth0Client) {
-    await refreshAuthState()
-    return null
+    console.error('Failed to clear Auth0 redirect params', error)
   }
 
-  await handleRedirectIfPresent()
-  await refreshAuthState()
-  return auth0Client
-}
-
-export function getAuthState () {
-  return cloneAuthState(authState)
-}
-
-export function onAuthStateChange (listener) {
-  if (typeof listener !== 'function') return () => {}
-  authStateListeners.add(listener)
-  try {
-    listener(cloneAuthState(authState))
-  } catch (error) {
-    console.error('Auth listener failed', error)
-  }
-  return () => {
-    authStateListeners.delete(listener)
-  }
+  redirectHandled = true
 }
 
 function resolveDefaultLabel (state) {
@@ -153,7 +175,7 @@ function resolveDefaultLabel (state) {
   return name || nickname || email || 'Bruger'
 }
 
-function updateAuthUI () {
+function updateAuthUi () {
   if (typeof document === 'undefined') return
 
   const loginBtn = document.getElementById('btn-login')
@@ -186,22 +208,112 @@ function updateAuthUI () {
   }
 }
 
+function assignInlineHandlers () {
+  if (typeof window === 'undefined') return
+  window.csmateAuthLogin = login
+  window.csmateAuthSignup = signup
+  window.csmateAuthLogout = logout
+}
+
+function handleAuthButton (button, handler) {
+  if (!button) return
+  button.removeEventListener('click', handler)
+  button.addEventListener('click', handler)
+}
+
+function onLoginButtonClick (event) {
+  if (event?.preventDefault) event.preventDefault()
+  login()
+}
+
+function onSignupButtonClick (event) {
+  if (event?.preventDefault) event.preventDefault()
+  signup()
+}
+
+function onLogoutButtonClick (event) {
+  if (event?.preventDefault) event.preventDefault()
+  logout()
+}
+
+function bindAuthButtonHandlers () {
+  if (typeof document === 'undefined') return
+
+  const loginBtn = document.getElementById('btn-login')
+  const logoutBtn = document.getElementById('btn-logout')
+  const switchUserBtn = document.getElementById('btn-switch-user')
+  const signupBtn = document.getElementById('btn-signup')
+
+  handleAuthButton(loginBtn, onLoginButtonClick)
+  handleAuthButton(signupBtn, onSignupButtonClick)
+  handleAuthButton(switchUserBtn, onLoginButtonClick)
+  handleAuthButton(logoutBtn, onLogoutButtonClick)
+}
+
+export async function initAuth () {
+  if (auth0Client) {
+    return auth0Client
+  }
+  if (initPromise) {
+    return initPromise
+  }
+
+  initPromise = (async () => {
+    const client = await createClient()
+    if (!client) {
+      auth0Client = null
+      await synchronizeAuthState(null)
+      return null
+    }
+
+    auth0Client = client
+    await handleRedirectIfPresent(client)
+    await synchronizeAuthState(client)
+    return client
+  })()
+
+  try {
+    const client = await initPromise
+    return client
+  } finally {
+    initPromise = null
+  }
+}
+
+export function getAuthState () {
+  return cloneAuthState(authState)
+}
+
+export function onAuthStateChange (listener) {
+  if (typeof listener !== 'function') return () => {}
+  authStateListeners.add(listener)
+  try {
+    listener(cloneAuthState(authState))
+  } catch (error) {
+    console.error('Auth listener failed', error)
+  }
+  return () => {
+    authStateListeners.delete(listener)
+  }
+}
+
 export function setAuthLabelResolver (resolver) {
   if (typeof resolver === 'function') {
     labelResolver = resolver
   } else {
     labelResolver = null
   }
-  updateAuthUI()
+  updateAuthUi()
 }
 
 export function refreshAuthUi () {
-  updateAuthUI()
+  updateAuthUi()
 }
 
 async function ensureClient () {
-  if (auth0Client) return auth0Client
-  return initAuth()
+  const client = await initAuth()
+  assignInlineHandlers()
+  return client
 }
 
 export async function login () {
@@ -219,8 +331,30 @@ export async function login () {
   }
 }
 
+export async function signup () {
+  const client = await ensureClient()
+  if (!client) return
+
+  try {
+    await client.loginWithRedirect({
+      authorizationParams: {
+        redirect_uri: getRedirectUri(),
+        screen_hint: 'signup'
+      }
+    })
+  } catch (error) {
+    console.error('Auth0 signup failed', error)
+  }
+}
+
 export async function logout () {
   const client = await ensureClient()
+
+  clearStoredUser()
+  authState = cloneAuthState(defaultState)
+  updateAuthUi()
+  notifyAuthStateListeners()
+
   if (!client) return
 
   try {
@@ -234,45 +368,15 @@ export async function logout () {
   }
 }
 
-export async function switchUser () {
-  const client = await ensureClient()
-  if (!client) return
-
-  try {
-    await client.loginWithRedirect({
-      authorizationParams: {
-        redirect_uri: getRedirectUri(),
-        prompt: 'login'
-      }
-    })
-  } catch (error) {
-    console.error('Auth0 switch user failed', error)
-  }
-}
-
 export function setupAuthUI () {
-  if (typeof document === 'undefined') return
-
-  const loginBtn = document.getElementById('btn-login')
-  const logoutBtn = document.getElementById('btn-logout')
-  const switchUserBtn = document.getElementById('btn-switch-user')
-
-  loginBtn?.addEventListener('click', event => {
-    event.preventDefault()
-    login()
-  })
-
-  logoutBtn?.addEventListener('click', event => {
-    event.preventDefault()
-    logout()
-  })
-
-  switchUserBtn?.addEventListener('click', event => {
-    event.preventDefault()
-    switchUser()
-  })
-
+  assignInlineHandlers()
+  bindAuthButtonHandlers()
+  refreshAuthUi()
   initAuth().catch(error => {
     console.error('initAuth failed', error)
   })
 }
+
+assignInlineHandlers()
+
+export { cloneAuthState }
