@@ -9,7 +9,21 @@ import { EXCLUDED_MATERIAL_KEYS, shouldExcludeMaterialEntry } from './src/lib/ma
 import { createMaterialRow } from './src/modules/materialRowTemplate.js'
 import { sha256Hex, constantTimeEquals } from './src/lib/sha256.js'
 import { ensureExportLibs, ensureZipLib, prefetchExportLibs } from './src/features/export/lazy-libs.js'
-import { setupAuthUI, onAuthStateChange, setAuthLabelResolver, refreshAuthUi } from './src/auth.js'
+import {
+  initAuth,
+  onAuthStateChange,
+  setAuthLabelResolver,
+  refreshAuthUi,
+  login as authLogin,
+  logout as authLogout,
+  signup as authSignup
+} from './src/auth.js'
+import {
+  getCurrentUser as getStoredUser,
+  setCurrentUser as setStoredCurrentUser,
+  getAllUsers,
+  updateUserRole as updateStoredUserRole
+} from './src/state/users.js'
 import { setupPwaInstall } from './src/pwa-install.js'
 import {
   exportAll as exportAllForJob,
@@ -315,13 +329,23 @@ const SYSTEM_ID_BY_KEY = {
   modex: 'MODEX',
   alfix: 'ALFIX_VARIO'
 };
-const USER_STORAGE_KEY = 'csmate.user.v1';
 const DEFAULT_JOB_NAME = 'Migreret job';
 const DEFAULT_SYSTEM_ID = 'BOSTA70';
 const DEFAULT_ACTION_HINT = 'Udfyld Sagsinfo for at fortsætte.';
 const ROLE_PERMISSIONS = {
   owner: {
     canEditGlobalTemplates: true,
+    canEditPrices: true,
+    canEditWages: true,
+    canCreateJobs: true,
+    canDeleteJobs: true,
+    canLockJobs: true,
+    canSendJobs: true,
+    canEditMaterials: true,
+    canEditLon: true
+  },
+  firmAdmin: {
+    canEditGlobalTemplates: false,
     canEditPrices: true,
     canEditWages: true,
     canCreateJobs: true,
@@ -353,6 +377,17 @@ const ROLE_PERMISSIONS = {
     canEditMaterials: true,
     canEditLon: true
   },
+  foreman: {
+    canEditGlobalTemplates: false,
+    canEditPrices: false,
+    canEditWages: false,
+    canCreateJobs: true,
+    canDeleteJobs: false,
+    canLockJobs: true,
+    canSendJobs: true,
+    canEditMaterials: true,
+    canEditLon: true
+  },
   montor: {
     canEditGlobalTemplates: false,
     canEditPrices: false,
@@ -363,6 +398,28 @@ const ROLE_PERMISSIONS = {
     canSendJobs: false,
     canEditMaterials: true,
     canEditLon: true
+  },
+  user: {
+    canEditGlobalTemplates: false,
+    canEditPrices: false,
+    canEditWages: false,
+    canCreateJobs: false,
+    canDeleteJobs: false,
+    canLockJobs: false,
+    canSendJobs: false,
+    canEditMaterials: true,
+    canEditLon: true
+  },
+  guest: {
+    canEditGlobalTemplates: false,
+    canEditPrices: false,
+    canEditWages: false,
+    canCreateJobs: false,
+    canDeleteJobs: false,
+    canLockJobs: false,
+    canSendJobs: false,
+    canEditMaterials: false,
+    canEditLon: false
   }
 };
 
@@ -378,11 +435,11 @@ let cachedDBPromise = null;
 let jobsState = [];
 let currentJobId = null;
 let currentSystemId = DEFAULT_SYSTEM_ID;
+let activeUser = null;
 let jobSearchTerm = '';
 let jobStatusFilter = 'alle';
 let showArchivedJobs = false;
 let jobAutosaveTimer = null;
-let currentUser = null;
 let lastCapturedMaterials = new Map();
 let lastCapturedLon = {};
 let jobStoreListenerAttached = false;
@@ -1292,9 +1349,9 @@ function setupJobUI() {
 
   const createBtn = document.getElementById('btnCreateJob');
   if (createBtn) {
-    createBtn.disabled = !!currentUser && !requirePermission('canCreateJobs');
+    createBtn.disabled = !!activeUser && !requirePermission('canCreateJobs');
     createBtn.addEventListener('click', () => {
-      if (currentUser && !requirePermission('canCreateJobs')) return;
+      if (activeUser && !requirePermission('canCreateJobs')) return;
       createNewJob();
     });
   }
@@ -1468,7 +1525,7 @@ function handleWorkerFieldChange(event) {
 function updatePermissionControls() {
   const createBtn = document.getElementById('btnCreateJob');
   if (createBtn) {
-    createBtn.disabled = !!currentUser && !requirePermission('canCreateJobs');
+    createBtn.disabled = !!activeUser && !requirePermission('canCreateJobs');
   }
   const addWorkerBtn = document.getElementById('btnAddWorker');
   if (addWorkerBtn) {
@@ -1575,69 +1632,50 @@ function handleSagsinfoChange(event) {
   renderJobList();
 }
 
-function loadStoredUser() {
-  if (typeof localStorage === 'undefined') return null;
-  try {
-    const raw = localStorage.getItem(USER_STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (parsed && typeof parsed === 'object' && parsed.name && parsed.role) {
-      return parsed;
-    }
-  } catch (error) {
-    console.warn('Kunne ikke læse bruger fra storage', error);
-  }
-  return null;
+const USER_ROLE_OPTIONS = ['owner', 'firmAdmin', 'formand', 'montor', 'user'];
+
+function normalizeRoleValue (role) {
+  if (typeof role !== 'string') return '';
+  const trimmed = role.trim();
+  if (!trimmed) return '';
+  const lower = trimmed.toLowerCase();
+  if (lower === 'firma-admin' || lower === 'firmadmin') return 'firmAdmin';
+  if (lower === 'foreman') return 'formand';
+  if (lower === 'formand') return 'formand';
+  if (lower === 'montør') return 'montor';
+  if (lower === 'montor') return 'montor';
+  if (lower === 'owner') return 'owner';
+  if (lower === 'user' || lower === 'bruger') return 'user';
+  if (lower === 'guest') return 'guest';
+  return trimmed;
 }
 
-function loadCurrentUserState() {
-  currentUser = loadStoredUser();
-  setAuditUserResolver(getCurrentUserNameOrNull);
-  updateUserUI();
+function formatRoleLabel (role) {
+  const normalized = normalizeRoleValue(role);
+  const labels = {
+    owner: 'Owner',
+    firmAdmin: 'Firma-admin',
+    'firma-admin': 'Firma-admin',
+    formand: 'Formand',
+    foreman: 'Formand',
+    montor: 'Montør',
+    user: 'Bruger',
+    guest: 'Gæst'
+  };
+  if (labels[normalized]) return labels[normalized];
+  if (labels[role]) return labels[role];
+  return normalized || role || 'Ukendt';
 }
 
-function saveCurrentUserState(user) {
-  currentUser = user;
-  if (typeof localStorage !== 'undefined') {
-    try {
-      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
-    } catch (error) {
-      console.warn('Kunne ikke gemme bruger', error);
-    }
-  }
-  setAuditUserResolver(getCurrentUserNameOrNull);
-  updateUserUI();
-  renderJobList();
-}
-
-function getCurrentUserNameOrNull() {
-  return currentUser ? currentUser.name : null;
-}
-
-function requirePermission(key) {
+function requirePermission (key) {
   return canPerformAction({
-    user: currentUser,
+    user: activeUser,
     action: key,
-    rolePermissions: ROLE_PERMISSIONS,
+    rolePermissions: ROLE_PERMISSIONS
   });
 }
 
-function formatRoleLabel(role) {
-  const map = {
-    owner: 'Owner',
-    'firma-admin': 'Firma-admin',
-    formand: 'Formand',
-    montor: 'Montør',
-  };
-  return map[role] || role;
-}
-
-function getLocalUserDisplayName() {
-  const name = currentUser?.name;
-  return typeof name === 'string' ? name.trim() : '';
-}
-
-function getAuth0DisplayName(state = latestAuthState) {
+function getAuth0DisplayName (state = latestAuthState) {
   if (!state?.isAuthenticated || !state.user) return '';
   const { name, nickname, email } = state.user;
   const candidates = [name, nickname, email];
@@ -1651,127 +1689,249 @@ function getAuth0DisplayName(state = latestAuthState) {
   return '';
 }
 
-function refreshUserLabel() {
-  refreshAuthUi();
+function getActiveUserName () {
+  const name = activeUser?.name;
+  return typeof name === 'string' ? name.trim() : '';
 }
 
-function updateUserUI() {
-  const label = document.getElementById('currentUserInfo');
-  if (label) {
-    if (currentUser) {
-      label.textContent = `Bruger: ${currentUser.name} (${formatRoleLabel(currentUser.role)})`;
-    } else {
-      label.textContent = 'Ingen bruger';
-    }
+function ensureUserAdminContainer () {
+  if (typeof document === 'undefined') return null;
+  let container = document.getElementById('userAdminTable');
+  if (!container) {
+    const adminFieldset = document.getElementById('adminFeedback')?.closest('fieldset');
+    if (!adminFieldset) return null;
+    container = document.createElement('div');
+    container.id = 'userAdminTable';
+    container.className = 'user-admin-table';
+    adminFieldset.appendChild(container);
   }
-  refreshUserLabel();
+  if (!container.dataset.bound) {
+    container.addEventListener('change', handleUserAdminChange);
+    container.addEventListener('click', handleUserAdminClick);
+    container.dataset.bound = 'true';
+  }
+  return container;
+}
+
+function handleUserAdminChange (event) {
+  const select = event.target;
+  if (!(select instanceof HTMLSelectElement)) return;
+  if (select.name !== 'user-role') return;
+  const userId = select.dataset.userId;
+  if (!userId) return;
+
+  const nextRole = normalizeRoleValue(select.value) || select.value;
+  const updated = updateStoredUserRole(userId, nextRole, activeUser?.id);
+  if (updated && activeUser && updated.id === activeUser.id) {
+    applyUserToUi(updated);
+  } else {
+    renderUserAdminTable();
+  }
+}
+
+function handleUserAdminClick (event) {
+  const button = event.target instanceof HTMLElement
+    ? event.target.closest('button[data-action]')
+    : null;
+  if (!button) return;
+  const action = button.dataset.action;
+  const userId = button.dataset.userId;
+  if (action === 'set-active-user' && userId) {
+    event.preventDefault();
+    const stored = setStoredCurrentUser(userId);
+    applyUserToUi(stored);
+  }
+}
+
+const lastLoginFormatter = (typeof Intl !== 'undefined' && Intl.DateTimeFormat)
+  ? new Intl.DateTimeFormat('da-DK', { dateStyle: 'short', timeStyle: 'short' })
+  : null;
+
+function formatLastLogin (timestamp) {
+  if (!Number.isFinite(timestamp)) return 'Aldrig';
+  try {
+    if (lastLoginFormatter) return lastLoginFormatter.format(timestamp);
+    return new Date(timestamp).toLocaleString('da-DK');
+  } catch (error) {
+    console.warn('Kunne ikke formatere tidspunkt', error);
+    return new Date(timestamp).toLocaleString('da-DK');
+  }
+}
+
+function renderUserAdminTable () {
+  const container = ensureUserAdminContainer();
+  if (!container) return;
+
+  const users = getAllUsers();
+  container.innerHTML = '';
+
+  if (!users.length) {
+    const empty = document.createElement('p');
+    empty.className = 'muted';
+    empty.textContent = 'Ingen brugere synkroniseret endnu.';
+    container.appendChild(empty);
+    return;
+  }
+
+  const table = document.createElement('table');
+  table.className = 'user-admin-table__table';
+  const thead = document.createElement('thead');
+  thead.innerHTML = `
+    <tr>
+      <th scope="col">Navn</th>
+      <th scope="col">E-mail</th>
+      <th scope="col">Rolle</th>
+      <th scope="col">Sidst aktiv</th>
+      <th scope="col" class="actions">Handlinger</th>
+    </tr>
+  `;
+  table.appendChild(thead);
+
+  const tbody = document.createElement('tbody');
+
+  users.forEach(user => {
+    const tr = document.createElement('tr');
+    const userId = user?.id || '';
+    if (userId) tr.dataset.userId = userId;
+    const canonicalRole = normalizeRoleValue(user?.role);
+    if (activeUser?.id && userId === activeUser.id) {
+      tr.classList.add('is-active');
+    }
+
+    const nameCell = document.createElement('td');
+    nameCell.textContent = user?.name?.trim?.() || user?.email || user?.emailKey || 'Ukendt';
+    tr.appendChild(nameCell);
+
+    const emailCell = document.createElement('td');
+    emailCell.textContent = user?.email || user?.emailKey || '—';
+    tr.appendChild(emailCell);
+
+    const roleCell = document.createElement('td');
+    const roleSelect = document.createElement('select');
+    roleSelect.name = 'user-role';
+    if (userId) roleSelect.dataset.userId = userId;
+    USER_ROLE_OPTIONS.forEach(optionRole => {
+      const option = document.createElement('option');
+      option.value = optionRole;
+      option.textContent = formatRoleLabel(optionRole);
+      roleSelect.appendChild(option);
+    });
+    if (canonicalRole && !USER_ROLE_OPTIONS.includes(canonicalRole)) {
+      const option = document.createElement('option');
+      option.value = canonicalRole;
+      option.textContent = formatRoleLabel(canonicalRole);
+      roleSelect.appendChild(option);
+    }
+    roleSelect.value = canonicalRole || roleSelect.options[0]?.value || '';
+    roleCell.appendChild(roleSelect);
+    tr.appendChild(roleCell);
+
+    const lastLoginCell = document.createElement('td');
+    lastLoginCell.textContent = formatLastLogin(user?.lastLoginAt);
+    tr.appendChild(lastLoginCell);
+
+    const actionsCell = document.createElement('td');
+    actionsCell.className = 'actions';
+    if (activeUser?.id && userId === activeUser.id) {
+      const badge = document.createElement('span');
+      badge.className = 'status-pill';
+      badge.textContent = 'Aktiv bruger';
+      actionsCell.appendChild(badge);
+    } else {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'btn small';
+      button.dataset.action = 'set-active-user';
+      if (userId) button.dataset.userId = userId;
+      button.textContent = 'Skift til';
+      actionsCell.appendChild(button);
+    }
+    tr.appendChild(actionsCell);
+
+    tbody.appendChild(tr);
+  });
+
+  table.appendChild(tbody);
+  container.appendChild(table);
+}
+
+function setupUserManagementUi () {
+  if (typeof document === 'undefined') return;
+  const overlay = document.getElementById('userOverlay');
+  if (overlay?.parentElement) {
+    overlay.remove();
+  }
+  const trigger = document.getElementById('btnOpenUserOverlay');
+  if (trigger) {
+    trigger.textContent = 'Brugere';
+    trigger.addEventListener('click', () => {
+      const container = ensureUserAdminContainer();
+      if (!container) return;
+      container.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  }
+}
+
+function applyRoleGuards (user = activeUser) {
+  if (typeof document !== 'undefined') {
+    const role = normalizeRoleValue(user?.role) || 'guest';
+    document.body?.setAttribute('data-user-role', role);
+  }
   updatePermissionControls();
 }
 
-function openUserOverlay() {
-  const overlay = document.getElementById('userOverlay');
-  if (!overlay) return;
-  overlay.removeAttribute('hidden');
-  overlay.setAttribute('aria-hidden', 'false');
-  const nameInput = document.getElementById('userName');
-  if (nameInput) {
-    nameInput.value = currentUser?.name || '';
-    nameInput.focus();
+function applyUserToUi (user) {
+  if (user && typeof user === 'object') {
+    const normalizedRole = normalizeRoleValue(user.role);
+    activeUser = { ...user, role: normalizedRole || user.role || '' };
+  } else {
+    activeUser = null;
   }
-  const roleSelect = document.getElementById('userRole');
-  if (roleSelect) {
-    roleSelect.value = currentUser?.role || 'montor';
-  }
-  updateOverlayAdminRow();
-}
-
-function closeUserOverlay() {
-  const overlay = document.getElementById('userOverlay');
-  if (!overlay) return;
-  overlay.setAttribute('hidden', '');
-  overlay.setAttribute('aria-hidden', 'true');
-  const feedback = document.getElementById('userOverlayFeedback');
-  if (feedback) {
-    feedback.setAttribute('hidden', '');
-    feedback.textContent = '';
-  }
-}
-
-function hasStoredOwner() {
-  const stored = loadStoredUser();
-  return stored?.role === 'owner';
-}
-
-function updateOverlayAdminRow() {
-  const roleSelect = document.getElementById('userRole');
-  const adminRow = document.getElementById('adminCodeRow');
-  const adminInput = document.getElementById('adminCodeInput');
-  if (!roleSelect || !adminRow || !adminInput) return;
-  const role = roleSelect.value;
-  const needsCode = role === 'owner' || (role === 'firma-admin' && !hasStoredOwner());
-  adminRow.hidden = !needsCode;
-  if (!needsCode) {
-    adminInput.value = '';
-  }
-}
-
-function setupUserOverlay() {
-  const openBtn = document.getElementById('btnOpenUserOverlay');
-  const closeBtn = document.getElementById('btnCloseUserOverlay');
-  const cancelBtn = document.getElementById('btnCancelUser');
-  const overlay = document.getElementById('userOverlay');
-  const form = document.getElementById('userForm');
-  const roleSelect = document.getElementById('userRole');
-  const adminInput = document.getElementById('adminCodeInput');
-  const feedback = document.getElementById('userOverlayFeedback');
-
-  openBtn?.addEventListener('click', () => openUserOverlay());
-  closeBtn?.addEventListener('click', () => closeUserOverlay());
-  cancelBtn?.addEventListener('click', () => closeUserOverlay());
-  overlay?.addEventListener('click', event => {
-    if (event.target instanceof HTMLElement && event.target.dataset.overlayDismiss !== undefined) {
-      closeUserOverlay();
-    }
+  setAuditUserResolver(() => {
+    const name = getActiveUserName();
+    return name || null;
   });
-  roleSelect?.addEventListener('change', () => updateOverlayAdminRow());
+  applyRoleGuards(activeUser);
+  renderUserAdminTable();
+  renderJobList();
+  refreshAuthUi();
+}
 
-  form?.addEventListener('submit', event => {
-    event.preventDefault();
-    if (!roleSelect) return;
-    const nameInput = document.getElementById('userName');
-    const name = nameInput?.value.trim();
-    const role = roleSelect.value;
-    const adminCode = adminInput?.value?.trim() || '';
-    if (!name) {
-      if (feedback) {
-        feedback.textContent = 'Angiv navn.';
-        feedback.removeAttribute('hidden');
-      }
-      return;
-    }
-    if (role === 'owner' && adminCode !== 'StilAce') {
-      if (feedback) {
-        feedback.textContent = 'Forkert adminkode.';
-        feedback.removeAttribute('hidden');
-      }
-      return;
-    }
-    if (role === 'firma-admin' && !hasStoredOwner() && adminCode !== 'StilAce') {
-      if (feedback) {
-        feedback.textContent = 'Adminkode kræves for firma-admin.';
-        feedback.removeAttribute('hidden');
-      }
-      return;
-    }
-    if (feedback) {
-      feedback.setAttribute('hidden', '');
-      feedback.textContent = '';
-    }
-    saveCurrentUserState({ name, role });
-    closeUserOverlay();
-  });
+if (typeof window !== 'undefined') {
+  window.csmate = window.csmate || {};
+  window.csmate.setActiveUser = applyUserToUi;
+}
 
-  updateOverlayAdminRow();
+function bindAuthControls () {
+  if (typeof document === 'undefined') return;
+  const loginBtn = document.getElementById('btn-login');
+  if (loginBtn) {
+    loginBtn.addEventListener('click', event => {
+      event.preventDefault();
+      authLogin();
+    });
+  }
+  const switchBtn = document.getElementById('btn-switch-user');
+  if (switchBtn) {
+    switchBtn.addEventListener('click', event => {
+      event.preventDefault();
+      authLogin();
+    });
+  }
+  const logoutBtn = document.getElementById('btn-logout');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', event => {
+      event.preventDefault();
+      authLogout();
+    });
+  }
+  const signupBtn = document.getElementById('btn-signup');
+  if (signupBtn) {
+    signupBtn.addEventListener('click', event => {
+      event.preventDefault();
+      authSignup();
+    });
+  }
 }
 const TRAELLE_RATE35 = 10.44;
 const TRAELLE_RATE50 = 14.62;
@@ -4680,8 +4840,7 @@ async function initApp() {
   setupSagsinfoAudit();
   setupMaterialAuditListeners();
   setupLonAuditListeners();
-  setupUserOverlay();
-  loadCurrentUserState();
+  setupUserManagementUi();
   ensureJobsInitialised();
   const job = getCurrentJob();
   if (job) {
@@ -4711,8 +4870,11 @@ registerJobStoreHooks({
 
 async function bootstrap () {
   setAuthLabelResolver(state => {
-    const localName = getLocalUserDisplayName();
-    if (localName) return localName;
+    const localName = getActiveUserName();
+    if (localName) {
+      const roleLabel = formatRoleLabel(activeUser?.role);
+      return roleLabel ? `${localName} (${roleLabel})` : localName;
+    }
     const authName = getAuth0DisplayName(state);
     return authName || 'Ingen bruger';
   });
@@ -4723,7 +4885,11 @@ async function bootstrap () {
   });
 
   await initApp();
-  setupAuthUI();
+  bindAuthControls();
+  applyUserToUi(getStoredUser());
+  initAuth().catch(error => {
+    console.error('initAuth failed', error);
+  });
   setActiveTab('job');
 }
 
