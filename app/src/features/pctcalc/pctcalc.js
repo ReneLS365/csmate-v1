@@ -2,6 +2,23 @@
 (() => {
   const STYLE_ID = 'pctcalc-style'
   const STYLE_HREF = 'src/features/pctcalc/pctcalc.css'
+  const CALC_URL = 'https://gleeful-faun-12d319.netlify.app/'
+
+  const scheduleIdle = (task) => {
+    if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
+      window.requestIdleCallback(() => task(), { timeout: 1500 })
+    } else {
+      window.setTimeout(task, 0)
+    }
+  }
+
+  const whenReady = (task) => {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', task, { once: true })
+    } else {
+      task()
+    }
+  }
 
   function ensureStylesheet () {
     const existing = document.getElementById(STYLE_ID)
@@ -14,10 +31,6 @@
     document.head.appendChild(link)
     return link
   }
-
-  ensureStylesheet()
-
-  const CALC_URL = 'https://gleeful-faun-12d319.netlify.app/'
 
   function hasSlaebKeyword (input) {
     const text = (input || '').trim().toLowerCase()
@@ -42,31 +55,20 @@
     )
   }
 
-  // Undgå dobbel-mount
-  if (window.__pctcalcMounted) return
-  window.__pctcalcMounted = true
-
-  // PRIMÆR placering: værktøjsområde for slæbeprocenter, hvis tilstede
-  // Sekundær: ved label/input for slæbeprocent-feltet
-  // Tertiær: første element, der matcher tekst 'Slæbeprocenter'
   function findMountPoint () {
-    // 1) Eksplicit hook hvis appen har sat data-attr
     let el = document.querySelector('[data-slaebepct-tools]')
     if (el) return el
 
-    // 2) Kendte id/navne
     el = document.querySelector(
       '#slaebePct, #slaebPct, [name="slaebePct"], [name="slaebPct"], [data-field="slaebePct"], [data-field="slaebPct"]'
     )
     if (el) {
-      // lav en lille inline container ved siden af feltet/label
       const wrapper = document.createElement('span')
       wrapper.className = 'pctcalc-inline-tools'
       el.insertAdjacentElement('afterend', wrapper)
       return wrapper
     }
 
-    // 3) Fuzzy: find header/label med teksten "Slæbeprocenter"
     const candidates = Array.from(document.querySelectorAll('h1,h2,h3,h4,label,legend,span,div'))
     const head = candidates.find(n => hasSlaebKeyword(n.textContent || ''))
     if (head) {
@@ -76,7 +78,6 @@
       return wrapper
     }
 
-    // 4) Fald tilbage til body (øverst til højre via fixed? Nej: undlad. Åbn kun i nyt faneblad via global knap)
     return null
   }
 
@@ -114,7 +115,6 @@
     `
     document.body.appendChild(modal)
 
-    // Luk via overlay/knap/Escape
     modal.addEventListener('click', ev => {
       if (ev.target && ev.target.getAttribute('data-close') === '1') closeModal()
     })
@@ -137,33 +137,35 @@
     }
   }
 
-  // Singleton modal controller
-  const modalCtrl = renderModal()
+  let modalCtrl = null
 
   function openModalOrTab () {
+    if (!modalCtrl) {
+      modalCtrl = renderModal()
+    }
     try {
       modalCtrl.open()
     } catch {
-      // Fallback: nyt faneblad (på meget stramme CSP/iframe-politikker)
       window.open(CALC_URL, '_blank', 'noopener,noreferrer')
     }
   }
 
-  // Mount knap uden at forstyrre eksisterende layout
   function mount () {
     const mountPoint = findMountPoint()
     if (mountPoint && !mountPoint.querySelector('.pctcalc-btn')) {
       mountPoint.appendChild(makeButton())
       return true
     }
-    // Hvis vi ikke fandt noget sikkert mountpoint, gør INTET (fail-silent).
     return false
   }
 
-  // Kør efter DOM er ready (ikke afhængig af frameworks)
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', mount)
-  } else {
+  function initFeature () {
+    if (window.__pctcalcMounted) return
+    window.__pctcalcMounted = true
+
+    ensureStylesheet()
     mount()
   }
+
+  scheduleIdle(() => whenReady(initFeature))
 })()

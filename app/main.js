@@ -86,6 +86,27 @@ function forEachNode(nodeList, callback) {
   }
 }
 
+function scheduleIdleTask(callback, { timeout = 1500 } = {}) {
+  const run = () => {
+    try {
+      const result = callback();
+      if (result && typeof result.then === 'function') {
+        result.catch(error => {
+          console.error('Deferred task failed', error);
+        });
+      }
+    } catch (error) {
+      console.error('Deferred task failed', error);
+    }
+  };
+
+  if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
+    window.requestIdleCallback(run, { timeout });
+  } else {
+    setTimeout(run, timeout || 0);
+  }
+}
+
 const TAB_SECTION_MAP = Object.freeze({
   job: 'jobs',
   case: 'sagsinfo',
@@ -4752,59 +4773,62 @@ async function initApp() {
     });
   }
 
-  await primeBaseMaterialLists();
+  scheduleIdleTask(async () => {
+    await primeBaseMaterialLists();
+    hydrateMaterialListsFromJson();
+    setupListSelectors();
+    renderOptaelling();
+    addWorker();
+    setupCSVImport();
+    validateSagsinfo();
+    updateTotals(true);
+  }, { timeout: 500 });
 
-  hydrateMaterialListsFromJson();
-  setupListSelectors();
-  renderOptaelling();
-  addWorker();
+  scheduleIdleTask(() => {
+    initStatusControls();
+    populateRecentCases();
+    setupGuideModal();
 
-  setupCSVImport();
-
-  initStatusControls();
-  populateRecentCases();
-
-  setupGuideModal();
-
-  document.getElementById('btnBeregnLon')?.addEventListener('click', () => beregnLon());
-  document.getElementById('btnPrint')?.addEventListener('click', () => {
-    if (validateSagsinfo()) {
-      window.print();
-    } else {
-      updateActionHint('Udfyld Sagsinfo for at kunne printe.', 'error');
-    }
-  });
-
-  document.getElementById('btnExportCSV')?.addEventListener('click', () => downloadCSV());
-
-  document.getElementById('btnExportAll')?.addEventListener('click', async () => {
-    await exportAll();
-  });
-
-  document.getElementById('btnExportZip')?.addEventListener('click', async () => {
-    await exportZip();
-  });
-
-  ['btnExportAll', 'btnExportZip'].forEach(id => {
-    const button = document.getElementById(id);
-    if (!button) return;
-    const prime = () => prefetchExportLibs();
-    button.addEventListener('pointerenter', prime, { once: true });
-    button.addEventListener('focus', prime, { once: true });
-  });
-
-  document.getElementById('btnAddWorker')?.addEventListener('click', () => addWorker());
-
-  const recentSelect = document.getElementById('recentCases');
-  if (recentSelect) {
-    recentSelect.addEventListener('change', event => {
-      const loadBtn = document.getElementById('btnLoadCase');
-      if (loadBtn) {
-        loadBtn.disabled = !(event.target.value);
+    document.getElementById('btnBeregnLon')?.addEventListener('click', () => beregnLon());
+    document.getElementById('btnPrint')?.addEventListener('click', () => {
+      if (validateSagsinfo()) {
+        window.print();
+      } else {
+        updateActionHint('Udfyld Sagsinfo for at kunne printe.', 'error');
       }
     });
-  }
-  document.getElementById('btnLoadCase')?.addEventListener('click', () => handleLoadCase());
+
+    document.getElementById('btnExportCSV')?.addEventListener('click', () => downloadCSV());
+
+    document.getElementById('btnExportAll')?.addEventListener('click', async () => {
+      await exportAll();
+    });
+
+    document.getElementById('btnExportZip')?.addEventListener('click', async () => {
+      await exportZip();
+    });
+
+    ['btnExportAll', 'btnExportZip'].forEach(id => {
+      const button = document.getElementById(id);
+      if (!button) return;
+      const prime = () => prefetchExportLibs();
+      button.addEventListener('pointerenter', prime, { once: true });
+      button.addEventListener('focus', prime, { once: true });
+    });
+
+    document.getElementById('btnAddWorker')?.addEventListener('click', () => addWorker());
+
+    const recentSelect = document.getElementById('recentCases');
+    if (recentSelect) {
+      recentSelect.addEventListener('change', event => {
+        const loadBtn = document.getElementById('btnLoadCase');
+        if (loadBtn) {
+          loadBtn.disabled = !(event.target.value);
+        }
+      });
+    }
+    document.getElementById('btnLoadCase')?.addEventListener('click', () => handleLoadCase());
+  }, { timeout: 1000 });
 
   ['traelleloeft35', 'traelleloeft50'].forEach(id => {
     const input = document.getElementById(id);
@@ -4822,12 +4846,12 @@ async function initApp() {
     }
   });
 
-  validateSagsinfo();
-  updateTotals(true);
-  installLazyNumpad();
-  setupMobileKeyboardDismissal();
-  setupServiceWorkerMessaging();
-  setupPWAInstallPrompt();
+  scheduleIdleTask(() => {
+    installLazyNumpad();
+    setupMobileKeyboardDismissal();
+    setupServiceWorkerMessaging();
+    setupPWAInstallPrompt();
+  });
 
   document.getElementById('btnHardResetApp')?.addEventListener('click', () => {
     hardResetApp();

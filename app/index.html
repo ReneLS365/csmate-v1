@@ -21,10 +21,13 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <link rel="stylesheet" href="style.css">
-  <link rel="stylesheet" href="src/ui/numpad.css">
+  <link rel="stylesheet" href="src/ui/numpad.css" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="src/ui/numpad.css"></noscript>
   <link rel="stylesheet" href="print.css" media="print">
-  <link rel="stylesheet" href="src/styles/fixes.css">
-  <link rel="stylesheet" href="/css/pwa.css">
+  <link rel="stylesheet" href="src/styles/fixes.css" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="src/styles/fixes.css"></noscript>
+  <link rel="stylesheet" href="/css/pwa.css" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="/css/pwa.css"></noscript>
   <link rel="manifest" href="/manifest.webmanifest" crossorigin="anonymous">
   <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-16.png">
