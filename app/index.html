@@ -30,6 +30,7 @@
   <link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-16.png">
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
+  <script src="https://cdn.auth0.com/js/auth0-spa-js/2.6/auth0-spa-js.production.js" defer></script>
 </head>
 <body>
   <a class="skip-to-content" href="#main">Spring til indhold</a>
@@ -58,6 +59,11 @@
         <div class="user-controls no-print">
           <span id="currentUserInfo" class="user-label">Ingen bruger</span>
           <button id="btnOpenUserOverlay" type="button">Skift bruger</button>
+          <div class="auth0-controls">
+            <button id="auth0-login-btn" type="button">Log ind med Auth0</button>
+            <button id="auth0-logout-btn" type="button">Log ud</button>
+            <span id="current-user-label" class="user-label">Ingen bruger</span>
+          </div>
         </div>
       </div>
     </header>

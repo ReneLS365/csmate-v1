@@ -9,6 +9,7 @@ import { EXCLUDED_MATERIAL_KEYS, shouldExcludeMaterialEntry } from './src/lib/ma
 import { createMaterialRow } from './src/modules/materialRowTemplate.js'
 import { sha256Hex, constantTimeEquals } from './src/lib/sha256.js'
 import { ensureExportLibs, ensureZipLib, prefetchExportLibs } from './src/features/export/lazy-libs.js'
+import { initAuth0, getAuthState, loginWithAuth0, logoutFromAuth0 } from './src/auth0-client.js'
 import {
   exportAll as exportAllForJob,
   exportSingleSheet,
@@ -4745,10 +4746,47 @@ registerJobStoreHooks({
   }
 });
 
+async function bootstrap () {
+  let auth0 = null;
+  try {
+    auth0 = await initAuth0();
+  } catch (error) {
+    console.warn('Auth0 init fejlede', error);
+  }
+
+  let state = { isAuthenticated: false, user: null };
+  if (auth0) {
+    try {
+      state = await getAuthState();
+    } catch (error) {
+      console.warn('Kunne ikke hente Auth0-state', error);
+    }
+  }
+
+  const label = document.getElementById('current-user-label');
+  if (label) {
+    label.textContent = state.isAuthenticated
+      ? (state.user?.name || state.user?.email || 'Ingen bruger')
+      : 'Ingen bruger';
+  }
+
+  await initApp();
+
+  const login = document.getElementById('auth0-login-btn');
+  if (login) {
+    login.onclick = () => loginWithAuth0();
+  }
+
+  const logout = document.getElementById('auth0-logout-btn');
+  if (logout) {
+    logout.onclick = () => logoutFromAuth0();
+  }
+}
+
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initApp, { once: true });
+  document.addEventListener('DOMContentLoaded', bootstrap, { once: true });
 } else {
-  initApp();
+  bootstrap();
 }
 
 export { populateWorkersFromLabor };
