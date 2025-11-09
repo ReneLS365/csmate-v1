@@ -5,7 +5,8 @@
 
 const state = {
   adminCodeOk: false,
-  lockNonInputs: true
+  // Default to unlocked so general navigation/buttons remain usable
+  lockNonInputs: false
 }
 
 const listeners = new Set()

@@ -13,11 +13,13 @@ function handlePointerEvent (event) {
   const target = event.target
   if (!target) return
 
-  // Allow clicks on inputs and elements with data-allow-click attribute
-  const isInput = target.closest('input, select, textarea, [role="spinbutton"], [data-numpad="true"]')
+  const interactiveSelector = 'input, select, textarea, button, a[href], summary, label, [role="button"], [role="tab"], [role="link"], [role="menuitem"], [role="spinbutton"], [data-numpad="true"], [contenteditable="true"]'
+
+  // Allow clicks on typical interactive elements and anything explicitly flagged
+  const isInteractive = target.closest(interactiveSelector)
   const isAllowed = target.closest('[data-allow-click]')
 
-  if (!isInput && !isAllowed) {
+  if (!isInteractive && !isAllowed) {
     event.preventDefault()
     event.stopPropagation()
     event.stopImmediatePropagation()
