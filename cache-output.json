@@ -1,45 +1,45 @@
 {
-  "version": "v20251108T170214",
+  "version": "v20251109T095228",
   "cachePrefix": "csmate",
-  "cacheName": "csmate-v20251108T170214",
+  "cacheName": "csmate-v20251109T095228",
   "precache": [
     {
       "url": "/",
       "file": "app/index.html",
       "aliasFor": "/index.html",
       "exists": true,
-      "bytes": 29748,
-      "sha256": "39f9b9116a593e0d9ea89167c020a2e0b43178881cee5086de1cc673a7ee5f69"
+      "bytes": 29998,
+      "sha256": "4a161fb9535fc282ee4c3d757402d5da06d34628e8bea5210637cad5a6d237a2"
     },
     {
       "url": "/?source=pwa",
       "file": "app/index.html",
       "exists": true,
-      "bytes": 29748,
-      "sha256": "39f9b9116a593e0d9ea89167c020a2e0b43178881cee5086de1cc673a7ee5f69",
+      "bytes": 29998,
+      "sha256": "4a161fb9535fc282ee4c3d757402d5da06d34628e8bea5210637cad5a6d237a2",
       "duplicateOf": "app/index.html"
     },
     {
       "url": "/index.html",
       "file": "app/index.html",
       "exists": true,
-      "bytes": 29748,
-      "sha256": "39f9b9116a593e0d9ea89167c020a2e0b43178881cee5086de1cc673a7ee5f69",
+      "bytes": 29998,
+      "sha256": "4a161fb9535fc282ee4c3d757402d5da06d34628e8bea5210637cad5a6d237a2",
       "duplicateOf": "app/index.html"
     },
     {
       "url": "/main.js",
       "file": "app/main.js",
       "exists": true,
-      "bytes": 170103,
-      "sha256": "47ecd36724624a5c7482cf004cf6138eb560406b8d09de0b7681fb020a518005"
+      "bytes": 154973,
+      "sha256": "a128a814064ad3da7e1cb26481c3a1503e75365b6a9898034a85779a2a9f0b87"
     },
     {
       "url": "/style.css",
       "file": "app/style.css",
       "exists": true,
-      "bytes": 22627,
-      "sha256": "98a0ab7f69dcae2d80dc48cfca2ce7faa4e76037969c494f540f1677aa1295b3"
+      "bytes": 22665,
+      "sha256": "abedfbc42f8408a2ee248925bd818d7afac5d9408ea43849c78903e685205edf"
     },
     {
       "url": "/print.css",
@@ -68,6 +68,27 @@
       "exists": true,
       "bytes": 1080,
       "sha256": "25be69be5247a52ab06ca766aded83d1853056a9a3139a7b80b7168982c3b35f"
+    },
+    {
+      "url": "/favicon.ico",
+      "file": "public/favicon.ico",
+      "exists": true,
+      "bytes": 703,
+      "sha256": "4e69a5acc6198d9a624ac117c4012069d639fbc80b2e7f9f1d9a1d410e7e7647"
+    },
+    {
+      "url": "/icons/icon-16.png",
+      "file": "public/icons/icon-16.png",
+      "exists": true,
+      "bytes": 224,
+      "sha256": "0341f9e4f1aa3ff3c21c0878e0baa0894b61f226c5f683f8fa3736b2a4e72bdf"
+    },
+    {
+      "url": "/icons/icon-32.png",
+      "file": "public/icons/icon-32.png",
+      "exists": true,
+      "bytes": 441,
+      "sha256": "c6c104b93be9e58b7e79acf710bc59c572bd38ebd982a9f26188744b8bf2d1bb"
     },
     {
       "url": "/icons/icon-192.png",
@@ -131,6 +152,13 @@
       "exists": true,
       "bytes": 986,
       "sha256": "a84a3709378ebe39235e2446ad151f9a4c6a3ca4c2c761fa4097b23cb4764484"
+    },
+    {
+      "url": "/src/data/materials-static.js",
+      "file": "app/src/data/materials-static.js",
+      "exists": true,
+      "bytes": 16739,
+      "sha256": "b6e02e88bc5d48bb329855f718ccf507959afe52e5f2eba4b29b8548f3ed2307"
     }
   ],
   "dataMatchers": [

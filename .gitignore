@@ -21,3 +21,4 @@ ios/
 # Generated PWA assets
 public/icons/*.png
 public/screenshots/*.png
+public/favicon.ico
