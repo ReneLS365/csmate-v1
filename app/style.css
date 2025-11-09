@@ -48,6 +48,7 @@ nav button{background:#34353b;color:var(--text);border:1px solid var(--border);b
 nav button.active{outline:2px solid var(--accent)}
 .user-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .user-controls button{min-width:44px;padding:0.55rem 0.9rem}
+.auth0-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .user-label{font-size:0.85rem;color:var(--muted);font-weight:600}
 button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .material-row input:focus-visible,.csm-row input:focus-visible{outline:2px solid var(--accent)}
