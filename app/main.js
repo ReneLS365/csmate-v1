@@ -9,7 +9,8 @@ import { EXCLUDED_MATERIAL_KEYS, shouldExcludeMaterialEntry } from './src/lib/ma
 import { createMaterialRow } from './src/modules/materialRowTemplate.js'
 import { sha256Hex, constantTimeEquals } from './src/lib/sha256.js'
 import { ensureExportLibs, ensureZipLib, prefetchExportLibs } from './src/features/export/lazy-libs.js'
-import { initAuth0, getAuthState, loginWithAuth0, logoutFromAuth0 } from './src/auth0-client.js'
+import { setupAuthUI, onAuthStateChange, setAuthLabelResolver, refreshAuthUi } from './src/auth.js'
+import { setupPwaInstall } from './src/pwa-install.js'
 import {
   exportAll as exportAllForJob,
   exportSingleSheet,
@@ -38,9 +39,9 @@ import {
   setAuditUserResolver
 } from './jobs.js'
 
-const IOS_INSTALL_PROMPT_DISMISSED_KEY = 'csmate.iosInstallPromptDismissed'
 let DEFAULT_ADMIN_CODE_HASH = ''
 let materialsVirtualListController = null
+let latestAuthState = { isAuthenticated: false, user: null }
 
 async function loadDefaultAdminCode () {
   try {
@@ -382,7 +383,6 @@ let jobStatusFilter = 'alle';
 let showArchivedJobs = false;
 let jobAutosaveTimer = null;
 let currentUser = null;
-let auth0User = null;
 let lastCapturedMaterials = new Map();
 let lastCapturedLon = {};
 let jobStoreListenerAttached = false;
@@ -1637,9 +1637,9 @@ function getLocalUserDisplayName() {
   return typeof name === 'string' ? name.trim() : '';
 }
 
-function getAuth0DisplayName() {
-  if (!auth0User) return '';
-  const { name, nickname, email } = auth0User;
+function getAuth0DisplayName(state = latestAuthState) {
+  if (!state?.isAuthenticated || !state.user) return '';
+  const { name, nickname, email } = state.user;
   const candidates = [name, nickname, email];
   for (let index = 0; index < candidates.length; index += 1) {
     const value = candidates[index];
@@ -1652,86 +1652,7 @@ function getAuth0DisplayName() {
 }
 
 function refreshUserLabel() {
-  const displayName = getLocalUserDisplayName() || getAuth0DisplayName();
-  const label = document.getElementById('current-user-label');
-  if (label) {
-    label.textContent = displayName || 'Ingen bruger';
-  }
-  const toggle = document.getElementById('user-menu-toggle');
-  if (toggle) {
-    toggle.setAttribute('aria-label', displayName ? `Brugermenu for ${displayName}` : 'Brugermenu');
-  }
-}
-
-function applyAuth0UserToState(state) {
-  if (state?.isAuthenticated && state.user) {
-    auth0User = state.user;
-  } else {
-    auth0User = null;
-  }
-  refreshUserLabel();
-}
-
-function setupUserMenu() {
-  const toggle = document.getElementById('user-menu-toggle');
-  const dropdown = document.getElementById('user-menu-dropdown');
-  if (!toggle || !dropdown) return;
-
-  function closeMenu() {
-    dropdown.hidden = true;
-    toggle.setAttribute('aria-expanded', 'false');
-  }
-
-  function openMenu() {
-    dropdown.hidden = false;
-    toggle.setAttribute('aria-expanded', 'true');
-  }
-
-  toggle.addEventListener('click', event => {
-    event.stopPropagation();
-    if (dropdown.hidden) {
-      openMenu();
-    } else {
-      closeMenu();
-    }
-  });
-
-  document.addEventListener('click', event => {
-    if (dropdown.hidden) return;
-    const target = event.target;
-    if (target instanceof HTMLElement && (dropdown.contains(target) || target === toggle)) {
-      return;
-    }
-    closeMenu();
-  });
-
-  document.addEventListener('keydown', event => {
-    if (event.key === 'Escape' && !dropdown.hidden) {
-      closeMenu();
-      toggle.focus();
-    }
-  });
-
-  dropdown.addEventListener('click', event => {
-    event.stopPropagation();
-    const button = event.target instanceof HTMLElement
-      ? event.target.closest('button[data-user-action]')
-      : null;
-    if (!button) return;
-    const action = button.dataset.userAction;
-    if (action === 'local-login') {
-      openUserOverlay();
-    } else if (action === 'auth0-login') {
-      loginWithAuth0();
-    } else if (action === 'auth0-logout') {
-      logoutFromAuth0();
-      auth0User = null;
-      refreshUserLabel();
-    }
-    closeMenu();
-  });
-
-  refreshUserLabel();
+  refreshAuthUi();
 }
 
 function updateUserUI() {
@@ -4574,124 +4495,6 @@ function setupServiceWorkerMessaging() {
   });
 }
 
-function setupPWAInstallPrompt() {
-  if (typeof window === 'undefined') return;
-
-  const installButton = document.getElementById('installBtn');
-  const iosBanner = document.getElementById('iosInstallPrompt');
-  const iosDismissButton = document.getElementById('iosInstallDismiss');
-  if (!installButton && !iosBanner) return;
-
-  let deferredPrompt = null;
-  const displayModeMedia = typeof window.matchMedia === 'function'
-    ? window.matchMedia('(display-mode: standalone)')
-    : null;
-
-  const hideInstallButton = () => {
-    if (installButton) {
-      installButton.setAttribute('hidden', '');
-      installButton.disabled = false;
-    }
-  };
-
-  const showInstallButton = () => {
-    if (installButton) {
-      installButton.removeAttribute('hidden');
-      installButton.disabled = false;
-    }
-  };
-
-  const hasDismissedIOSPrompt = () => {
-    try {
-      return window.localStorage?.getItem(IOS_INSTALL_PROMPT_DISMISSED_KEY) === '1';
-    } catch (error) {
-      console.warn('Kunne ikke læse iOS prompt flag', error);
-      return false;
-    }
-  };
-
-  const hideIOSHint = (persist = false) => {
-    if (iosBanner) {
-      iosBanner.setAttribute('hidden', '');
-    }
-    if (persist) {
-      try {
-        window.localStorage?.setItem(IOS_INSTALL_PROMPT_DISMISSED_KEY, '1');
-      } catch (error) {
-        console.warn('Kunne ikke gemme iOS prompt flag', error);
-      }
-    }
-  };
-
-  const maybeShowIOSHint = () => {
-    if (!iosBanner) return;
-    const ua = navigator.userAgent || '';
-    const isiOS = /iphone|ipad|ipod/i.test(ua);
-    const isSafari = /safari/i.test(ua) && !/(crios|fxios|edgios)/i.test(ua);
-    const isStandalone = (displayModeMedia?.matches ?? false) || navigator.standalone === true;
-    if (isiOS && isSafari && !isStandalone && !hasDismissedIOSPrompt()) {
-      iosBanner.removeAttribute('hidden');
-    } else {
-      iosBanner.setAttribute('hidden', '');
-    }
-  };
-
-  window.addEventListener('beforeinstallprompt', event => {
-    event.preventDefault();
-    deferredPrompt = event;
-    showInstallButton();
-  });
-
-  installButton?.addEventListener('click', async () => {
-    if (!deferredPrompt) return;
-    installButton.disabled = true;
-    const promptEvent = deferredPrompt;
-    deferredPrompt = null;
-    promptEvent.prompt();
-    try {
-      await promptEvent.userChoice;
-    } catch (error) {
-      console.warn('Install prompt failed', error);
-    } finally {
-      hideInstallButton();
-    }
-  });
-
-  window.addEventListener('appinstalled', () => {
-    deferredPrompt = null;
-    hideInstallButton();
-    hideIOSHint(true);
-  });
-
-  if (displayModeMedia?.addEventListener) {
-    displayModeMedia.addEventListener('change', event => {
-      if (event.matches) {
-        hideInstallButton();
-        hideIOSHint(true);
-      }
-    });
-  }
-
-  iosDismissButton?.addEventListener('click', () => {
-    hideIOSHint(true);
-  });
-
-  iosBanner?.addEventListener('keydown', event => {
-    if (event.key === 'Escape') {
-      hideIOSHint(true);
-    }
-  });
-
-  maybeShowIOSHint();
-
-  if (iosBanner) {
-    iosBanner.addEventListener('click', event => {
-      if (event.target === iosBanner) {
-        hideIOSHint(true);
-      }
-    });
-  }
-}
 
 async function hardResetApp() {
   if (navigator.serviceWorker) {
@@ -4850,7 +4653,7 @@ async function initApp() {
     installLazyNumpad();
     setupMobileKeyboardDismissal();
     setupServiceWorkerMessaging();
-    setupPWAInstallPrompt();
+    setupPwaInstall();
   });
 
   document.getElementById('btnHardResetApp')?.addEventListener('click', () => {
@@ -4907,26 +4710,20 @@ registerJobStoreHooks({
 });
 
 async function bootstrap () {
-  let auth0 = null;
-  try {
-    auth0 = await initAuth0();
-  } catch (error) {
-    console.warn('Auth0 init fejlede', error);
-  }
+  setAuthLabelResolver(state => {
+    const localName = getLocalUserDisplayName();
+    if (localName) return localName;
+    const authName = getAuth0DisplayName(state);
+    return authName || 'Ingen bruger';
+  });
 
-  let state = { isAuthenticated: false, user: null };
-  if (auth0) {
-    try {
-      state = await getAuthState();
-    } catch (error) {
-      console.warn('Kunne ikke hente Auth0-state', error);
-    }
-  }
-
-  applyAuth0UserToState(state);
+  onAuthStateChange(state => {
+    latestAuthState = state;
+    refreshAuthUi();
+  });
 
   await initApp();
-  setupUserMenu();
+  setupAuthUI();
   setActiveTab('job');
 }
 

@@ -49,6 +49,9 @@ header .ttl{font-weight:700}
 .statusbar.offline{background:#fff5f5;border-bottom:1px solid #feb2b2;color:#7f1d1d}
 .statusbar .muted{color:currentColor}
 .user-menu{display:flex;align-items:center;justify-content:flex-end;gap:0.5rem;padding:0.25rem 0.75rem;font-size:0.85rem;position:relative;margin-left:auto;color:var(--muted);background:var(--panel)}
+.auth-controls{display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;justify-content:flex-end;width:100%}
+.auth-controls__label{font-weight:500;color:var(--text)}
+.auth-controls .btn.small{padding:0.25rem 0.6rem;font-size:0.8rem}
 .statusbar.online+.user-menu{background:#e6ffed;color:#14532d}
 .statusbar.offline+.user-menu{background:#fff5f5;color:#7f1d1d}
 .statusbar.online+.user-menu .user-menu-toggle,.statusbar.offline+.user-menu .user-menu-toggle{color:inherit;border-color:currentColor}
