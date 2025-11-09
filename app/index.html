@@ -45,20 +45,13 @@
       <button id="btn-sync-now" class="btn small">Synkronisér nu</button>
     </div>
     <div class="user-menu no-print">
-      <span id="current-user-label">Ingen bruger</span>
-      <button
-        id="user-menu-toggle"
-        class="btn user-menu-toggle"
-        type="button"
-        aria-haspopup="true"
-        aria-expanded="false"
-      >
-        Bruger ▾
-      </button>
-      <div id="user-menu-dropdown" class="user-menu-dropdown" hidden>
-        <button type="button" data-user-action="local-login">Skift bruger</button>
-        <button type="button" data-user-action="auth0-login">Log ind med Auth0</button>
-        <button type="button" data-user-action="auth0-logout">Log ud</button>
+      <div class="auth-controls">
+        <span id="current-user-label" class="auth-controls__label">Ingen bruger</span>
+        <button id="btnOpenUserOverlay" class="btn small" type="button">Lokal bruger</button>
+        <button id="btn-login" class="btn small" type="button">Login</button>
+        <button id="btn-switch-user" class="btn small" type="button" hidden style="display:none;">Skift bruger</button>
+        <button id="btn-logout" class="btn small" type="button" hidden style="display:none;">Log ud</button>
+        <button id="btn-install-app" class="btn small" type="button" hidden style="display:none;">Installer app</button>
       </div>
     </div>
   </div>
@@ -697,7 +690,6 @@
 </script>
 
   <div class="pwa-install-wrap" role="presentation">
-    <button id="installBtn" class="pwa-install-btn" type="button" hidden>Installer app</button>
   </div>
 
 <script>
