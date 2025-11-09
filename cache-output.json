@@ -1,7 +1,7 @@
 {
-  "version": "v20251109T084625",
+  "version": "v20251109T092858",
   "cachePrefix": "csmate",
-  "cacheName": "csmate-v20251109T084625",
+  "cacheName": "csmate-v20251109T092858",
   "precache": [
     {
       "url": "/",
@@ -31,8 +31,8 @@
       "url": "/main.js",
       "file": "app/main.js",
       "exists": true,
-      "bytes": 170103,
-      "sha256": "47ecd36724624a5c7482cf004cf6138eb560406b8d09de0b7681fb020a518005"
+      "bytes": 154973,
+      "sha256": "a128a814064ad3da7e1cb26481c3a1503e75365b6a9898034a85779a2a9f0b87"
     },
     {
       "url": "/style.css",
@@ -152,6 +152,13 @@
       "exists": true,
       "bytes": 986,
       "sha256": "a84a3709378ebe39235e2446ad151f9a4c6a3ca4c2c761fa4097b23cb4764484"
+    },
+    {
+      "url": "/src/data/materials-static.js",
+      "file": "app/src/data/materials-static.js",
+      "exists": true,
+      "bytes": 16739,
+      "sha256": "b6e02e88bc5d48bb329855f718ccf507959afe52e5f2eba4b29b8548f3ed2307"
     }
   ],
   "dataMatchers": [
