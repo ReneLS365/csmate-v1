@@ -8,38 +8,38 @@
       "file": "app/index.html",
       "aliasFor": "/index.html",
       "exists": true,
-      "bytes": 29962,
-      "sha256": "ec9cc3bd925042639879758e43db657bc103b01c7fd39191a4096c3062883aba"
+      "bytes": 30390,
+      "sha256": "2b9878252f948c380e3ffd7ad688a4be61b059a9b2148a8e145a3cda9ddefa40"
     },
     {
       "url": "/?source=pwa",
       "file": "app/index.html",
       "exists": true,
-      "bytes": 29962,
-      "sha256": "ec9cc3bd925042639879758e43db657bc103b01c7fd39191a4096c3062883aba",
+      "bytes": 30390,
+      "sha256": "2b9878252f948c380e3ffd7ad688a4be61b059a9b2148a8e145a3cda9ddefa40",
       "duplicateOf": "app/index.html"
     },
     {
       "url": "/index.html",
       "file": "app/index.html",
       "exists": true,
-      "bytes": 29962,
-      "sha256": "ec9cc3bd925042639879758e43db657bc103b01c7fd39191a4096c3062883aba",
+      "bytes": 30390,
+      "sha256": "2b9878252f948c380e3ffd7ad688a4be61b059a9b2148a8e145a3cda9ddefa40",
       "duplicateOf": "app/index.html"
     },
     {
       "url": "/main.js",
       "file": "app/main.js",
       "exists": true,
-      "bytes": 154973,
-      "sha256": "a128a814064ad3da7e1cb26481c3a1503e75365b6a9898034a85779a2a9f0b87"
+      "bytes": 155936,
+      "sha256": "6546497291fc673642ba5422b110f73e82afccd3e061fb3dac8d1958643b49c2"
     },
     {
       "url": "/style.css",
       "file": "app/style.css",
       "exists": true,
-      "bytes": 22665,
-      "sha256": "abedfbc42f8408a2ee248925bd818d7afac5d9408ea43849c78903e685205edf"
+      "bytes": 22737,
+      "sha256": "4ed3cd1b834729cc75c5a8ab8967513ffce18ca08eb13a085b17906afd999e7b"
     },
     {
       "url": "/print.css",
