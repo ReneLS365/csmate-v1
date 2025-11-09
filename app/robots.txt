@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://csmate.netlify.app/sitemap.xml
+Sitemap: https://csmate&#46;netlify&#46;app/sitemap.xml
