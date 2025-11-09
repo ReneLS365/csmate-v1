@@ -181,6 +181,7 @@ function updateAuthUi () {
   const loginBtn = document.getElementById('btn-login')
   const logoutBtn = document.getElementById('btn-logout')
   const switchUserBtn = document.getElementById('btn-switch-user')
+  const signupBtn = document.getElementById('btn-signup')
   const userLabel = document.getElementById('current-user-label')
 
   const isAuthenticated = authState.isAuthenticated
@@ -188,6 +189,11 @@ function updateAuthUi () {
   if (loginBtn) {
     loginBtn.style.display = isAuthenticated ? 'none' : 'inline-flex'
     loginBtn.toggleAttribute('hidden', isAuthenticated)
+  }
+
+  if (signupBtn) {
+    signupBtn.style.display = isAuthenticated ? 'none' : 'inline-flex'
+    signupBtn.toggleAttribute('hidden', isAuthenticated)
   }
 
   if (logoutBtn) {
