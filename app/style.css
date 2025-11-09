@@ -43,13 +43,23 @@ html,body{margin:0;height:100%;width:100%;max-width:100vw;overflow-x:hidden;back
 header{position:sticky;top:0;background:var(--elev);border-bottom:1px solid var(--border);z-index:5}
 header .bar{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:6px 10px;min-height:40px}
 header .ttl{font-weight:700}
-nav{display:flex;gap:8px;flex-wrap:wrap;padding:4px 0}
-nav button{background:#34353b;color:var(--text);border:1px solid var(--border);border-radius:999px;padding:0.55rem 0.9rem;min-height:44px;min-width:44px;font-size:0.95rem;line-height:1.2}
-nav button.active{outline:2px solid var(--accent)}
-.user-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.user-controls button{min-width:44px;padding:0.55rem 0.9rem}
-.auth0-controls{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.user-label{font-size:0.85rem;color:var(--muted);font-weight:600}
+.statusbar-container{position:sticky;top:0;z-index:6;display:flex;flex-direction:column;gap:0;background:var(--panel);border-bottom:1px solid var(--border)}
+.statusbar{position:relative;padding:.5rem 1rem;font-size:.9rem;display:flex;gap:1rem;align-items:center;background:inherit;border-bottom:1px solid var(--border)}
+.statusbar.online{background:#e6ffed;border-bottom:1px solid #b2f5bf;color:#14532d}
+.statusbar.offline{background:#fff5f5;border-bottom:1px solid #feb2b2;color:#7f1d1d}
+.statusbar .muted{color:currentColor}
+.user-menu{display:flex;align-items:center;justify-content:flex-end;gap:0.5rem;padding:0.25rem 0.75rem;font-size:0.85rem;position:relative;margin-left:auto;color:var(--muted);background:var(--panel)}
+.statusbar.online+.user-menu{background:#e6ffed;color:#14532d}
+.statusbar.offline+.user-menu{background:#fff5f5;color:#7f1d1d}
+.statusbar.online+.user-menu .user-menu-toggle,.statusbar.offline+.user-menu .user-menu-toggle{color:inherit;border-color:currentColor}
+button.user-menu-toggle{padding:0.2rem 0.6rem;font-size:0.8rem;min-height:36px}
+.user-menu-dropdown{position:absolute;top:calc(100% + 0.25rem);right:0;background:var(--color-surface,#1f1f1f);border-radius:0.5rem;box-shadow:0 4px 16px rgba(0,0,0,0.5);padding:0.4rem 0.5rem;display:flex;flex-direction:column;gap:0.25rem;z-index:20;border:1px solid var(--border)}
+.user-menu-dropdown button{width:100%;text-align:left;padding:0.3rem 0.4rem;font-size:0.8rem;background:transparent;border:none;color:var(--text);border-radius:0.35rem;min-height:32px}
+.user-menu-dropdown button:hover,.user-menu-dropdown button:focus-visible{background:rgba(255,255,255,0.08)}
+.tab-bar{display:flex;overflow-x:auto;gap:0.5rem;padding:0.4rem 0.75rem 0.6rem;scrollbar-width:none}
+.tab-bar::-webkit-scrollbar{display:none}
+button.tab-btn{flex:0 0 auto;padding:0.35rem 0.9rem;border-radius:999px;border:1px solid var(--color-border-muted,#333);background:var(--color-surface-elevated,#181818);color:var(--color-text-muted,#aaa);font-size:0.85rem;line-height:1.2;min-height:36px;min-width:44px}
+.tab-btn.is-active{background:var(--color-accent,#3b82f6);color:#fff;border-color:var(--color-accent,#3b82f6)}
 button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .material-row input:focus-visible,.csm-row input:focus-visible{outline:2px solid var(--accent)}
 main{padding:var(--pad);display:flex;flex-direction:column;gap:var(--gap)}

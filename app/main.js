@@ -86,6 +86,21 @@ function forEachNode(nodeList, callback) {
   }
 }
 
+const TAB_SECTION_MAP = Object.freeze({
+  job: 'jobs',
+  case: 'sagsinfo',
+  count: 'optaelling',
+  wage: 'lon',
+  history: 'historik',
+  help: 'help'
+});
+
+function mapTabToSection(tabName) {
+  if (!tabName) return '';
+  const normalized = normalizeKey(tabName);
+  return TAB_SECTION_MAP[normalized] || normalized;
+}
+
 function vis(id) {
   const targetId = resolveSectionId(id);
   const sections = document.querySelectorAll('.sektion');
@@ -114,13 +129,25 @@ function vis(id) {
     section.setAttribute('aria-hidden', isActive ? 'false' : 'true');
   });
 
-  const navButtons = document.querySelectorAll('header nav button[data-section]');
-  forEachNode(navButtons, btn => {
+  syncActiveTabBySection(activeId);
+}
+
+function syncActiveTabBySection(activeSectionId) {
+  const buttons = document.querySelectorAll('.tab-bar .tab-btn[data-section]');
+  forEachNode(buttons, btn => {
     const buttonTarget = resolveSectionId(btn.dataset.section);
-    const isActive = buttonTarget === activeId;
+    const isActive = buttonTarget === activeSectionId;
+    btn.classList.toggle('is-active', isActive);
     btn.classList.toggle('active', isActive);
     btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
   });
+}
+
+function setActiveTab(tabName) {
+  const section = mapTabToSection(tabName);
+  if (section) {
+    vis(section);
+  }
 }
 
 function activateTabByName(name) {
@@ -132,6 +159,7 @@ function activateTabByName(name) {
   document.querySelectorAll('[data-tab]').forEach(btn => {
     const isActive = btn.getAttribute('data-tab') === name;
     btn.classList.toggle('active', isActive);
+    btn.classList.toggle('is-active', isActive);
   });
 }
 
@@ -333,6 +361,7 @@ let jobStatusFilter = 'alle';
 let showArchivedJobs = false;
 let jobAutosaveTimer = null;
 let currentUser = null;
+let auth0User = null;
 let lastCapturedMaterials = new Map();
 let lastCapturedLon = {};
 let jobStoreListenerAttached = false;
@@ -1582,6 +1611,108 @@ function formatRoleLabel(role) {
   return map[role] || role;
 }
 
+function getLocalUserDisplayName() {
+  const name = currentUser?.name;
+  return typeof name === 'string' ? name.trim() : '';
+}
+
+function getAuth0DisplayName() {
+  if (!auth0User) return '';
+  const { name, nickname, email } = auth0User;
+  const candidates = [name, nickname, email];
+  for (let index = 0; index < candidates.length; index += 1) {
+    const value = candidates[index];
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (trimmed) return trimmed;
+    }
+  }
+  return '';
+}
+
+function refreshUserLabel() {
+  const displayName = getLocalUserDisplayName() || getAuth0DisplayName();
+  const label = document.getElementById('current-user-label');
+  if (label) {
+    label.textContent = displayName || 'Ingen bruger';
+  }
+  const toggle = document.getElementById('user-menu-toggle');
+  if (toggle) {
+    toggle.setAttribute('aria-label', displayName ? `Brugermenu for ${displayName}` : 'Brugermenu');
+  }
+}
+
+function applyAuth0UserToState(state) {
+  if (state?.isAuthenticated && state.user) {
+    auth0User = state.user;
+  } else {
+    auth0User = null;
+  }
+  refreshUserLabel();
+}
+
+function setupUserMenu() {
+  const toggle = document.getElementById('user-menu-toggle');
+  const dropdown = document.getElementById('user-menu-dropdown');
+  if (!toggle || !dropdown) return;
+
+  function closeMenu() {
+    dropdown.hidden = true;
+    toggle.setAttribute('aria-expanded', 'false');
+  }
+
+  function openMenu() {
+    dropdown.hidden = false;
+    toggle.setAttribute('aria-expanded', 'true');
+  }
+
+  toggle.addEventListener('click', event => {
+    event.stopPropagation();
+    if (dropdown.hidden) {
+      openMenu();
+    } else {
+      closeMenu();
+    }
+  });
+
+  document.addEventListener('click', event => {
+    if (dropdown.hidden) return;
+    const target = event.target;
+    if (target instanceof HTMLElement && (dropdown.contains(target) || target === toggle)) {
+      return;
+    }
+    closeMenu();
+  });
+
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && !dropdown.hidden) {
+      closeMenu();
+      toggle.focus();
+    }
+  });
+
+  dropdown.addEventListener('click', event => {
+    event.stopPropagation();
+    const button = event.target instanceof HTMLElement
+      ? event.target.closest('button[data-user-action]')
+      : null;
+    if (!button) return;
+    const action = button.dataset.userAction;
+    if (action === 'local-login') {
+      openUserOverlay();
+    } else if (action === 'auth0-login') {
+      loginWithAuth0();
+    } else if (action === 'auth0-logout') {
+      logoutFromAuth0();
+      auth0User = null;
+      refreshUserLabel();
+    }
+    closeMenu();
+  });
+
+  refreshUserLabel();
+}
+
 function updateUserUI() {
   const label = document.getElementById('currentUserInfo');
   if (label) {
@@ -1591,6 +1722,7 @@ function updateUserUI() {
       label.textContent = 'Ingen bruger';
     }
   }
+  refreshUserLabel();
   updatePermissionControls();
 }
 
@@ -4584,19 +4716,23 @@ async function initApp() {
   vis('jobs');
 
   const navConfig = [
-    { id: 'btnJobs', section: 'jobs', onActivate: () => renderJobList() },
-    { id: 'btnSagsinfo', section: 'sagsinfo' },
-    { id: 'btnOptaelling', section: 'optaelling' },
-    { id: 'btnLon', section: 'lon' },
-    { id: 'btnHistorik', section: 'historik', onActivate: () => renderAuditLog() },
-    { id: 'tab-btn-help', section: 'help', onActivate: () => activateTabByName('help') },
+    { id: 'btnJobs', section: 'jobs', tab: 'job', onActivate: () => renderJobList() },
+    { id: 'btnSagsinfo', section: 'sagsinfo', tab: 'case' },
+    { id: 'btnOptaelling', section: 'optaelling', tab: 'count' },
+    { id: 'btnLon', section: 'lon', tab: 'wage' },
+    { id: 'btnHistorik', section: 'historik', tab: 'history', onActivate: () => renderAuditLog() },
+    { id: 'tab-btn-help', section: 'help', tab: 'help', onActivate: () => activateTabByName('help') },
   ];
 
-  navConfig.forEach(({ id, section, onActivate }) => {
+  navConfig.forEach(({ id, section, tab, onActivate }) => {
     const button = document.getElementById(id);
     if (!button) return;
     button.addEventListener('click', () => {
-      vis(section);
+      if (tab) {
+        setActiveTab(tab);
+      } else if (section) {
+        vis(section);
+      }
       if (typeof onActivate === 'function') {
         onActivate();
       }
@@ -4763,24 +4899,11 @@ async function bootstrap () {
     }
   }
 
-  const label = document.getElementById('current-user-label');
-  if (label) {
-    label.textContent = state.isAuthenticated
-      ? (state.user?.name || state.user?.email || 'Ingen bruger')
-      : 'Ingen bruger';
-  }
+  applyAuth0UserToState(state);
 
   await initApp();
-
-  const login = document.getElementById('auth0-login-btn');
-  if (login) {
-    login.onclick = () => loginWithAuth0();
-  }
-
-  const logout = document.getElementById('auth0-logout-btn');
-  if (logout) {
-    logout.onclick = () => logoutFromAuth0();
-  }
+  setupUserMenu();
+  setActiveTab('job');
 }
 
 if (document.readyState === 'loading') {

@@ -34,11 +34,30 @@
 </head>
 <body>
   <a class="skip-to-content" href="#main">Spring til indhold</a>
-  <div id="statusbar" class="statusbar offline">
-    <span class="status-dot offline" id="status-dot"></span>
-    <span id="status-text">Offline</span>
-    <span class="muted">Sidst synkroniseret: <span id="last-sync">-</span></span>
-    <button id="btn-sync-now" class="btn small">Synkronisér nu</button>
+  <div class="statusbar-container">
+    <div id="statusbar" class="statusbar offline">
+      <span class="status-dot offline" id="status-dot"></span>
+      <span id="status-text">Offline</span>
+      <span class="muted">Sidst synkroniseret: <span id="last-sync">-</span></span>
+      <button id="btn-sync-now" class="btn small">Synkronisér nu</button>
+    </div>
+    <div class="user-menu no-print">
+      <span id="current-user-label">Ingen bruger</span>
+      <button
+        id="user-menu-toggle"
+        class="btn user-menu-toggle"
+        type="button"
+        aria-haspopup="true"
+        aria-expanded="false"
+      >
+        Bruger ▾
+      </button>
+      <div id="user-menu-dropdown" class="user-menu-dropdown" hidden>
+        <button type="button" data-user-action="local-login">Skift bruger</button>
+        <button type="button" data-user-action="auth0-login">Log ind med Auth0</button>
+        <button type="button" data-user-action="auth0-logout">Log ud</button>
+      </div>
+    </div>
   </div>
   <div id="iosInstallPrompt" class="ios-install-prompt" role="region" aria-live="polite" hidden>
     <p>Tilføj CSMate til hjemmeskærmen: Tryk på delingsknappen og vælg <strong>Føj til hjemmeskærm</strong>.</p>
@@ -48,24 +67,15 @@
     <header data-allow-click>
       <div class="bar">
         <h1 class="ttl">akkordseddel</h1>
-        <nav>
-          <button id="btnJobs" data-section="jobs" class="active" type="button">Job</button>
-          <button id="btnSagsinfo" data-section="sagsinfo" type="button">Sagsinfo</button>
-          <button id="btnOptaelling" data-section="optaelling" type="button">Optælling</button>
-          <button id="btnLon" data-section="lon" type="button">Løn</button>
-          <button id="btnHistorik" data-section="historik" type="button">Historik</button>
-          <button data-tab="help" data-section="help" id="tab-btn-help" type="button">Hjælp</button>
-        </nav>
-        <div class="user-controls no-print">
-          <span id="currentUserInfo" class="user-label">Ingen bruger</span>
-          <button id="btnOpenUserOverlay" type="button">Skift bruger</button>
-          <div class="auth0-controls">
-            <button id="auth0-login-btn" type="button">Log ind med Auth0</button>
-            <button id="auth0-logout-btn" type="button">Log ud</button>
-            <span id="current-user-label" class="user-label">Ingen bruger</span>
-          </div>
-        </div>
       </div>
+      <nav class="tab-bar" aria-label="Hovednavigation">
+        <button id="btnJobs" class="tab-btn" data-tab="job" data-section="jobs" type="button">Job</button>
+        <button id="btnSagsinfo" class="tab-btn" data-tab="case" data-section="sagsinfo" type="button">Sagsinfo</button>
+        <button id="btnOptaelling" class="tab-btn" data-tab="count" data-section="optaelling" type="button">Optælling</button>
+        <button id="btnLon" class="tab-btn" data-tab="wage" data-section="lon" type="button">Løn</button>
+        <button id="btnHistorik" class="tab-btn" data-tab="history" data-section="historik" type="button">Historik</button>
+        <button id="tab-btn-help" class="tab-btn" data-tab="help" data-section="help" type="button">Hjælp</button>
+      </nav>
     </header>
     <div class="app-content">
       <div class="materials-scroll">
