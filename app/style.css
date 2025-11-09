@@ -66,6 +66,7 @@ label span{color:var(--muted);font-size:0.85rem}
 .statusbar{position:sticky;top:0;z-index:5;padding:.5rem 1rem;font-size:.9rem;display:flex;gap:1rem;align-items:center;background:var(--panel);border-bottom:1px solid var(--border)}
 .statusbar.online{background:#e6ffed;border-bottom:1px solid #b2f5bf;color:#14532d}
 .statusbar.offline{background:#fff5f5;border-bottom:1px solid #feb2b2;color:#7f1d1d}
+.statusbar .muted{color:currentColor}
 .status-dot{width:.6rem;height:.6rem;border-radius:50%;display:inline-block;background:currentColor}
 .status-dot.online{background:#16a34a}
 .status-dot.offline{background:#dc2626}

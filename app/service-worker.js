@@ -1,5 +1,5 @@
 /* CSMate Service Worker – Workbox-inspired offline shell */
-const VERSION = 'v20251108T170214'; // replaced automatically during build
+const VERSION = 'v20251109T092858'; // replaced automatically during build
 const SW_VERSION = VERSION;
 const CACHE_VERSION = VERSION; // replaced automatically during build
 const CACHE_PREFIX = 'csmate';
@@ -13,6 +13,9 @@ const PRECACHE = [
   '/css/pwa.css',
   '/manifest.json',
   '/manifest.webmanifest',
+  '/favicon.ico',
+  '/icons/icon-16.png',
+  '/icons/icon-32.png',
   '/icons/icon-192.png',
   '/icons/icon-192-maskable.png',
   '/icons/icon-512.png',
@@ -21,7 +24,8 @@ const PRECACHE = [
   '/src/styles/fixes.css',
   '/src/globals.js',
   '/src/dev.js',
-  '/src/keyboard.js'
+  '/src/keyboard.js',
+  '/src/data/materials-static.js'
 ];
 
 const DATA_MATCHERS = [/\/data\//, /\.json(?:\?|$)/i];
