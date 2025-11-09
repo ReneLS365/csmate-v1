@@ -215,6 +215,41 @@ function assignInlineHandlers () {
   window.csmateAuthLogout = logout
 }
 
+function handleAuthButton (button, handler) {
+  if (!button) return
+  button.removeEventListener('click', handler)
+  button.addEventListener('click', handler)
+}
+
+function onLoginButtonClick (event) {
+  if (event?.preventDefault) event.preventDefault()
+  login()
+}
+
+function onSignupButtonClick (event) {
+  if (event?.preventDefault) event.preventDefault()
+  signup()
+}
+
+function onLogoutButtonClick (event) {
+  if (event?.preventDefault) event.preventDefault()
+  logout()
+}
+
+function bindAuthButtonHandlers () {
+  if (typeof document === 'undefined') return
+
+  const loginBtn = document.getElementById('btn-login')
+  const logoutBtn = document.getElementById('btn-logout')
+  const switchUserBtn = document.getElementById('btn-switch-user')
+  const signupBtn = document.getElementById('btn-signup')
+
+  handleAuthButton(loginBtn, onLoginButtonClick)
+  handleAuthButton(signupBtn, onSignupButtonClick)
+  handleAuthButton(switchUserBtn, onLoginButtonClick)
+  handleAuthButton(logoutBtn, onLogoutButtonClick)
+}
+
 export async function initAuth () {
   if (auth0Client) {
     return auth0Client
@@ -335,6 +370,7 @@ export async function logout () {
 
 export function setupAuthUI () {
   assignInlineHandlers()
+  bindAuthButtonHandlers()
   refreshAuthUi()
   initAuth().catch(error => {
     console.error('initAuth failed', error)
