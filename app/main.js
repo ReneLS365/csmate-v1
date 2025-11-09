@@ -342,7 +342,8 @@ const ROLE_PERMISSIONS = {
     canLockJobs: true,
     canSendJobs: true,
     canEditMaterials: true,
-    canEditLon: true
+    canEditLon: true,
+    canManageUsers: true
   },
   firmAdmin: {
     canEditGlobalTemplates: false,
@@ -353,7 +354,8 @@ const ROLE_PERMISSIONS = {
     canLockJobs: true,
     canSendJobs: true,
     canEditMaterials: true,
-    canEditLon: true
+    canEditLon: true,
+    canManageUsers: true
   },
   'firma-admin': {
     canEditGlobalTemplates: false,
@@ -364,7 +366,8 @@ const ROLE_PERMISSIONS = {
     canLockJobs: true,
     canSendJobs: true,
     canEditMaterials: true,
-    canEditLon: true
+    canEditLon: true,
+    canManageUsers: true
   },
   formand: {
     canEditGlobalTemplates: false,
@@ -375,7 +378,8 @@ const ROLE_PERMISSIONS = {
     canLockJobs: true,
     canSendJobs: true,
     canEditMaterials: true,
-    canEditLon: true
+    canEditLon: true,
+    canManageUsers: false
   },
   foreman: {
     canEditGlobalTemplates: false,
@@ -386,7 +390,8 @@ const ROLE_PERMISSIONS = {
     canLockJobs: true,
     canSendJobs: true,
     canEditMaterials: true,
-    canEditLon: true
+    canEditLon: true,
+    canManageUsers: false
   },
   montor: {
     canEditGlobalTemplates: false,
@@ -397,7 +402,8 @@ const ROLE_PERMISSIONS = {
     canLockJobs: false,
     canSendJobs: false,
     canEditMaterials: true,
-    canEditLon: true
+    canEditLon: true,
+    canManageUsers: false
   },
   user: {
     canEditGlobalTemplates: false,
@@ -408,7 +414,8 @@ const ROLE_PERMISSIONS = {
     canLockJobs: false,
     canSendJobs: false,
     canEditMaterials: true,
-    canEditLon: true
+    canEditLon: true,
+    canManageUsers: false
   },
   guest: {
     canEditGlobalTemplates: false,
@@ -419,7 +426,8 @@ const ROLE_PERMISSIONS = {
     canLockJobs: false,
     canSendJobs: false,
     canEditMaterials: false,
-    canEditLon: false
+    canEditLon: false,
+    canManageUsers: false
   }
 };
 
@@ -1533,6 +1541,11 @@ function updatePermissionControls() {
     const locked = !!job?.isLocked;
     addWorkerBtn.disabled = !requirePermission('canEditLon') || locked;
   }
+  const userAdminPanel = document.getElementById('user-admin-panel');
+  if (userAdminPanel) {
+    const allowed = requirePermission('canManageUsers');
+    userAdminPanel.toggleAttribute('hidden', !allowed);
+  }
   updateLockControls(getCurrentJob());
   applyJobLockState(getCurrentJob());
 }
@@ -1696,24 +1709,18 @@ function getActiveUserName () {
 
 function ensureUserAdminContainer () {
   if (typeof document === 'undefined') return null;
-  let container = document.getElementById('userAdminTable');
-  if (!container) {
-    const adminFieldset = document.getElementById('adminFeedback')?.closest('fieldset');
-    if (!adminFieldset) return null;
-    container = document.createElement('div');
-    container.id = 'userAdminTable';
-    container.className = 'user-admin-table';
-    adminFieldset.appendChild(container);
+  const panel = document.getElementById('user-admin-panel');
+  if (!panel) return null;
+  if (!panel.dataset.bound) {
+    panel.addEventListener('change', handleUserAdminChange);
+    panel.addEventListener('click', handleUserAdminClick);
+    panel.dataset.bound = 'true';
   }
-  if (!container.dataset.bound) {
-    container.addEventListener('change', handleUserAdminChange);
-    container.addEventListener('click', handleUserAdminClick);
-    container.dataset.bound = 'true';
-  }
-  return container;
+  return panel;
 }
 
 function handleUserAdminChange (event) {
+  if (!requirePermission('canManageUsers')) return;
   const select = event.target;
   if (!(select instanceof HTMLSelectElement)) return;
   if (select.name !== 'user-role') return;
@@ -1730,6 +1737,7 @@ function handleUserAdminChange (event) {
 }
 
 function handleUserAdminClick (event) {
+  if (!requirePermission('canManageUsers')) return;
   const button = event.target instanceof HTMLElement
     ? event.target.closest('button[data-action]')
     : null;
@@ -1759,35 +1767,30 @@ function formatLastLogin (timestamp) {
 }
 
 function renderUserAdminTable () {
-  const container = ensureUserAdminContainer();
-  if (!container) return;
+  const panel = ensureUserAdminContainer();
+  if (!panel) return;
 
-  const users = getAllUsers();
-  container.innerHTML = '';
+  const tbody = panel.querySelector('#user-admin-table-body');
+  if (!tbody) return;
+  const emptyState = panel.querySelector('#user-admin-empty');
+  const allowed = requirePermission('canManageUsers');
 
-  if (!users.length) {
-    const empty = document.createElement('p');
-    empty.className = 'muted';
-    empty.textContent = 'Ingen brugere synkroniseret endnu.';
-    container.appendChild(empty);
+  panel.toggleAttribute('hidden', !allowed);
+  tbody.innerHTML = '';
+
+  if (!allowed) {
+    if (emptyState) emptyState.setAttribute('hidden', '');
     return;
   }
 
-  const table = document.createElement('table');
-  table.className = 'user-admin-table__table';
-  const thead = document.createElement('thead');
-  thead.innerHTML = `
-    <tr>
-      <th scope="col">Navn</th>
-      <th scope="col">E-mail</th>
-      <th scope="col">Rolle</th>
-      <th scope="col">Sidst aktiv</th>
-      <th scope="col" class="actions">Handlinger</th>
-    </tr>
-  `;
-  table.appendChild(thead);
+  const users = getAllUsers();
 
-  const tbody = document.createElement('tbody');
+  if (!Array.isArray(users) || users.length === 0) {
+    if (emptyState) emptyState.removeAttribute('hidden');
+    return;
+  }
+
+  if (emptyState) emptyState.setAttribute('hidden', '');
 
   users.forEach(user => {
     const tr = document.createElement('tr');
@@ -1850,9 +1853,6 @@ function renderUserAdminTable () {
 
     tbody.appendChild(tr);
   });
-
-  table.appendChild(tbody);
-  container.appendChild(table);
 }
 
 function setupUserManagementUi () {
@@ -1863,7 +1863,7 @@ function setupUserManagementUi () {
   }
   const trigger = document.getElementById('btnOpenUserOverlay');
   if (trigger) {
-    trigger.textContent = 'Brugere';
+    trigger.textContent = 'Offline login';
     trigger.addEventListener('click', () => {
       const container = ensureUserAdminContainer();
       if (!container) return;

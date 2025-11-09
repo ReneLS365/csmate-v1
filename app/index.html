@@ -4,6 +4,7 @@
   <!-- keep charset meta within first kilobyte for Lighthouse best-practice -->
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.auth0.com 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https://cdn.auth0.com https://*.auth0.com; frame-src https://*.auth0.com; worker-src 'self'; manifest-src 'self'; base-uri 'self'; form-action 'self'">
   <title>CSMate – Stilladsoptælling, akkord og lønberegning</title>
   <meta name="description" content="CSMate er et professionelt værktøj til stilladsoptælling, akkord- og lønberegning. Optæl materialer, beregn akkord og del til E-komplet på få sekunder.">
   <link rel="canonical" href="https://csmate&#46;netlify&#46;app/">
@@ -47,11 +48,14 @@
     <div class="user-menu no-print">
       <div class="auth-controls">
         <span id="current-user-label" class="auth-controls__label">Ingen bruger</span>
-        <button id="btnOpenUserOverlay" class="btn small" type="button">Lokal bruger</button>
-        <button id="btn-login" class="btn small" type="button">Login</button>
-        <button id="btn-switch-user" class="btn small" type="button" hidden style="display:none;">Skift bruger</button>
-        <button id="btn-logout" class="btn small" type="button" hidden style="display:none;">Log ud</button>
-        <button id="btn-install-app" class="btn small" type="button" hidden style="display:none;">Installer app</button>
+        <div class="auth-controls__buttons">
+          <button id="btn-login" class="btn small" type="button" data-allow-click onclick="window.csmateAuthLogin?.()">Login</button>
+          <button id="btn-signup" class="btn small" type="button" data-allow-click onclick="window.csmateAuthSignup?.()">Opret bruger</button>
+          <button id="btn-logout" class="btn small" type="button" hidden style="display:none;" data-allow-click onclick="window.csmateAuthLogout?.()">Log ud</button>
+          <button id="btn-switch-user" class="btn small" type="button" hidden style="display:none;" data-allow-click>Skift bruger</button>
+          <button id="btnOpenUserOverlay" class="btn small" type="button" data-allow-click>Offline login</button>
+        </div>
+        <button id="btn-install-app" class="btn small" type="button" hidden style="display:none;" data-allow-click>Installer app</button>
       </div>
     </div>
   </div>
@@ -271,6 +275,25 @@
       <p id="adminFeedback" class="status-message" hidden aria-live="polite"></p>
       <button id="btnHardResetApp" type="button" hidden>Nulstil app-data</button>
       <button id="btn-backup" class="btn" type="button">Eksportér al data (ZIP/JSON)</button>
+      <section id="user-admin-panel" class="user-admin-panel" hidden aria-labelledby="user-admin-panel-title" aria-describedby="user-admin-description">
+        <h3 id="user-admin-panel-title">Brugeradministration</h3>
+        <p id="user-admin-description" class="muted">Offline fallback til Owner og Firma-admin for at vælge aktive brugere og roller.</p>
+        <div class="user-admin-panel__table-wrapper">
+          <table class="user-admin-table__table" aria-describedby="user-admin-description">
+            <thead>
+              <tr>
+                <th scope="col">Navn</th>
+                <th scope="col">E-mail</th>
+                <th scope="col">Rolle</th>
+                <th scope="col">Sidst aktiv</th>
+                <th scope="col" class="actions">Handlinger</th>
+              </tr>
+            </thead>
+            <tbody id="user-admin-table-body"></tbody>
+          </table>
+        </div>
+        <p id="user-admin-empty" class="muted" hidden>Ingen brugere synkroniseret endnu.</p>
+      </section>
     </fieldset>
   </section>
 
@@ -473,38 +496,6 @@
           interne vejledninger.
         </p>
       </div>
-    </div>
-  </div>
-
-  <div id="userOverlay" class="user-overlay" hidden aria-hidden="true">
-    <div class="user-overlay-backdrop" data-overlay-dismiss></div>
-    <div class="user-overlay-dialog" role="dialog" aria-modal="true" aria-labelledby="userOverlayTitle">
-      <button type="button" id="btnCloseUserOverlay" class="user-overlay-close" aria-label="Luk">×</button>
-      <h2 id="userOverlayTitle">Log ind</h2>
-      <form id="userForm">
-        <label>
-          <span>Navn</span>
-          <input id="userName" type="text" autocomplete="name" required>
-        </label>
-        <label>
-          <span>Rolle</span>
-          <select id="userRole" required>
-            <option value="montor">Montør</option>
-            <option value="formand">Formand</option>
-            <option value="firma-admin">Firma-admin</option>
-            <option value="owner">Owner</option>
-          </select>
-        </label>
-        <label id="adminCodeRow" class="admin-code-row" hidden>
-          <span>Adminkode</span>
-          <input id="adminCodeInput" type="password" autocomplete="off" placeholder="StilAce">
-        </label>
-        <p id="userOverlayFeedback" class="status-message" hidden aria-live="polite"></p>
-        <div class="user-overlay-actions">
-          <button id="btnSaveUser" type="submit">Gem / Log ind</button>
-          <button id="btnCancelUser" type="button">Annuller</button>
-        </div>
-      </form>
     </div>
   </div>
 
