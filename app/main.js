@@ -362,7 +362,7 @@ const ROLE_PERMISSIONS = {
     canLockJobs: false,
     canSendJobs: false,
     canEditMaterials: true,
-    canEditLon: false
+    canEditLon: true
   }
 };
 
