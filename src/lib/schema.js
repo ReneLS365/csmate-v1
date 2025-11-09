@@ -32,7 +32,6 @@ export const ConfigSchema = {
       clientId: '',
       redirectUri: `${origin}/auth/callback`,
       postLogoutRedirectUri: `${origin}/`,
-      audience: '',
       scopes: 'openid profile email offline_access',
       connection: '',
       organization: '',
