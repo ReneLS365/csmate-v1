@@ -119,7 +119,6 @@ export async function startLogin() {
     code_challenge_method: 'S256'
   });
 
-  if (oidc.audience) params.set('audience', oidc.audience);
   if (oidc.organization) params.set('organization', oidc.organization);
   if (oidc.connection) params.set('connection', oidc.connection);
 
@@ -153,10 +152,6 @@ export async function handleCallback() {
     code,
     redirect_uri: oidc.redirectUri
   });
-
-  if (oidc.audience) {
-    body.set('audience', oidc.audience);
-  }
 
   const response = await fetch(tokenUrl, {
     method: 'POST',

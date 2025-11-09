@@ -21,7 +21,6 @@ function ensureConfig() {
   if (!base.auth.provider) base.auth.provider = ConfigSchema.auth.provider;
   if (!base.auth.oidc) base.auth.oidc = clone(ConfigSchema.auth.oidc);
   if (!base.auth.roleMapping) base.auth.roleMapping = clone(ConfigSchema.auth.roleMapping);
-  if (!('audience' in base.auth.oidc)) base.auth.oidc.audience = ConfigSchema.auth.oidc.audience;
   if (!('connection' in base.auth.oidc)) base.auth.oidc.connection = ConfigSchema.auth.oidc.connection;
   if (!('organization' in base.auth.oidc)) base.auth.oidc.organization = ConfigSchema.auth.oidc.organization;
   if (!('permissionClaim' in base.auth.oidc)) base.auth.oidc.permissionClaim = ConfigSchema.auth.oidc.permissionClaim;
@@ -65,7 +64,6 @@ const clientIdEl = document.querySelector('#clientId');
 const redirectEl = document.querySelector('#redirectUri');
 const postLogoutEl = document.querySelector('#postLogoutRedirectUri');
 const scopesEl = document.querySelector('#scopes');
-const audienceEl = document.querySelector('#audience');
 const connectionEl = document.querySelector('#connection');
 const organizationEl = document.querySelector('#organization');
 const permissionClaimEl = document.querySelector('#permissionClaim');
@@ -182,7 +180,6 @@ function fillForm() {
   redirectEl.value = config.auth.oidc.redirectUri ?? '';
   postLogoutEl.value = config.auth.oidc.postLogoutRedirectUri ?? '';
   scopesEl.value = config.auth.oidc.scopes ?? '';
-  audienceEl.value = config.auth.oidc.audience ?? '';
   connectionEl.value = config.auth.oidc.connection ?? '';
   organizationEl.value = config.auth.oidc.organization ?? '';
   permissionClaimEl.value = config.auth.oidc.permissionClaim ?? ConfigSchema.auth.oidc.permissionClaim;
@@ -201,7 +198,6 @@ function updateConfigFromForm() {
   config.auth.oidc.authority = authorityEl.value.trim();
   config.auth.oidc.clientId = clientIdEl.value.trim();
   config.auth.oidc.scopes = scopesEl.value.trim();
-  config.auth.oidc.audience = audienceEl.value.trim();
   config.auth.oidc.connection = connectionEl.value.trim();
   config.auth.oidc.organization = organizationEl.value.trim();
   config.auth.oidc.permissionClaim = permissionClaimEl.value.trim() || ConfigSchema.auth.oidc.permissionClaim;
