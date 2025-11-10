@@ -1,6 +1,7 @@
 import { createRemoteJWKSet, jwtVerify, JWTPayload } from 'jose'
 
 let cachedIssuer: string | null = null
+let cachedAudience: string[] | null = null
 let cachedJwks: ReturnType<typeof createRemoteJWKSet> | null = null
 
 const buildIssuerFromEnv = () => {
@@ -32,6 +33,35 @@ const getIssuer = () => {
   return cachedIssuer
 }
 
+const buildAudienceFromEnv = (): string[] => {
+  const rawCandidates = [
+    process.env.AUTH0_AUDIENCE,
+    process.env.AUTH0_API_AUDIENCE,
+    process.env.AUTH0_CLIENT_ID,
+    process.env.VITE_AUTH0_CLIENT_ID,
+  ]
+
+  const audiences = rawCandidates
+    .flatMap(candidate => candidate?.split(',') ?? [])
+    .map(candidate => candidate.trim())
+    .filter(candidate => candidate.length > 0)
+
+  if (audiences.length === 0) {
+    throw new Error(
+      'Missing AUTH0_AUDIENCE/AUTH0_API_AUDIENCE/AUTH0_CLIENT_ID configuration for JWT verification',
+    )
+  }
+
+  return Array.from(new Set(audiences))
+}
+
+const getAudience = () => {
+  if (!cachedAudience) {
+    cachedAudience = buildAudienceFromEnv()
+  }
+  return cachedAudience
+}
+
 const getJwks = () => {
   if (!cachedJwks) {
     const issuer = getIssuer()
@@ -42,8 +72,10 @@ const getJwks = () => {
 
 export async function verifyJwt(token: string): Promise<JWTPayload> {
   const issuer = getIssuer()
+  const audience = getAudience()
   const { payload } = await jwtVerify(token, getJwks(), {
     issuer,
+    audience: audience.length === 1 ? audience[0] : audience,
   })
   return payload
 }
