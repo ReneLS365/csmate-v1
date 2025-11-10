@@ -10,6 +10,7 @@ import {
   numeric,
   timestamp,
   date,
+  primaryKey,
 } from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
 
@@ -49,6 +50,24 @@ export const users = pgTable('users', {
   createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
   lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
 })
+
+export const userTenants = pgTable(
+  'user_tenants',
+  {
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    tenantId: uuid('tenant_id')
+      .notNull()
+      .references(() => tenants.id, { onDelete: 'cascade' }),
+    role: text('role').notNull(),
+    isActive: boolean('is_active').default(true).notNull(),
+    createdAt: timestamp('created_at', { withTimezone: true }).defaultNow().notNull(),
+  },
+  table => ({
+    pk: primaryKey({ columns: [table.userId, table.tenantId] }),
+  }),
+)
 
 // ---------- ROLLER ----------
 // Globalt rollekatalog (owner, admin, kontor, formand, montør, lærling)
@@ -197,6 +216,7 @@ export const tenantsRelations = relations(tenants, ({ many }) => ({
   adminKeys: many(adminKeys),
   projects: many(projects),
   payProfiles: many(payProfiles),
+  userTenants: many(userTenants),
   memberships: many(userTenantMemberships),
   akkordSheets: many(akkordSheets),
 }))
@@ -209,6 +229,7 @@ export const adminKeysRelations = relations(adminKeys, ({ one }) => ({
 }))
 
 export const usersRelations = relations(users, ({ many }) => ({
+  tenantRoles: many(userTenants),
   memberships: many(userTenantMemberships),
   wagePostings: many(wagePostings),
   createdProjects: many(projects),
@@ -235,6 +256,17 @@ export const membershipsRelations = relations(userTenantMemberships, ({ one }) =
   defaultPayProfile: one(payProfiles, {
     fields: [userTenantMemberships.defaultPayProfileId],
     references: [payProfiles.id],
+  }),
+}))
+
+export const userTenantsRelations = relations(userTenants, ({ one }) => ({
+  user: one(users, {
+    fields: [userTenants.userId],
+    references: [users.id],
+  }),
+  tenant: one(tenants, {
+    fields: [userTenants.tenantId],
+    references: [tenants.id],
   }),
 }))
 
