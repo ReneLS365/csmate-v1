@@ -11,13 +11,11 @@ import { sha256Hex, constantTimeEquals } from './src/lib/sha256.js'
 import { ensureExportLibs, ensureZipLib, prefetchExportLibs } from './src/features/export/lazy-libs.js'
 import {
   initAuth,
-  onAuthStateChange,
-  setAuthLabelResolver,
-  refreshAuthUi,
-  login as authLogin,
+  loginWithRedirect,
+  signupWithRedirect,
   logout as authLogout,
-  signup as authSignup
-} from './src/auth.js'
+  getAuthState
+} from './src/auth/auth0-client.js'
 import {
   getCurrentUser as getStoredUser,
   setCurrentUser as setStoredCurrentUser,
@@ -56,6 +54,21 @@ import {
 let DEFAULT_ADMIN_CODE_HASH = ''
 let materialsVirtualListController = null
 let latestAuthState = { isAuthenticated: false, user: null }
+
+function setLatestAuthState(state) {
+  latestAuthState = {
+    isAuthenticated: Boolean(state?.isAuthenticated),
+    user: state?.user ? { ...state.user } : null
+  }
+  return latestAuthState
+}
+
+function syncAuthUiFromState() {
+  const state = getAuthState()
+  const latest = setLatestAuthState(state)
+  updateAuthUi(latest.isAuthenticated, latest.user)
+  return latest
+}
 
 async function loadDefaultAdminCode () {
   try {
@@ -1707,6 +1720,46 @@ function getActiveUserName () {
   return typeof name === 'string' ? name.trim() : '';
 }
 
+function updateAuthUi (isAuthenticated, user) {
+  if (typeof document === 'undefined') return;
+
+  const loginBtn = document.querySelector('[data-auth="login"]');
+  const signupBtn = document.querySelector('[data-auth="signup"]');
+  const offlineBtn = document.querySelector('[data-auth="offline"]');
+  const logoutBtn = document.querySelector('[data-auth="logout"]');
+  const userLabel = document.querySelector('[data-auth="user-label"]');
+  const switchUserBtn = document.getElementById('btn-switch-user');
+
+  const controls = [loginBtn, signupBtn, offlineBtn];
+  controls.forEach(button => {
+    if (!button) return;
+    button.classList.toggle('hidden', Boolean(isAuthenticated));
+  });
+
+  if (logoutBtn) {
+    logoutBtn.classList.toggle('hidden', !isAuthenticated);
+  }
+
+  if (switchUserBtn) {
+    switchUserBtn.classList.toggle('hidden', Boolean(isAuthenticated));
+  }
+
+  if (userLabel) {
+    const authLabel = isAuthenticated ? getAuth0DisplayName({ isAuthenticated, user }) : '';
+    const activeName = getActiveUserName();
+    const offlineState = Boolean(window.CSMATE_AUTH?.offline && !isAuthenticated);
+    const label = authLabel || activeName || (offlineState ? 'Offline gæst' : '');
+
+    if (label) {
+      userLabel.textContent = label;
+      userLabel.classList.remove('hidden');
+    } else {
+      userLabel.textContent = 'Ingen bruger';
+      userLabel.classList.add('hidden');
+    }
+  }
+}
+
 function ensureUserAdminContainer () {
   if (typeof document === 'undefined') return null;
   const panel = document.getElementById('user-admin-panel');
@@ -1894,7 +1947,7 @@ function applyUserToUi (user) {
   applyRoleGuards(activeUser);
   renderUserAdminTable();
   renderJobList();
-  refreshAuthUi();
+  syncAuthUiFromState();
 }
 
 if (typeof window !== 'undefined') {
@@ -1902,34 +1955,54 @@ if (typeof window !== 'undefined') {
   window.csmate.setActiveUser = applyUserToUi;
 }
 
-function bindAuthControls () {
+function initAuthButtons () {
   if (typeof document === 'undefined') return;
-  const loginBtn = document.getElementById('btn-login');
+
+  const loginBtn = document.querySelector('[data-auth="login"]');
   if (loginBtn) {
     loginBtn.addEventListener('click', event => {
       event.preventDefault();
-      authLogin();
+      loginWithRedirect();
     });
   }
-  const switchBtn = document.getElementById('btn-switch-user');
-  if (switchBtn) {
-    switchBtn.addEventListener('click', event => {
+
+  const signupBtn = document.querySelector('[data-auth="signup"]');
+  if (signupBtn) {
+    signupBtn.addEventListener('click', event => {
       event.preventDefault();
-      authLogin();
+      signupWithRedirect();
     });
   }
-  const logoutBtn = document.getElementById('btn-logout');
+
+  const offlineBtn = document.querySelector('[data-auth="offline"]');
+  if (offlineBtn) {
+    offlineBtn.addEventListener('click', event => {
+      event.preventDefault();
+      window.CSMATE_AUTH = {
+        ...(window.CSMATE_AUTH || {}),
+        isReady: true,
+        isAuthenticated: false,
+        user: null,
+        offline: true
+      };
+      setLatestAuthState({ isAuthenticated: false, user: null });
+      updateAuthUi(false, null);
+    });
+  }
+
+  const logoutBtn = document.querySelector('[data-auth="logout"]');
   if (logoutBtn) {
     logoutBtn.addEventListener('click', event => {
       event.preventDefault();
       authLogout();
     });
   }
-  const signupBtn = document.getElementById('btn-signup');
-  if (signupBtn) {
-    signupBtn.addEventListener('click', event => {
+
+  const switchBtn = document.getElementById('btn-switch-user');
+  if (switchBtn) {
+    switchBtn.addEventListener('click', event => {
       event.preventDefault();
-      authSignup();
+      loginWithRedirect();
     });
   }
 }
@@ -4869,27 +4942,17 @@ registerJobStoreHooks({
 });
 
 async function bootstrap () {
-  setAuthLabelResolver(state => {
-    const localName = getActiveUserName();
-    if (localName) {
-      const roleLabel = formatRoleLabel(activeUser?.role);
-      return roleLabel ? `${localName} (${roleLabel})` : localName;
-    }
-    const authName = getAuth0DisplayName(state);
-    return authName || 'Ingen bruger';
-  });
-
-  onAuthStateChange(state => {
-    latestAuthState = state;
-    refreshAuthUi();
-  });
-
   await initApp();
-  bindAuthControls();
   applyUserToUi(getStoredUser());
-  initAuth().catch(error => {
+
+  try {
+    await initAuth();
+  } catch (error) {
     console.error('initAuth failed', error);
-  });
+  }
+
+  syncAuthUiFromState();
+  initAuthButtons();
   setActiveTab('job');
 }
 
