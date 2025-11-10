@@ -1,3 +1,5 @@
+import { ensureUserFromAuth0, setCurrentUser } from '../state/users.js';
+
 const defaultState = Object.freeze({
   isReady: false,
   isAuthenticated: false,
@@ -6,6 +8,46 @@ const defaultState = Object.freeze({
 
 let auth0Client = null;
 let authState = { ...defaultState };
+
+function setWindowActiveUser(user) {
+  if (typeof window === 'undefined') return;
+  const target = window.csmate;
+  if (!target || typeof target.setActiveUser !== 'function') return;
+  try {
+    target.setActiveUser(user || null);
+  } catch (error) {
+    console.error('setActiveUser failed', error);
+  }
+}
+
+function clearStoredUser() {
+  try {
+    setCurrentUser(null);
+  } catch (error) {
+    console.error('setCurrentUser(null) failed', error);
+  }
+  setWindowActiveUser(null);
+}
+
+function applyStoredUserFromAuth0(authUser) {
+  if (!authUser) {
+    clearStoredUser();
+    return null;
+  }
+
+  try {
+    const storedUser = ensureUserFromAuth0(authUser);
+    if (storedUser) {
+      setWindowActiveUser(storedUser);
+      return storedUser;
+    }
+  } catch (error) {
+    console.error('ensureUserFromAuth0 failed', error);
+  }
+
+  clearStoredUser();
+  return null;
+}
 
 if (typeof window !== 'undefined') {
   window.CSMATE_AUTH = window.CSMATE_AUTH || { isAuthenticated: false, user: null };
@@ -75,6 +117,7 @@ export async function initAuth() {
   const client = await createClient();
   if (!client) {
     authState = { ...defaultState, isReady: true };
+    clearStoredUser();
     publishState(authState);
     return cloneAuthState();
   }
@@ -84,6 +127,11 @@ export async function initAuth() {
   try {
     const isAuthenticated = await client.isAuthenticated();
     const user = isAuthenticated ? await client.getUser() : null;
+    if (isAuthenticated && user) {
+      applyStoredUserFromAuth0(user);
+    } else {
+      clearStoredUser();
+    }
     authState = {
       isReady: true,
       isAuthenticated,
@@ -92,6 +140,7 @@ export async function initAuth() {
   } catch (error) {
     console.error('Kunne ikke læse Auth0-status', error);
     authState = { ...defaultState, isReady: true };
+    clearStoredUser();
   }
 
   publishState(authState);
