@@ -64,6 +64,11 @@ async function handleGet(event, callerRoles) {
   return json(200, { users: rows })
 }
 
+const ASSIGNABLE_ROLES = new Set(['worker', 'tenant_admin', 'superadmin'])
+
+const callerHasSuperadminRole = (roles) =>
+  Array.isArray(roles) && roles.some(role => role?.role === 'superadmin')
+
 async function handlePost(event, callerRoles) {
   let body
   try {
@@ -82,6 +87,14 @@ async function handlePost(event, callerRoles) {
 
   if (!isAllowed(callerRoles, tenantId)) {
     return json(403, { error: 'Forbidden' })
+  }
+
+  if (!ASSIGNABLE_ROLES.has(role)) {
+    return json(400, { error: 'Unsupported role' })
+  }
+
+  if (role === 'superadmin' && !callerHasSuperadminRole(callerRoles)) {
+    return json(403, { error: 'Forbidden role escalation' })
   }
 
   await db
