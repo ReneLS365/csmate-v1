@@ -1,1 +1,1 @@
-export { importJSON } from '@/modules/importers';
+export { importJSON } from '../modules/importers';

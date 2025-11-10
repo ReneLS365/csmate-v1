@@ -1,1 +1,1 @@
-export { hashState } from '@/modules/diff';
+export { hashState } from '../modules/diff';

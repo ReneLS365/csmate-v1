@@ -1,6 +1,6 @@
 // netlify/functions/powerlogin.ts
-import { db } from '../../src/lib/db'
-import { tenants, adminKeys, roles } from '../../src/lib/schema'
+import { db } from '../../src/lib/db.ts'
+import { tenants, adminKeys, roles } from '../../src/lib/schema.ts'
 import { eq, and, asc } from 'drizzle-orm'
 import bcrypt from 'bcryptjs'
 import { signAdminToken } from '../lib/auth'

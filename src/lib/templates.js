@@ -7,4 +7,4 @@ export {
   getPersistedTemplate,
   clearPersistedTemplate,
   resolveTemplateId
-} from '@/modules/templates';
+} from '../modules/templates';

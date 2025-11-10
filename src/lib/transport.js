@@ -1,1 +1,1 @@
-export { calculateTransportSurcharge, resolveTransportRules } from '@/modules/transport';
+export { calculateTransportSurcharge, resolveTransportRules } from '../modules/transport';

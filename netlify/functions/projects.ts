@@ -1,6 +1,6 @@
 // netlify/functions/projects.ts
-import { db } from '../../src/lib/db'
-import { projects } from '../../src/lib/schema'
+import { db } from '../../src/lib/db.ts'
+import { projects } from '../../src/lib/schema.ts'
 import { eq } from 'drizzle-orm'
 import { extractBearerToken, verifyAdminToken } from '../lib/auth'
 
