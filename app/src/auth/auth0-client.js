@@ -312,3 +312,8 @@ export function getAuthState() {
 export function getRoles() {
   return Array.isArray(authState.roles) ? authState.roles.slice() : [];
 }
+
+export function isAdmin() {
+  const roles = Array.isArray(authState.roles) ? authState.roles : [];
+  return roles.some(role => role?.role === 'superadmin' || role?.role === 'tenant_admin');
+}

@@ -91,6 +91,7 @@
         <button id="btnOptaelling" class="tab-btn" data-tab="count" data-section="optaelling" type="button">Optælling</button>
         <button id="btnLon" class="tab-btn" data-tab="wage" data-section="lon" type="button">Løn</button>
         <button id="btnHistorik" class="tab-btn" data-tab="history" data-section="historik" type="button">Historik</button>
+        <button id="tab-btn-admin" class="tab-btn hidden" data-tab="admin" data-section="view-admin" type="button" hidden>Admin</button>
         <button id="tab-btn-help" class="tab-btn" data-tab="help" data-section="help" type="button">Hjælp</button>
       </nav>
     </header>
@@ -490,6 +491,16 @@
         </div>
       </section>
     </section>
+  </section>
+  <section data-view="admin" id="view-admin" class="sektion tab-view hidden" hidden>
+    <h2>Adminpanel</h2>
+
+    <label>
+      Firma
+      <select id="admin-tenant-select"></select>
+    </label>
+
+    <div id="admin-users-list"></div>
   </section>
         </main>
       </div>

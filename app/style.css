@@ -279,6 +279,9 @@ round:rgba(255,255,255,0.03)}
 .modal-content ol{padding-left:22px;line-height:1.6}
 .modal-content p{line-height:1.6}
 .modal-close{position:absolute;top:16px;right:16px;width:36px;height:36px;border-radius:50%;border:1px solid var(--border);background:#3a3c43;color:var(--text);font-size:1.5rem;line-height:1;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.admin-users-table{width:100%;border-collapse:collapse;margin-top:1rem}
+.admin-users-table th,
+.admin-users-table td{padding:0.5rem;border-bottom:1px solid #374151;text-align:left;font-size:0.9rem}
 @media (max-width:600px){
   header .bar{flex-direction:column;align-items:flex-start}
   .grid-3{grid-template-columns:1fr}
