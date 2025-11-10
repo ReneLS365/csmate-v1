@@ -1,45 +1,45 @@
 {
-  "version": "v20251110T062004",
+  "version": "v20251110T073136-857e3915",
   "cachePrefix": "csmate",
-  "cacheName": "csmate-v20251110T062004",
+  "cacheName": "csmate-v20251110T073136-857e3915",
   "precache": [
     {
       "url": "/",
       "file": "app/index.html",
       "aliasFor": "/index.html",
       "exists": true,
-      "bytes": 31866,
-      "sha256": "99cd78069cf71a1c7593f6ec63a19e0ec51a23263af33bee0164b5fc78b87f0e"
+      "bytes": 32251,
+      "sha256": "755d617b036fe6858bd37a88875930a51e961dc5e95f6c163113a57f510e5316"
     },
     {
       "url": "/?source=pwa",
       "file": "app/index.html",
       "exists": true,
-      "bytes": 31866,
-      "sha256": "99cd78069cf71a1c7593f6ec63a19e0ec51a23263af33bee0164b5fc78b87f0e",
+      "bytes": 32251,
+      "sha256": "755d617b036fe6858bd37a88875930a51e961dc5e95f6c163113a57f510e5316",
       "duplicateOf": "app/index.html"
     },
     {
       "url": "/index.html",
       "file": "app/index.html",
       "exists": true,
-      "bytes": 31866,
-      "sha256": "99cd78069cf71a1c7593f6ec63a19e0ec51a23263af33bee0164b5fc78b87f0e",
+      "bytes": 32251,
+      "sha256": "755d617b036fe6858bd37a88875930a51e961dc5e95f6c163113a57f510e5316",
       "duplicateOf": "app/index.html"
     },
     {
       "url": "/main.js",
       "file": "app/main.js",
       "exists": true,
-      "bytes": 161473,
-      "sha256": "707457880694868a33def665dc05cfcbd95ffbae132830fb5a376309b201136e"
+      "bytes": 171285,
+      "sha256": "43105d3294cf2fa545872091de02c7d2efdcefd2c40df0992ec1887aabb34597"
     },
     {
       "url": "/style.css",
       "file": "app/style.css",
       "exists": true,
-      "bytes": 24220,
-      "sha256": "9e1f4fbc1d7aef3d3e364cee6dc83b5a7128cdcb3e8149b4fab42a8f8ea56591"
+      "bytes": 24418,
+      "sha256": "82ca32bdc40c204afb8731e5359e8d8fc8fa132db9e79687f25f9485469f95a9"
     },
     {
       "url": "/print.css",

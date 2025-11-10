@@ -1,1 +1,1 @@
-export { canTransition, nextStateByAction } from '@/modules/approval';
+export { canTransition, nextStateByAction } from '../modules/approval';

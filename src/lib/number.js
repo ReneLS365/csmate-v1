@@ -1,1 +1,1 @@
-export { toNumber, toIntPercent, clampInt } from '@/modules/number';
+export { toNumber, toIntPercent, clampInt } from '../modules/number';

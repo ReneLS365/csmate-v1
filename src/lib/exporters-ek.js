@@ -1,1 +1,1 @@
-export { EK_HEADER, exportEKCSV, buildEkompletPayload } from '@/modules/exporters-ek';
+export { EK_HEADER, exportEKCSV, buildEkompletPayload } from '../modules/exporters-ek';

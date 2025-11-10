@@ -1,1 +1,1 @@
-export { hasPerm } from '@/modules/approval-perms';
+export { hasPerm } from '../modules/approval-perms';

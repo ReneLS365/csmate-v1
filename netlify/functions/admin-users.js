@@ -1,5 +1,5 @@
-import { db } from '../../src/lib/db'
-import { users, userTenants } from '../../src/lib/schema'
+import { db } from '../../src/lib/db.ts'
+import { users, userTenants } from '../../src/lib/schema.ts'
 import { verifyJwt } from './_auth0-verify'
 import { and, asc, eq } from 'drizzle-orm'
 

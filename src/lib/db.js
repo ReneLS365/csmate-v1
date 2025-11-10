@@ -1,1 +1,1 @@
-export { saveProject, getProject, listProjects, deleteProject, pruneToMax } from '@/modules/db';
+export { saveProject, getProject, listProjects, deleteProject, pruneToMax } from '../modules/db';

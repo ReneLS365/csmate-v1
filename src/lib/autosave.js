@@ -1,1 +1,1 @@
-export { queueAutosave } from '@/modules/autosave';
+export { queueAutosave } from '../modules/autosave';
