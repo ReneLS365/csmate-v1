@@ -3,11 +3,12 @@ import { ensureUserFromAuth0, setCurrentUser } from '../state/users.js';
 const defaultState = Object.freeze({
   isReady: false,
   isAuthenticated: false,
-  user: null
+  user: null,
+  roles: Object.freeze([])
 });
 
 let auth0Client = null;
-let authState = { ...defaultState };
+let authState = { ...defaultState, roles: [] };
 
 function setWindowActiveUser(user) {
   if (typeof window === 'undefined') return;
@@ -27,6 +28,12 @@ function clearStoredUser() {
     console.error('setCurrentUser(null) failed', error);
   }
   setWindowActiveUser(null);
+  if (Array.isArray(authState.roles) && authState.roles.length) {
+    authState.roles = [];
+  }
+  if (typeof window !== 'undefined' && window.CSMATE_AUTH) {
+    window.CSMATE_AUTH.roles = [];
+  }
 }
 
 function applyStoredUserFromAuth0(authUser) {
@@ -50,7 +57,11 @@ function applyStoredUserFromAuth0(authUser) {
 }
 
 if (typeof window !== 'undefined') {
-  window.CSMATE_AUTH = window.CSMATE_AUTH || { isAuthenticated: false, user: null };
+  window.CSMATE_AUTH = window.CSMATE_AUTH || {
+    isAuthenticated: false,
+    user: null,
+    roles: []
+  };
 }
 
 function getConfig() {
@@ -66,7 +77,10 @@ function getConfig() {
 function publishState(state) {
   if (typeof window === 'undefined') return;
   const offline = window.CSMATE_AUTH?.offline && !state.isAuthenticated;
-  const nextState = { ...state };
+  const nextState = {
+    ...state,
+    roles: Array.isArray(state?.roles) ? state.roles.slice() : []
+  };
   if (offline) {
     nextState.offline = true;
   }
@@ -77,8 +91,97 @@ function cloneAuthState(state = authState) {
   return {
     isReady: Boolean(state?.isReady),
     isAuthenticated: Boolean(state?.isAuthenticated),
-    user: state?.user ? { ...state.user } : null
+    user: state?.user ? { ...state.user } : null,
+    roles: Array.isArray(state?.roles) ? state.roles.slice() : []
   };
+}
+
+async function syncUserWithBackend() {
+  if (!authState.isAuthenticated || !authState.user) {
+    authState.roles = [];
+    return;
+  }
+
+  authState.roles = [];
+
+  const accessToken = await getAccessToken();
+  if (!accessToken) {
+    return;
+  }
+
+  const user = authState.user || {};
+  const sub = typeof user.sub === 'string' ? user.sub : '';
+  const email = typeof user.email === 'string' ? user.email : '';
+  const name =
+    typeof user.name === 'string' && user.name.trim()
+      ? user.name
+      : typeof user.nickname === 'string'
+        ? user.nickname
+        : '';
+
+  if (!sub || !email) {
+    return;
+  }
+
+  try {
+    const response = await fetch('/.netlify/functions/auth-sync', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`
+      },
+      body: JSON.stringify({
+        sub,
+        email,
+        name
+      })
+    });
+
+    if (!response.ok) {
+      let errorMessage = '';
+      try {
+        errorMessage = await response.text();
+      } catch (error) {
+        errorMessage = '';
+      }
+      console.error('auth-sync failed', errorMessage || response.statusText);
+      return;
+    }
+
+    let payload = null;
+    try {
+      payload = await response.json();
+    } catch (error) {
+      console.error('auth-sync invalid JSON', error);
+      return;
+    }
+
+    if (!payload || typeof payload !== 'object') {
+      return;
+    }
+
+    const roles = Array.isArray(payload.roles)
+      ? payload.roles
+          .map(entry => {
+            if (!entry || typeof entry !== 'object') return null;
+            const tenantId =
+              typeof entry.tenantId === 'string' && entry.tenantId.trim()
+                ? entry.tenantId.trim()
+                : null;
+            const role =
+              typeof entry.role === 'string' && entry.role.trim()
+                ? entry.role.trim()
+                : null;
+            if (!tenantId || !role) return null;
+            return { tenantId, role };
+          })
+          .filter(Boolean)
+      : [];
+
+    authState.roles = roles;
+  } catch (error) {
+    console.error('auth-sync fetch error', error);
+  }
 }
 
 async function createClient() {
@@ -116,7 +219,7 @@ async function handleRedirectCallback(client) {
 export async function initAuth() {
   const client = await createClient();
   if (!client) {
-    authState = { ...defaultState, isReady: true };
+    authState = { ...defaultState, isReady: true, roles: [] };
     clearStoredUser();
     publishState(authState);
     return cloneAuthState();
@@ -135,11 +238,15 @@ export async function initAuth() {
     authState = {
       isReady: true,
       isAuthenticated,
-      user
+      user,
+      roles: []
     };
+    if (isAuthenticated && user) {
+      await syncUserWithBackend();
+    }
   } catch (error) {
     console.error('Kunne ikke læse Auth0-status', error);
-    authState = { ...defaultState, isReady: true };
+    authState = { ...defaultState, isReady: true, roles: [] };
     clearStoredUser();
   }
 
@@ -200,4 +307,8 @@ export async function getAccessToken() {
 
 export function getAuthState() {
   return cloneAuthState();
+}
+
+export function getRoles() {
+  return Array.isArray(authState.roles) ? authState.roles.slice() : [];
 }
