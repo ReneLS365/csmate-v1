@@ -14,7 +14,10 @@ import {
   loginWithRedirect,
   signupWithRedirect,
   logout as authLogout,
-  getAuthState
+  getAuthState,
+  getRoles,
+  isAdmin,
+  getAccessToken
 } from './src/auth/auth0-client.js'
 import {
   getCurrentUser as getStoredUser,
@@ -54,6 +57,9 @@ import {
 let DEFAULT_ADMIN_CODE_HASH = ''
 let materialsVirtualListController = null
 let latestAuthState = { isAuthenticated: false, user: null }
+let adminViewInitialized = false
+let adminViewInitPromise = null
+let lastAdminRolesSignature = ''
 
 function setLatestAuthState(state) {
   latestAuthState = {
@@ -67,6 +73,7 @@ function syncAuthUiFromState() {
   const state = getAuthState()
   const latest = setLatestAuthState(state)
   updateAuthUi(latest.isAuthenticated, latest.user)
+  updateAdminTabVisibility()
   return latest
 }
 
@@ -95,10 +102,20 @@ if (typeof document !== 'undefined') {
 // --- Utility Functions ---
 function resolveSectionId(id) {
   if (!id) return '';
-  const base = id.endsWith('Section') ? id.slice(0, -7) : id;
+  const raw = String(id);
+  if (typeof document !== 'undefined') {
+    const direct = document.getElementById(raw);
+    if (direct) return direct.id;
+  }
+  const base = raw.endsWith('Section') ? raw.slice(0, -7) : raw;
   const normalized = normalizeKey(base);
   const finalBase = normalized || base.replace(/Section$/i, '');
-  return `${finalBase}Section`;
+  const candidate = `${finalBase}Section`;
+  if (typeof document !== 'undefined') {
+    const resolved = document.getElementById(candidate);
+    if (resolved) return resolved.id;
+  }
+  return candidate;
 }
 
 function forEachNode(nodeList, callback) {
@@ -141,6 +158,7 @@ const TAB_SECTION_MAP = Object.freeze({
   count: 'optaelling',
   wage: 'lon',
   history: 'historik',
+  admin: 'view-admin',
   help: 'help'
 });
 
@@ -193,9 +211,19 @@ function syncActiveTabBySection(activeSectionId) {
 }
 
 function setActiveTab(tabName) {
+  if (!tabName) return;
+  const normalizedTab = normalizeKey(tabName);
+  if (normalizedTab === 'admin' && !isAdmin()) {
+    return;
+  }
   const section = mapTabToSection(tabName);
   if (section) {
     vis(section);
+    if (normalizedTab === 'admin') {
+      initAdminView().catch(error => {
+        console.error('initAdminView failed', error);
+      });
+    }
   }
 }
 
@@ -210,6 +238,315 @@ function activateTabByName(name) {
     btn.classList.toggle('active', isActive);
     btn.classList.toggle('is-active', isActive);
   });
+}
+
+function resetAdminViewState() {
+  adminViewInitialized = false;
+  adminViewInitPromise = null;
+  const select = document.getElementById('admin-tenant-select');
+  if (select) {
+    select.innerHTML = '';
+    select.value = '';
+  }
+  const container = document.getElementById('admin-users-list');
+  if (container) {
+    container.innerHTML = '';
+  }
+}
+
+function updateAdminTabVisibility() {
+  const adminTabBtn = document.getElementById('tab-btn-admin');
+  const adminSection = document.getElementById('view-admin');
+  if (!adminTabBtn || !adminSection) return;
+
+  if (isAdmin()) {
+    adminTabBtn.classList.remove('hidden');
+    adminTabBtn.removeAttribute('hidden');
+    adminTabBtn.removeAttribute('aria-hidden');
+    const roles = getRoles();
+    const signature = JSON.stringify(
+      roles
+        .filter(role => role && typeof role.tenantId === 'string' && role.tenantId)
+        .map(role => `${role.tenantId}:${role.role || ''}`)
+        .sort()
+    );
+    const hasChanged = signature !== lastAdminRolesSignature;
+    if (hasChanged) {
+      lastAdminRolesSignature = signature;
+      adminViewInitialized = false;
+      adminViewInitPromise = null;
+      if (!adminSection.hasAttribute('hidden')) {
+        initAdminView().catch(error => {
+          console.error('initAdminView failed', error);
+        });
+      }
+    }
+  } else {
+    const wasActive = !adminSection.hasAttribute('hidden');
+    adminTabBtn.classList.add('hidden');
+    adminTabBtn.setAttribute('hidden', '');
+    adminTabBtn.setAttribute('aria-hidden', 'true');
+    adminTabBtn.classList.remove('active');
+    adminTabBtn.classList.remove('is-active');
+    adminSection.classList.add('hidden');
+    adminSection.classList.remove('active');
+    adminSection.setAttribute('hidden', '');
+    adminSection.setAttribute('aria-hidden', 'true');
+    adminSection.style.display = 'none';
+    resetAdminViewState();
+    lastAdminRolesSignature = '';
+    if (wasActive) {
+      setActiveTab('job');
+    }
+  }
+}
+
+async function initAdminView() {
+  if (!isAdmin()) return;
+  if (adminViewInitialized) return;
+  if (adminViewInitPromise) {
+    await adminViewInitPromise;
+    return;
+  }
+
+  const runner = async () => {
+    const select = document.getElementById('admin-tenant-select');
+    const container = document.getElementById('admin-users-list');
+    if (!select || !container) {
+      adminViewInitialized = false;
+      return;
+    }
+
+    const roles = getRoles();
+    const tenantIds = Array.from(
+      new Set(
+        roles
+          .filter(role => role && typeof role.tenantId === 'string' && role.tenantId.trim())
+          .map(role => role.tenantId.trim())
+      )
+    );
+
+    select.innerHTML = tenantIds
+      .map(id => `<option value="${id}">${id}</option>`)
+      .join('');
+
+    if (tenantIds.length === 0) {
+      container.innerHTML = '<p>Ingen firmaer tilknyttet din bruger.</p>';
+      adminViewInitialized = true;
+      return;
+    }
+
+    if (!select.dataset.adminBound) {
+      select.addEventListener('change', event => {
+        const target = event?.target;
+        const nextTenant = target && typeof target.value === 'string' ? target.value : '';
+        if (!nextTenant) return;
+        loadAdminUsersForTenant(nextTenant);
+      });
+      select.dataset.adminBound = 'true';
+    }
+
+    const initialTenant = select.value || tenantIds[0];
+    if (!select.value) {
+      select.value = initialTenant;
+    }
+
+    const loaded = await loadAdminUsersForTenant(initialTenant);
+    if (!loaded) {
+      adminViewInitialized = false;
+      return;
+    }
+
+    adminViewInitialized = true;
+  };
+
+  adminViewInitPromise = runner();
+  try {
+    await adminViewInitPromise;
+  } catch (error) {
+    adminViewInitialized = false;
+    console.error('initAdminView failed', error);
+  } finally {
+    adminViewInitPromise = null;
+  }
+}
+
+async function loadAdminUsersForTenant(tenantId) {
+  const normalizedTenantId = typeof tenantId === 'string' ? tenantId.trim() : '';
+  const container = document.getElementById('admin-users-list');
+  if (!container) return false;
+
+  if (!normalizedTenantId) {
+    container.innerHTML = '<p>Ingen brugere fundet for dette firma endnu.</p>';
+    return false;
+  }
+
+  const token = await getAccessToken();
+  if (!token) {
+    console.error('Failed to load admin users: missing token');
+    container.innerHTML = '<p>Kunne ikke indlæse brugere.</p>';
+    return false;
+  }
+
+  let response;
+  try {
+    response = await fetch(
+      '/.netlify/functions/admin-users?tenantId=' + encodeURIComponent(normalizedTenantId),
+      {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      }
+    );
+  } catch (error) {
+    console.error('Failed to load admin users', error);
+    container.innerHTML = '<p>Kunne ikke indlæse brugere.</p>';
+    return false;
+  }
+
+  if (!response.ok) {
+    let message = '';
+    try {
+      message = await response.text();
+    } catch (error) {
+      message = '';
+    }
+    console.error('Failed to load admin users', message || response.statusText);
+    container.innerHTML = '<p>Kunne ikke indlæse brugere.</p>';
+    return false;
+  }
+
+  let data;
+  try {
+    data = await response.json();
+  } catch (error) {
+    console.error('Failed to parse admin users response', error);
+    container.innerHTML = '<p>Kunne ikke indlæse brugere.</p>';
+    return false;
+  }
+
+  const list = Array.isArray(data?.users) ? data.users : [];
+  renderAdminUsersTable(normalizedTenantId, list);
+  return true;
+}
+
+function renderAdminUsersTable(tenantId, users) {
+  const container = document.getElementById('admin-users-list');
+  if (!container) return;
+
+  const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, char => {
+    const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+    return map[char] || char;
+  });
+
+  const validUsers = Array.isArray(users)
+    ? users.filter(user => user && typeof user.userId === 'string' && user.userId)
+    : [];
+
+  if (validUsers.length === 0) {
+    container.innerHTML = '<p>Ingen brugere fundet for dette firma endnu.</p>';
+    return;
+  }
+
+  container.innerHTML = `
+    <table class="admin-users-table">
+      <thead>
+        <tr>
+          <th>Email</th>
+          <th>Navn</th>
+          <th>Rolle</th>
+          <th>Handling</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${validUsers
+          .map(user => {
+            const userId = escapeHtml(user.userId);
+            const email = escapeHtml(user.email || '');
+            const name = escapeHtml(user.name || '');
+            const role = typeof user.role === 'string' ? user.role : '';
+            return `
+          <tr data-user-id="${userId}">
+            <td>${email}</td>
+            <td>${name}</td>
+            <td>
+              <select class="admin-role-select">
+                <option value="worker" ${role === 'worker' ? 'selected' : ''}>Medarbejder</option>
+                <option value="tenant_admin" ${role === 'tenant_admin' ? 'selected' : ''}>Firma admin</option>
+              </select>
+            </td>
+            <td>
+              <button type="button" class="admin-save-role">Gem</button>
+            </td>
+          </tr>
+        `;
+          })
+          .join('')}
+      </tbody>
+    </table>
+  `;
+
+  container.querySelectorAll('.admin-save-role').forEach(button => {
+    button.addEventListener('click', async event => {
+      const target = event.currentTarget;
+      const row = target instanceof HTMLElement ? target.closest('tr[data-user-id]') : null;
+      if (!row) return;
+      const userId = row.dataset.userId;
+      const roleSelect = row.querySelector('.admin-role-select');
+      if (!userId || !(roleSelect instanceof HTMLSelectElement)) return;
+      const newRole = roleSelect.value;
+      target.disabled = true;
+      try {
+        await saveAdminUserRole(tenantId, userId, newRole);
+      } catch (error) {
+        console.error('Failed to save user role', error);
+      } finally {
+        target.disabled = false;
+      }
+    });
+  });
+}
+
+async function saveAdminUserRole(tenantId, userId, role) {
+  const token = await getAccessToken();
+  if (!token) {
+    console.error('Failed to save user role: missing token');
+    return false;
+  }
+
+  const payload = {
+    tenantId,
+    userId,
+    role
+  };
+
+  let response;
+  try {
+    response = await fetch('/.netlify/functions/admin-users', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`
+      },
+      body: JSON.stringify(payload)
+    });
+  } catch (error) {
+    console.error('Failed to save user role', error);
+    return false;
+  }
+
+  if (!response.ok) {
+    let message = '';
+    try {
+      message = await response.text();
+    } catch (error) {
+      message = '';
+    }
+    console.error('Failed to save user role', message || response.statusText);
+    return false;
+  }
+
+  return true;
 }
 
 let guideModalPreviousFocus = null;
@@ -1758,6 +2095,8 @@ function updateAuthUi (isAuthenticated, user) {
       userLabel.classList.add('hidden');
     }
   }
+
+  updateAdminTabVisibility();
 }
 
 function ensureUserAdminContainer () {
@@ -4778,6 +5117,7 @@ async function initApp() {
     { id: 'btnOptaelling', section: 'optaelling', tab: 'count' },
     { id: 'btnLon', section: 'lon', tab: 'wage' },
     { id: 'btnHistorik', section: 'historik', tab: 'history', onActivate: () => renderAuditLog() },
+    { id: 'tab-btn-admin', section: 'view-admin', tab: 'admin' },
     { id: 'tab-btn-help', section: 'help', tab: 'help', onActivate: () => activateTabByName('help') },
   ];
 
@@ -4952,6 +5292,7 @@ async function bootstrap () {
   }
 
   syncAuthUiFromState();
+  updateAdminTabVisibility();
   initAuthButtons();
   setActiveTab('job');
 }
