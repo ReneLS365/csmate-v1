@@ -1,67 +1,310 @@
-// app/src/sync.js
-const KEY = 'csmate.sync.queue.v1'
-function loadQ () {
+const QUEUE_KEY = 'csmate.sync.queue.v1'
+const LAST_SYNC_KEY = 'csmate.sync.last'
+
+const memoryQueue = { jobChanges: [] }
+let memoryLastSync = null
+let syncHandler = async () => ({ ok: true })
+let isSyncing = false
+let currentOnline = typeof navigator !== 'undefined' ? navigator.onLine : true
+let statusElements = null
+let statusResetTimer = null
+
+function hasStorage () {
   try {
-    return JSON.parse(localStorage.getItem(KEY)) || { jobChanges: [] }
+    return typeof localStorage !== 'undefined'
   } catch {
-    return { jobChanges: [] }
+    return false
   }
 }
+
+function loadQ () {
+  if (!hasStorage()) {
+    return { jobChanges: memoryQueue.jobChanges.slice() }
+  }
+  try {
+    const raw = localStorage.getItem(QUEUE_KEY)
+    if (!raw) return { jobChanges: [] }
+    const parsed = JSON.parse(raw)
+    if (parsed && typeof parsed === 'object' && Array.isArray(parsed.jobChanges)) {
+      return { jobChanges: parsed.jobChanges.slice() }
+    }
+  } catch (error) {
+    console.warn('Kunne ikke indlæse sync-kø', error)
+  }
+  return { jobChanges: [] }
+}
+
 function saveQ (q) {
-  localStorage.setItem(KEY, JSON.stringify(q))
+  const payload = { jobChanges: Array.isArray(q?.jobChanges) ? q.jobChanges.slice() : [] }
+  if (!hasStorage()) {
+    memoryQueue.jobChanges = payload.jobChanges.slice()
+    return
+  }
+  try {
+    localStorage.setItem(QUEUE_KEY, JSON.stringify(payload))
+  } catch (error) {
+    console.warn('Kunne ikke gemme sync-kø', error)
+  }
+}
+
+function persistLastSync (ts) {
+  if (!ts) return
+  if (!hasStorage()) {
+    memoryLastSync = ts
+    return
+  }
+  try {
+    localStorage.setItem(LAST_SYNC_KEY, String(ts))
+  } catch (error) {
+    console.warn('Kunne ikke gemme sidst synkroniseret', error)
+  }
+}
+
+export function getLastSyncTimestamp () {
+  if (!hasStorage()) return memoryLastSync
+  try {
+    const raw = localStorage.getItem(LAST_SYNC_KEY)
+    if (!raw) return null
+    const num = Number(raw)
+    return Number.isFinite(num) ? num : null
+  } catch {
+    return null
+  }
+}
+
+function formatTimestamp (ts) {
+  if (!ts) return '-'
+  const date = new Date(Number(ts))
+  if (Number.isNaN(date.getTime())) return '-'
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
+function formatFriendlyTime (ts) {
+  if (!ts) return '-'
+  const date = new Date(Number(ts))
+  if (Number.isNaN(date.getTime())) return '-'
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${pad(date.getHours())}:${pad(date.getMinutes())}`
+}
+
+function pendingEntries () {
+  const queue = loadQ()
+  const pending = queue.jobChanges.filter(entry => !entry?.syncedAt)
+  return { queue, pending }
 }
 
 export function queueChange (jobId, payload = {}) {
-  const q = loadQ()
-  q.jobChanges.push({ jobId, payload, ts: Date.now(), syncedAt: null })
-  saveQ(q)
+  const { queue } = pendingEntries()
+  queue.jobChanges.push({ jobId, payload, ts: Date.now(), syncedAt: null })
+  saveQ(queue)
   updateBadge()
 }
+
 export function pendingCount () {
-  return loadQ().jobChanges.filter(x => !x.syncedAt).length
+  return pendingEntries().pending.length
 }
+
 export function markAllSynced () {
-  const q = loadQ()
+  const { queue, pending } = pendingEntries()
+  if (!pending.length) return getLastSyncTimestamp() || Date.now()
   const now = Date.now()
-  q.jobChanges.forEach(x => { if (!x.syncedAt) x.syncedAt = now })
-  saveQ(q)
+  queue.jobChanges = queue.jobChanges.map(entry => {
+    if (!entry.syncedAt) {
+      return { ...entry, syncedAt: now }
+    }
+    return entry
+  })
+  saveQ(queue)
+  persistLastSync(now)
   return now
 }
+
+function ensureStatusElements () {
+  if (statusElements) return statusElements
+  if (typeof document === 'undefined') return null
+  const bar = document.getElementById('statusbar')
+  if (!bar) return null
+  statusElements = {
+    bar,
+    dot: document.getElementById('status-dot'),
+    statusText: document.getElementById('status-text'),
+    lastSync: document.getElementById('last-sync'),
+    button: document.getElementById('btn-sync-now')
+  }
+  return statusElements
+}
+
+function updateLastSyncDisplay (ts = getLastSyncTimestamp()) {
+  const els = ensureStatusElements()
+  if (!els?.lastSync) return
+  els.lastSync.textContent = formatTimestamp(ts)
+}
+
+function updateStatusLabel ({ forceText } = {}) {
+  const els = ensureStatusElements()
+  if (!els?.statusText) return
+  if (forceText) {
+    els.statusText.textContent = forceText
+    return
+  }
+  if (isSyncing) {
+    els.statusText.textContent = 'Synkroniserer…'
+    return
+  }
+  const pending = pendingCount()
+  const base = currentOnline ? 'Online' : 'Offline'
+  const suffix = pending > 0 ? ` – ${pending} ændring${pending === 1 ? '' : 'er'} klar` : ''
+  els.statusText.textContent = `${base}${suffix}`
+}
+
+function flashStatusMessage (message, duration = 4000) {
+  if (typeof window === 'undefined') return
+  const els = ensureStatusElements()
+  if (!els?.statusText) return
+  if (statusResetTimer) {
+    window.clearTimeout(statusResetTimer)
+    statusResetTimer = null
+  }
+  els.statusText.textContent = message
+  statusResetTimer = window.setTimeout(() => {
+    statusResetTimer = null
+    updateStatusLabel()
+  }, duration)
+}
+
+function setSyncVisualState (running) {
+  const els = ensureStatusElements()
+  isSyncing = running
+  if (els?.bar) {
+    els.bar.dataset.syncState = running ? 'syncing' : 'idle'
+    els.bar.classList.toggle('syncing', running)
+  }
+  if (els?.button) {
+    els.button.disabled = running
+    els.button.setAttribute('aria-busy', running ? 'true' : 'false')
+  }
+  if (!statusResetTimer) {
+    updateStatusLabel()
+  }
+}
+
 export function updateBadge () {
-  const el = document.querySelector('#status-text')
-  if (!el) return
-  const c = pendingCount()
-  el.dataset.pending = String(c)
+  const els = ensureStatusElements()
+  if (!els) return
+  if (els.statusText) {
+    updateStatusLabel()
+  }
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('csmate:pending-change', {
+      detail: { pending: pendingCount() }
+    }))
+  }
+}
+
+function applyOnlineState (online) {
+  const els = ensureStatusElements()
+  currentOnline = online
+  if (!els?.bar || !els?.dot) {
+    updateStatusLabel()
+    return
+  }
+  els.bar.classList.toggle('online', online)
+  els.bar.classList.toggle('offline', !online)
+  els.dot.classList.toggle('online', online)
+  els.dot.classList.toggle('offline', !online)
+  updateStatusLabel()
+}
+
+export async function runSyncNow ({ source = 'manual' } = {}) {
+  if (isSyncing) return { skipped: true }
+  const { pending } = pendingEntries()
+  if (!pending.length) {
+    flashStatusMessage('Ingen ændringer at synkronisere', 2500)
+    return { ok: true, pending: 0, timestamp: getLastSyncTimestamp() }
+  }
+
+  setSyncVisualState(true)
+  try {
+    const result = await syncHandler({ jobChanges: pending.slice(), source })
+    const ts = markAllSynced()
+    updateLastSyncDisplay(ts)
+    updateBadge()
+    flashStatusMessage(`Synkroniseret kl. ${formatFriendlyTime(ts)}`)
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('csmate:sync-complete', {
+        detail: { timestamp: ts, pending: pending.length, result, source }
+      }))
+    }
+    return { ok: true, timestamp: ts, pending: pending.length, result }
+  } catch (error) {
+    console.error('Sync kørsel fejlede', error)
+    flashStatusMessage('Synkronisering fejlede')
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('csmate:sync-error', {
+        detail: { error, source }
+      }))
+    }
+    throw error
+  } finally {
+    setSyncVisualState(false)
+    updateBadge()
+  }
+}
+
+export function registerSyncHandler (handler) {
+  if (typeof handler === 'function') {
+    syncHandler = handler
+  }
 }
 
 export function wireStatusbar () {
-  const bar = document.getElementById('statusbar')
-  const dot = document.getElementById('status-dot')
-  const last = document.getElementById('last-sync')
-  const statusText = document.getElementById('status-text')
+  const els = ensureStatusElements()
+  if (!els) return
 
-  function applyOnlineState () {
-    const online = navigator.onLine
-    bar?.classList.toggle('online', online)
-    bar?.classList.toggle('offline', !online)
-    dot?.classList.toggle('online', online)
-    dot?.classList.toggle('offline', !online)
-    if (statusText) statusText.textContent = online ? 'Online' : 'Offline'
-    updateBadge()
+  applyOnlineState(typeof navigator !== 'undefined' ? navigator.onLine : true)
+  updateLastSyncDisplay()
+  updateBadge()
+
+  if (els.button && !els.button.dataset.syncBound) {
+    els.button.addEventListener('click', async () => {
+      try {
+        await runSyncNow({ source: 'manual' })
+      } catch (error) {
+        console.error('Manuel synkronisering fejlede', error)
+      }
+    })
+    els.button.dataset.syncBound = '1'
   }
 
-  window.addEventListener('online', applyOnlineState)
-  window.addEventListener('offline', applyOnlineState)
-  applyOnlineState()
+  if (typeof window !== 'undefined') {
+    window.addEventListener('online', () => applyOnlineState(true))
+    window.addEventListener('offline', () => applyOnlineState(false))
+    window.addEventListener('storage', event => {
+      if (event.key === QUEUE_KEY) {
+        updateBadge()
+      } else if (event.key === LAST_SYNC_KEY) {
+        updateLastSyncDisplay()
+      }
+    })
+  }
+}
 
-  document.getElementById('btn-sync-now')?.addEventListener('click', () => {
-    const ts = markAllSynced()
-    if (last) {
-      last.textContent = new Date(ts).toISOString().slice(0, 16).replace('T', ' ')
-    }
-    updateBadge()
-    alert('Synkronisering markeret lokalt.')
-  })
+if (typeof window !== 'undefined') {
+  window.CSMateSync = window.CSMateSync || {}
+  window.CSMateSync.runSyncNow = runSyncNow
+  window.CSMateSync.registerSyncHandler = registerSyncHandler
+}
 
-  updateBadge()
+export function __resetSyncStateForTests () {
+  if (hasStorage()) {
+    try { localStorage.removeItem(QUEUE_KEY) } catch {}
+    try { localStorage.removeItem(LAST_SYNC_KEY) } catch {}
+  }
+  memoryQueue.jobChanges = []
+  memoryLastSync = null
+  isSyncing = false
+  statusElements = null
+  statusResetTimer = null
+  currentOnline = typeof navigator !== 'undefined' ? navigator.onLine : true
 }

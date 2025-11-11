@@ -428,68 +428,106 @@
   </section>
 
   <section id="helpSection" class="sektion" hidden>
-    <section id="tab-help" class="tab hidden">
-      <h2>Hjælp</h2>
-      <div class="grid two">
-        <div>
-          <h3>Kom hurtigt i gang</h3>
+    <section id="tab-help" class="tab hidden" aria-labelledby="helpHeading" tabindex="-1">
+      <header class="help-header">
+        <h2 id="helpHeading">Hjælp &amp; genveje</h2>
+        <p class="help-lead muted">Svar på de mest almindelige spørgsmål og tastaturgenveje. Tryk <kbd>Shift</kbd> + <kbd>?</kbd> for at åbne denne fane.</p>
+      </header>
+
+      <div class="help-grid">
+        <article class="help-card" id="help-quickstart" aria-labelledby="helpQuickstartHeading">
+          <h3 id="helpQuickstartHeading">Quickstart</h3>
           <ol>
-            <li>Opret job</li>
-            <li>Vælg system</li>
-            <li>Tæl materialer</li>
-            <li>Udfyld løn</li>
-            <li>Eksportér akkordseddel</li>
+            <li>Opret eller vælg et job på <strong>Job</strong>-fanen.</li>
+            <li>Udfyld <strong>Sagsinfo</strong> med adresse, kunde og dato.</li>
+            <li>Gå til <strong>Optælling</strong>, vælg system og indtast materialer.</li>
+            <li>Tjek <strong>Løn</strong> for timer, kilometertilæg og tillæg.</li>
+            <li>Afslut med <strong>Eksport</strong> eller synk via statusbjælken.</li>
           </ol>
-        </div>
-        <div>
-          <h3>FAQ</h3>
+          <p class="muted">Alle trin fungerer offline – data gemmes lokalt indtil du synkroniserer.</p>
+        </article>
+
+        <article class="help-card" id="help-faq" aria-labelledby="helpFaqHeading">
+          <h3 id="helpFaqHeading">Mini-FAQ</h3>
           <details>
-            <summary>Zoom på mobil</summary>
-            <p>Brug to-finger pinch eller “Vis desktopsite” i browsermenu.</p>
+            <summary>Hvordan zoomer jeg på mobil?</summary>
+            <p>Brug to-finger zoom eller vælg “Vis desktopsite” i browserens menu for præcis scrolling.</p>
+          </details>
+          <details>
+            <summary>Kan jeg bruge CSMate offline?</summary>
+            <p>Ja. Appen er en PWA og virker offline. Når forbindelsen er tilbage, synkroniseres ændringer via statusbjælken.</p>
           </details>
           <details>
             <summary>Installer som app (Android)</summary>
-            <p>Chrome → menu → “Føj til startskærm”.</p>
+            <p>Åbn menuen i Chrome og vælg <em>Føj til startskærm</em>. Du kan også bruge statusbjælkens installationsknap.</p>
           </details>
           <details>
             <summary>Installer som app (iOS/Safari)</summary>
-            <p>Del-ikon → “Føj til hjemmeskærm”.</p>
+            <p>Tryk på delingsikonet og vælg <em>Føj til hjemmeskærm</em>. Følg anvisningen på skærmen.</p>
           </details>
-          <h3>Genveje</h3>
-          <ul>
-            <li><kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>S</kbd> Gem aktivt job</li>
-            <li><kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>P</kbd> Eksport/print</li>
-            <li><kbd>Enter</kbd> Næste handling</li>
-          </ul>
-        </div>
+          <details>
+            <summary>Hvor finder jeg support?</summary>
+            <p>Kontakt din administrator eller send en mail til <a href="mailto:support@csmate.dk">support@csmate.dk</a>. Offline vises denne adresse så du kan skrive når du er online igen.</p>
+          </details>
+        </article>
+
+        <article class="help-card" id="help-shortcuts" aria-labelledby="helpShortcutsHeading">
+          <h3 id="helpShortcutsHeading">Genveje</h3>
+          <p class="muted">Genveje er midlertidigt deaktiveret når modaler eller numpad er åbne.</p>
+          <dl class="shortcut-list">
+            <div>
+              <dt><kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>S</kbd></dt>
+              <dd>Gem aktivt job</dd>
+            </div>
+            <div>
+              <dt><kbd>Ctrl</kbd>/<kbd>⌘</kbd> + <kbd>P</kbd></dt>
+              <dd>Åbn eksport/print</dd>
+            </div>
+            <div>
+              <dt><kbd>Shift</kbd> + <kbd>?</kbd></dt>
+              <dd>Åbn Hjælp-fanen</dd>
+            </div>
+            <div>
+              <dt><kbd>Shift</kbd> + <kbd>D</kbd></dt>
+              <dd>Åbn dev-panel (kun ejere/admins)</dd>
+            </div>
+            <div>
+              <dt><kbd>Enter</kbd></dt>
+              <dd>Gå til næste handling eller felt</dd>
+            </div>
+            <div>
+              <dt><kbd>Esc</kbd></dt>
+              <dd>Luk modaler og numpad</dd>
+            </div>
+          </dl>
+        </article>
+
+        <article class="help-card" id="help-knowledge" aria-labelledby="helpKnowledgeHeading">
+          <h3 id="helpKnowledgeHeading">Book of Scaf Knowledge</h3>
+          <div class="help-knowledge-grid">
+            <section>
+              <h4>Formler (kort)</h4>
+              <ul>
+                <li>Vindlast: brug kursusformlen og lokale data.</li>
+                <li>Søjletryk: regn på egenvægt, nyttelast og areal.</li>
+                <li>Transport: 15&nbsp;m inkl., +7&nbsp;% pr. 10&nbsp;m til 55&nbsp;m.</li>
+                <li>Slæb: følg virksomhedens skema.</li>
+              </ul>
+            </section>
+            <section>
+              <h4>Regler &amp; referencer</h4>
+              <ul>
+                <li>Transporttillæg: hvornår udløses og hvordan dokumenteres.</li>
+                <li>Særskilt akkord: typiske cases hvor særskilt afregning er påkrævet.</li>
+              </ul>
+              <ul class="help-reference-list">
+                <li>HP3 Provinsen (PDF)</li>
+                <li>Overenskomst 2024–2026 (PDF)</li>
+              </ul>
+            </section>
+          </div>
+        </article>
       </div>
-      <hr />
-      <section id="scafbook">
-        <h3>Book of Scaf Knowledge</h3>
-        <div class="grid two">
-          <div>
-            <h4>Formler (kort)</h4>
-            <ul>
-              <li>Vindlast: brug kursusformel og lokale data.</li>
-              <li>Søjletryk: input = egenvægt, nyttelast, areal.</li>
-              <li>Transport: 15 m inkl., +7 % pr. 10 m til 55 m.</li>
-              <li>Slæb: iht. virksomhedens skema.</li>
-            </ul>
-          </div>
-          <div>
-            <h4>Regler</h4>
-            <ul>
-              <li>Transporttillæg: hvornår udløses.</li>
-              <li>Særskilt akkord: typiske cases.</li>
-            </ul>
-            <h4>Links</h4>
-            <ul>
-              <li>HP3 Provinsen (PDF)</li>
-              <li>Overenskomst 2024–2026 (PDF)</li>
-            </ul>
-          </div>
-        </div>
-      </section>
     </section>
   </section>
   <section data-view="admin" id="view-admin" class="sektion tab-view hidden" hidden>

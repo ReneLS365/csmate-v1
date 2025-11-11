@@ -4,17 +4,82 @@ import { akkordSheets, projects } from '../../src/lib/schema.ts'
 import { eq } from 'drizzle-orm'
 import { extractBearerToken, verifyAdminToken } from '../lib/auth'
 
-const handler = async (event: any) => {
+type EventLike = {
+  httpMethod: string
+  headers?: Record<string, string>
+  queryStringParameters?: Record<string, string>
+  body?: string
+}
+
+const json = (statusCode: number, body: Record<string, any>) => ({
+  statusCode,
+  body: JSON.stringify(body),
+  headers: { 'Content-Type': 'application/json' }
+})
+
+const sanitizeString = (value: unknown) => typeof value === 'string' ? value.trim() : ''
+
+const parseBody = (raw: string | undefined) => {
+  if (!raw) return { error: 'Body mangler', data: null }
+  try {
+    const data = JSON.parse(raw)
+    return { data, error: null }
+  } catch {
+    return { data: null, error: 'Body skal være gyldig JSON' }
+  }
+}
+
+const validateSheetPayload = (payload: any, tenantId: string) => {
+  const errors: string[] = []
+  const data: Record<string, any> = {}
+
+  const incomingTenant = sanitizeString(payload?.tenantId)
+  if (!incomingTenant) errors.push('tenantId kræves')
+  if (incomingTenant && incomingTenant !== tenantId) errors.push('Ingen adgang til tenant')
+  data.tenantId = incomingTenant
+
+  const projectId = sanitizeString(payload?.projectId)
+  if (!projectId) errors.push('projectId kræves')
+  data.projectId = projectId
+
+  const sheetNo = sanitizeString(payload?.sheetNo)
+  if (!sheetNo) errors.push('sheetNo kræves')
+  data.sheetNo = sheetNo
+
+  data.phase = sanitizeString(payload?.phase) || 'montage'
+  data.system = sanitizeString(payload?.system) || null
+  data.payProfileId = sanitizeString(payload?.payProfileId) || null
+  data.hoursTotal = sanitizeString(payload?.hoursTotal) || '0'
+  data.kmTotal = sanitizeString(payload?.kmTotal) || '0'
+  data.slaebPercent = sanitizeString(payload?.slaebPercent) || '0'
+  data.extraPercent = sanitizeString(payload?.extraPercent) || '0'
+  data.demontageFactor = sanitizeString(payload?.demontageFactor) || '0.50'
+  data.materialSum = sanitizeString(payload?.materialSum) || '0'
+  data.montageSum = sanitizeString(payload?.montageSum) || '0'
+  data.demontageSum = sanitizeString(payload?.demontageSum) || '0'
+  data.totalAmount = sanitizeString(payload?.totalAmount) || '0'
+  data.hourRate = sanitizeString(payload?.hourRate) || '0'
+  data.createdByUserId = sanitizeString(payload?.createdByUserId) || null
+
+  return { valid: errors.length === 0, data, errors }
+}
+
+const ensureProjectForTenant = async (projectId: string, tenantId: string) => {
+  const [project] = await db
+    .select({ tenantId: projects.tenantId })
+    .from(projects)
+    .where(eq(projects.id, projectId))
+    .limit(1)
+  return project && project.tenantId === tenantId
+}
+
+const handler = async (event: EventLike) => {
   try {
     const method = event.httpMethod
 
     const token = extractBearerToken(event.headers ?? {})
     if (!token) {
-      return {
-        statusCode: 401,
-        body: JSON.stringify({ error: 'Authorization token mangler' }),
-        headers: { 'Content-Type': 'application/json' },
-      }
+      return json(401, { error: 'Authorization token mangler' })
     }
 
     let auth
@@ -22,120 +87,69 @@ const handler = async (event: any) => {
       auth = verifyAdminToken(token)
     } catch (error) {
       console.error('sheets token verification failed', error)
-      return {
-        statusCode: 401,
-        body: JSON.stringify({ error: 'Ugyldigt eller udløbet token' }),
-        headers: { 'Content-Type': 'application/json' },
-      }
+      return json(401, { error: 'Ugyldigt eller udløbet token' })
     }
 
     if (method === 'GET') {
-      const projectId = event.queryStringParameters?.projectId
+      const projectId = sanitizeString(event.queryStringParameters?.projectId)
       if (!projectId) {
-        return {
-          statusCode: 400,
-          body: JSON.stringify({ error: 'projectId kræves' }),
-          headers: { 'Content-Type': 'application/json' },
-        }
+        return json(400, { error: 'projectId kræves' })
       }
 
-      const [project] = await db
-        .select({ tenantId: projects.tenantId })
-        .from(projects)
-        .where(eq(projects.id, projectId))
-        .limit(1)
-
-      if (!project || project.tenantId !== auth.tenantId) {
-        return {
-          statusCode: 403,
-          body: JSON.stringify({ error: 'Ingen adgang til projektet' }),
-          headers: { 'Content-Type': 'application/json' },
+      try {
+        const allowed = await ensureProjectForTenant(projectId, auth.tenantId)
+        if (!allowed) {
+          return json(403, { error: 'Ingen adgang til projektet' })
         }
+      } catch (error) {
+        console.error('sheets project lookup failed', error)
+        return json(500, { error: 'Databasefejl ved validering af projekt' })
       }
 
-      const rows = await db.select().from(akkordSheets).where(eq(akkordSheets.projectId, projectId))
-      return {
-        statusCode: 200,
-        body: JSON.stringify(rows),
-        headers: { 'Content-Type': 'application/json' },
+      try {
+        const rows = await db.select().from(akkordSheets).where(eq(akkordSheets.projectId, projectId))
+        return json(200, rows)
+      } catch (error) {
+        console.error('sheets select failed', error)
+        return json(500, { error: 'Databasefejl ved hentning af akkordsedler' })
       }
     }
 
     if (method === 'POST') {
-      if (!event.body) {
-        return {
-          statusCode: 400,
-          body: JSON.stringify({ error: 'Body mangler' }),
-          headers: { 'Content-Type': 'application/json' },
-        }
+      const { data: payload, error } = parseBody(event.body)
+      if (error) {
+        return json(400, { error })
       }
 
-      const data = JSON.parse(event.body)
-
-      if (!data.tenantId || data.tenantId !== auth.tenantId) {
-        return {
-          statusCode: 403,
-          body: JSON.stringify({ error: 'Ingen adgang til tenant' }),
-          headers: { 'Content-Type': 'application/json' },
-        }
+      const { valid, data, errors } = validateSheetPayload(payload, auth.tenantId)
+      if (!valid) {
+        const status = errors.includes('Ingen adgang til tenant') ? 403 : 400
+        return json(status, { error: 'Ugyldig payload', details: errors })
       }
 
-      if (!data.projectId) {
-        return {
-          statusCode: 400,
-          body: JSON.stringify({ error: 'projectId kræves' }),
-          headers: { 'Content-Type': 'application/json' },
+      try {
+        const allowed = await ensureProjectForTenant(data.projectId, auth.tenantId)
+        if (!allowed) {
+          return json(403, { error: 'Ingen adgang til projektet' })
         }
+      } catch (error) {
+        console.error('sheets project validation failed', error)
+        return json(500, { error: 'Databasefejl ved validering af projekt' })
       }
 
-      const [project] = await db
-        .select({ tenantId: projects.tenantId })
-        .from(projects)
-        .where(eq(projects.id, data.projectId))
-        .limit(1)
-
-      if (!project || project.tenantId !== auth.tenantId) {
-        return {
-          statusCode: 403,
-          body: JSON.stringify({ error: 'Ingen adgang til projektet' }),
-          headers: { 'Content-Type': 'application/json' },
-        }
-      }
-
-      const [inserted] = await db
-        .insert(akkordSheets)
-        .values({
-          tenantId: data.tenantId,
-          projectId: data.projectId,
-          sheetNo: data.sheetNo,
-          phase: data.phase ?? 'montage',
-          system: data.system ?? null,
-          payProfileId: data.payProfileId ?? null,
-          hoursTotal: data.hoursTotal ?? '0',
-          kmTotal: data.kmTotal ?? '0',
-          slæbPercent: data.slaebPercent ?? '0',
-          extraPercent: data.extraPercent ?? '0',
-          demontageFactor: data.demontageFactor ?? '0.50',
-          materialSum: data.materialSum ?? '0',
-          montageSum: data.montageSum ?? '0',
-          demontageSum: data.demontageSum ?? '0',
-          totalAmount: data.totalAmount ?? '0',
-          hourRate: data.hourRate ?? '0',
-          createdByUserId: data.createdByUserId ?? null,
-        })
-        .returning()
-
-      return {
-        statusCode: 200,
-        body: JSON.stringify(inserted),
-        headers: { 'Content-Type': 'application/json' },
+      try {
+        const [inserted] = await db.insert(akkordSheets).values(data).returning()
+        return json(200, inserted)
+      } catch (error) {
+        console.error('sheets insert failed', error)
+        return json(500, { error: 'Databasefejl ved oprettelse af ark' })
       }
     }
 
     return { statusCode: 405, body: 'Method Not Allowed' }
-  } catch (err: any) {
-    console.error('sheets function error', err)
-    return { statusCode: 500, body: JSON.stringify({ error: 'Internal Server Error' }) }
+  } catch (error) {
+    console.error('sheets function error', error)
+    return json(500, { error: 'Internal Server Error' })
   }
 }
 
