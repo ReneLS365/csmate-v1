@@ -11,7 +11,11 @@ let statusResetTimer = null
 
 function hasStorage () {
   try {
-    return typeof localStorage !== 'undefined'
+    if (typeof localStorage === 'undefined') return false
+    const testKey = '__csmate.sync.test__'
+    localStorage.setItem(testKey, '1')
+    localStorage.removeItem(testKey)
+    return true
   } catch {
     return false
   }
@@ -23,21 +27,26 @@ function loadQ () {
   }
   try {
     const raw = localStorage.getItem(QUEUE_KEY)
-    if (!raw) return { jobChanges: [] }
+    if (!raw) {
+      memoryQueue.jobChanges = []
+      return { jobChanges: [] }
+    }
     const parsed = JSON.parse(raw)
     if (parsed && typeof parsed === 'object' && Array.isArray(parsed.jobChanges)) {
-      return { jobChanges: parsed.jobChanges.slice() }
+      const items = parsed.jobChanges.slice()
+      memoryQueue.jobChanges = items.slice()
+      return { jobChanges: items }
     }
   } catch (error) {
     console.warn('Kunne ikke indlæse sync-kø', error)
   }
-  return { jobChanges: [] }
+  return { jobChanges: memoryQueue.jobChanges.slice() }
 }
 
 function saveQ (q) {
   const payload = { jobChanges: Array.isArray(q?.jobChanges) ? q.jobChanges.slice() : [] }
+  memoryQueue.jobChanges = payload.jobChanges.slice()
   if (!hasStorage()) {
-    memoryQueue.jobChanges = payload.jobChanges.slice()
     return
   }
   try {
@@ -49,8 +58,8 @@ function saveQ (q) {
 
 function persistLastSync (ts) {
   if (!ts) return
+  memoryLastSync = ts
   if (!hasStorage()) {
-    memoryLastSync = ts
     return
   }
   try {
@@ -68,7 +77,7 @@ export function getLastSyncTimestamp () {
     const num = Number(raw)
     return Number.isFinite(num) ? num : null
   } catch {
-    return null
+    return memoryLastSync
   }
 }
 
