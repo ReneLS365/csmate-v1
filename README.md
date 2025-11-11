@@ -50,6 +50,13 @@ Service worker registreres automatisk i produktion; ved lokale tests kan den cac
   - E2E-tests: `npm run e2e`
   - Lighthouse CI: `npx lhci collect && npx lhci assert --config=.lighthouserc.cjs`
 
+## Testplan PR #125 → HEAD
+
+Se [docs/testing/pr-125-forward.md](docs/testing/pr-125-forward.md) for en detaljeret rapport over alle ændringer fra PR #125 til nu, inkl.:
+- feature-områder pr. PR
+- automatiske testresultater (lint, Vitest, Playwright, build)
+- kendte kritiske regressioner og TODOs
+
 ## Eksport og print
 - **Del til E-komplet (CSV)**: Eksporterer en semikolon-separeret fil med Sagsinfo, materialer (inkl. manuelle og tralleløft), lønlinjer og totaler. Tal skrives med komma-decimaler.
 - **Eksportér PDF + CSV**: Genererer først CSV (som ovenfor), beregner løn (kører `Beregn løn`) og laver derefter en PDF med Sagsinfo, materialetabel, lønoversigt, totaler samt den aktuelle resultatsektion.
