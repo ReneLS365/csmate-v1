@@ -1,13 +1,41 @@
 import { db } from '../../src/lib/db.ts'
-import { users, userTenants } from '../../src/lib/schema.ts'
+import { tenants, users, userTenants } from '../../src/lib/schema.ts'
 import { verifyJwt } from './_auth0-verify'
-import { and, asc, eq } from 'drizzle-orm'
+import { and, asc, eq, or } from 'drizzle-orm'
 
 const json = (status, body) => ({
   statusCode: status,
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify(body)
 })
+
+const TENANT_ROLE_MAP = new Map([
+  ['owner', 'owner'],
+  ['superadmin', 'owner'],
+  ['tenant_admin', 'tenantAdmin'],
+  ['tenantadmin', 'tenantAdmin'],
+  ['tenant-admin', 'tenantAdmin'],
+  ['worker', 'worker']
+])
+
+const CANONICAL_TO_DB_ROLE = new Map([
+  ['owner', 'superadmin'],
+  ['tenantAdmin', 'tenant_admin'],
+  ['worker', 'worker']
+])
+
+const mapTenantRole = (role) => {
+  if (!role) return 'worker'
+  const normalized = String(role).trim().toLowerCase()
+  return TENANT_ROLE_MAP.get(normalized) || 'worker'
+}
+
+const mapRoleForDb = (role) => {
+  if (!role) return null
+  const normalized = String(role).trim()
+  const canonical = mapTenantRole(normalized)
+  return CANONICAL_TO_DB_ROLE.get(canonical) || null
+}
 
 async function findUserIdBySub(sub) {
   if (!sub) return null
@@ -20,21 +48,40 @@ async function findUserIdBySub(sub) {
   return record?.id || null
 }
 
+async function resolveTenantRecord(tenantKey) {
+  const normalized = typeof tenantKey === 'string' ? tenantKey.trim() : ''
+  if (!normalized) return null
+  const [record] = await db
+    .select({ id: tenants.id, slug: tenants.slug })
+    .from(tenants)
+    .where(or(eq(tenants.id, normalized), eq(tenants.slug, normalized)))
+    .limit(1)
+  return record || null
+}
+
 async function getCallerRoles(sub) {
   const userId = await findUserIdBySub(sub)
   if (!userId) return []
 
   const rows = await db
-    .select({ tenantId: userTenants.tenantId, role: userTenants.role })
+    .select({ tenantId: userTenants.tenantId, tenantSlug: tenants.slug, role: userTenants.role })
     .from(userTenants)
+    .innerJoin(tenants, eq(tenants.id, userTenants.tenantId))
     .where(and(eq(userTenants.userId, userId), eq(userTenants.isActive, true)))
 
-  return rows.map(row => ({ tenantId: row.tenantId, role: row.role }))
+  return rows.map(row => ({ tenantId: row.tenantId, tenantSlug: row.tenantSlug, role: mapTenantRole(row.role) }))
 }
 
-function isAllowed(roles, tenantId) {
+function isAllowed(roles, tenantId, tenantSlug = '') {
   if (!Array.isArray(roles) || roles.length === 0) return false
-  return roles.some(role => role.role === 'superadmin' || (role.tenantId === tenantId && role.role === 'tenant_admin'))
+  const normalizedId = typeof tenantId === 'string' ? tenantId : ''
+  const normalizedSlug = typeof tenantSlug === 'string' ? tenantSlug : ''
+  return roles.some(role => {
+    if (!role) return false
+    if (role.role === 'owner') return true
+    const matchTenant = role.tenantId === normalizedId || (normalizedSlug && role.tenantSlug === normalizedSlug)
+    return matchTenant && role.role === 'tenantAdmin'
+  })
 }
 
 async function handleGet(event, callerRoles) {
@@ -43,9 +90,12 @@ async function handleGet(event, callerRoles) {
     return json(400, { error: 'Missing tenantId' })
   }
 
-  const normalizedTenantId = tenantId.trim()
+  const tenantRecord = await resolveTenantRecord(tenantId)
+  if (!tenantRecord) {
+    return json(404, { error: 'Tenant not found' })
+  }
 
-  if (!isAllowed(callerRoles, normalizedTenantId)) {
+  if (!isAllowed(callerRoles, tenantRecord.id, tenantRecord.slug)) {
     return json(403, { error: 'Forbidden' })
   }
 
@@ -58,16 +108,34 @@ async function handleGet(event, callerRoles) {
     })
     .from(userTenants)
     .innerJoin(users, eq(users.id, userTenants.userId))
-    .where(and(eq(userTenants.tenantId, normalizedTenantId), eq(userTenants.isActive, true)))
+    .where(and(eq(userTenants.tenantId, tenantRecord.id), eq(userTenants.isActive, true)))
     .orderBy(asc(users.email))
 
-  return json(200, { users: rows })
+  const usersPayload = rows.map(row => {
+    const canonicalRole = mapTenantRole(row.role)
+    const roles = canonicalRole === 'owner' ? ['owner', 'tenantAdmin'] : [canonicalRole]
+    return {
+      id: row.userId,
+      email: row.email,
+      displayName: row.name || row.email,
+      roles,
+      tenants: [
+        {
+          id: tenantRecord.id,
+          slug: tenantRecord.slug,
+          role: canonicalRole,
+        },
+      ],
+    }
+  })
+
+  return json(200, { users: usersPayload })
 }
 
-const ASSIGNABLE_ROLES = new Set(['worker', 'tenant_admin', 'superadmin'])
+const ASSIGNABLE_ROLES = new Set(['worker', 'tenantAdmin'])
 
 const callerHasSuperadminRole = (roles) =>
-  Array.isArray(roles) && roles.some(role => role?.role === 'superadmin')
+  Array.isArray(roles) && roles.some(role => role?.role === 'owner')
 
 async function handlePost(event, callerRoles) {
   let body
@@ -77,43 +145,82 @@ async function handlePost(event, callerRoles) {
     return json(400, { error: 'Invalid JSON body' })
   }
 
-  const tenantId = typeof body.tenantId === 'string' ? body.tenantId.trim() : ''
+  const tenantKey = typeof body.tenantId === 'string' ? body.tenantId.trim() : ''
   const userId = typeof body.userId === 'string' ? body.userId.trim() : ''
-  const role = typeof body.role === 'string' ? body.role.trim() : ''
+  const requestedRole = typeof body.role === 'string' ? body.role.trim() : ''
+  const canonicalRole = mapTenantRole(requestedRole)
 
-  if (!tenantId || !userId || !role) {
+  if (!tenantKey || !userId || !canonicalRole) {
     return json(400, { error: 'Missing tenantId/userId/role' })
   }
 
-  if (!isAllowed(callerRoles, tenantId)) {
+  const tenantRecord = await resolveTenantRecord(tenantKey)
+  if (!tenantRecord) {
+    return json(404, { error: 'Tenant not found' })
+  }
+
+  if (!isAllowed(callerRoles, tenantRecord.id, tenantRecord.slug)) {
     return json(403, { error: 'Forbidden' })
   }
 
-  if (!ASSIGNABLE_ROLES.has(role)) {
+  if (!ASSIGNABLE_ROLES.has(canonicalRole)) {
     return json(400, { error: 'Unsupported role' })
   }
 
-  if (role === 'superadmin' && !callerHasSuperadminRole(callerRoles)) {
+  if (canonicalRole === 'owner' && !callerHasSuperadminRole(callerRoles)) {
     return json(403, { error: 'Forbidden role escalation' })
+  }
+
+  const dbRole = mapRoleForDb(canonicalRole)
+  if (!dbRole) {
+    return json(400, { error: 'Unsupported role' })
   }
 
   await db
     .insert(userTenants)
     .values({
       userId,
-      tenantId,
-      role,
+      tenantId: tenantRecord.id,
+      role: dbRole,
       isActive: true
     })
     .onConflictDoUpdate({
       target: [userTenants.userId, userTenants.tenantId],
       set: {
-        role,
+        role: dbRole,
         isActive: true
       }
     })
 
-  return json(200, { ok: true })
+  const [updated] = await db
+    .select({
+      userId: users.id,
+      email: users.email,
+      name: users.name,
+      role: userTenants.role,
+    })
+    .from(users)
+    .innerJoin(userTenants, and(eq(userTenants.userId, users.id), eq(userTenants.tenantId, tenantRecord.id)))
+    .where(eq(users.id, userId))
+    .limit(1)
+
+  const responseUser = updated
+    ? {
+        id: updated.userId,
+        email: updated.email,
+        displayName: updated.name || updated.email,
+        roles: canonicalRole === 'owner' ? ['owner', 'tenantAdmin'] : [canonicalRole],
+        tenants: [
+          {
+            id: tenantRecord?.id || tenantKey,
+            slug: tenantRecord?.slug || null,
+            role: canonicalRole,
+          },
+        ],
+      }
+    : null
+
+  return json(200, { ok: true, user: responseUser })
 }
 
 export const handler = async (event) => {

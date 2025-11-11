@@ -35,10 +35,16 @@ test.describe('Auth og Admin UI', () => {
         body: JSON.stringify({
           users: [
             {
-              userId: 'auth0|test-user',
+              id: 'auth0|test-user',
               email: 'admin@example.com',
-              name: 'Test Admin',
-              role: 'tenant_admin'
+              displayName: 'Test Admin',
+              roles: ['tenantAdmin'],
+              tenants: [
+                {
+                  id: 'default',
+                  role: 'tenantAdmin'
+                }
+              ]
             }
           ]
         })
