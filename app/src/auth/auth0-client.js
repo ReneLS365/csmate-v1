@@ -1,30 +1,34 @@
-import { ensureUserFromAuth0, getCurrentUser, setCurrentUser } from '../state/users.js'
+import {
+  ensureUserFromAuth0,
+  getCurrentUser,
+  setCurrentUser,
+  mergeRemoteUserProfile
+} from '../state/users.js'
 
 const defaultState = Object.freeze({
   isReady: false,
   isAuthenticated: false,
   user: null,
-  roles: Object.freeze([])
+  profile: null,
+  lastSyncError: null
 })
 
 let auth0Client = null
-let authState = { ...defaultState, roles: [] }
+let authState = { ...defaultState }
 
-function normalizeRolesEntries (entries) {
-  if (!Array.isArray(entries)) return []
-  return entries
-    .map(entry => {
-      if (!entry || typeof entry !== 'object') return null
-      const tenantId = typeof entry.tenantId === 'string' && entry.tenantId.trim()
-        ? entry.tenantId.trim()
-        : null
-      const role = typeof entry.role === 'string' && entry.role.trim()
-        ? entry.role.trim()
-        : null
-      if (!tenantId || !role) return null
-      return { tenantId, role }
-    })
-    .filter(Boolean)
+function cloneProfile (profile) {
+  if (!profile || typeof profile !== 'object') return null
+  const copy = { ...profile }
+  if (Array.isArray(copy.roles)) {
+    copy.roles = copy.roles.slice()
+  }
+  if (Array.isArray(copy.tenants)) {
+    copy.tenants = copy.tenants.map(entry => ({ ...entry }))
+  }
+  if (copy.metadata && typeof copy.metadata === 'object') {
+    copy.metadata = { ...copy.metadata }
+  }
+  return copy
 }
 
 function setWindowActiveUser (user) {
@@ -55,12 +59,9 @@ function clearStoredUser () {
   }
 
   setWindowActiveUser(fallbackUser || null)
-
-  if (Array.isArray(authState.roles) && authState.roles.length) {
-    authState.roles = []
-  }
+  authState.profile = fallbackUser ? cloneProfile(fallbackUser) : null
   if (typeof window !== 'undefined' && window.CSMATE_AUTH) {
-    window.CSMATE_AUTH.roles = []
+    window.CSMATE_AUTH.profile = authState.profile
   }
 }
 
@@ -68,12 +69,12 @@ function getWindowAuthSnapshot () {
   if (typeof window === 'undefined') return null
   const snapshot = window.CSMATE_AUTH
   if (!snapshot || typeof snapshot !== 'object') return null
-  const roles = normalizeRolesEntries(snapshot.roles)
   const user = snapshot.user && typeof snapshot.user === 'object' ? { ...snapshot.user } : null
+  const profile = cloneProfile(snapshot.profile)
   return {
     isAuthenticated: Boolean(snapshot.isAuthenticated),
     user,
-    roles,
+    profile,
     offline: Boolean(snapshot.offline)
   }
 }
@@ -88,6 +89,7 @@ function applyStoredUserFromAuth0 (authUser) {
     const storedUser = ensureUserFromAuth0(authUser)
     if (storedUser) {
       setWindowActiveUser(storedUser)
+      authState.profile = cloneProfile(storedUser)
       return storedUser
     }
   } catch (error) {
@@ -102,7 +104,7 @@ if (typeof window !== 'undefined') {
   window.CSMATE_AUTH = window.CSMATE_AUTH || {
     isAuthenticated: false,
     user: null,
-    roles: []
+    profile: null
   }
 }
 
@@ -121,7 +123,7 @@ function publishState (state) {
   const offline = window.CSMATE_AUTH?.offline && !state.isAuthenticated
   const nextState = {
     ...state,
-    roles: Array.isArray(state?.roles) ? state.roles.slice() : []
+    profile: cloneProfile(state?.profile)
   }
   if (offline) {
     nextState.offline = true
@@ -134,21 +136,24 @@ function cloneAuthState (state = authState) {
     isReady: Boolean(state?.isReady),
     isAuthenticated: Boolean(state?.isAuthenticated),
     user: state?.user ? { ...state.user } : null,
-    roles: Array.isArray(state?.roles) ? state.roles.slice() : []
+    profile: cloneProfile(state?.profile),
+    lastSyncError: state?.lastSyncError || null
   }
 }
 
 async function syncUserWithBackend () {
   if (!authState.isAuthenticated || !authState.user) {
-    authState.roles = []
-    return
+    authState.profile = cloneProfile(getCurrentUser())
+    authState.lastSyncError = null
+    return null
   }
 
-  authState.roles = []
+  authState.lastSyncError = null
 
   const accessToken = await getAccessToken()
   if (!accessToken) {
-    return
+    authState.lastSyncError = 'missing_token'
+    return null
   }
 
   const user = authState.user || {}
@@ -162,7 +167,8 @@ async function syncUserWithBackend () {
         : ''
 
   if (!sub || !email) {
-    return
+    authState.lastSyncError = 'missing_claims'
+    return null
   }
 
   try {
@@ -186,25 +192,52 @@ async function syncUserWithBackend () {
       } catch (error) {
         errorMessage = ''
       }
-      console.error('auth-sync failed', errorMessage || response.statusText)
-      return
+      const message = errorMessage || response.statusText
+      authState.lastSyncError = message || `HTTP_${response.status}`
+      console.error('auth-sync failed', message)
+      return null
     }
 
     let payload = null
     try {
       payload = await response.json()
     } catch (error) {
+      authState.lastSyncError = 'invalid_json'
       console.error('auth-sync invalid JSON', error)
-      return
+      return null
     }
 
     if (!payload || typeof payload !== 'object') {
-      return
+      authState.lastSyncError = 'invalid_payload'
+      return null
     }
 
-    authState.roles = normalizeRolesEntries(payload.roles)
+    const profilePayload = payload.user || null
+    if (!profilePayload || typeof profilePayload !== 'object') {
+      authState.lastSyncError = 'missing_user'
+      return null
+    }
+
+    const merged = mergeRemoteUserProfile({
+      ...profilePayload,
+      authId: sub,
+      email,
+      displayName: profilePayload.displayName || name || email
+    })
+
+    if (merged) {
+      authState.profile = cloneProfile(merged)
+      setWindowActiveUser(merged)
+      authState.lastSyncError = null
+      return merged
+    }
+
+    authState.lastSyncError = 'merge_failed'
+    return null
   } catch (error) {
+    authState.lastSyncError = error?.message || 'fetch_failed'
     console.error('auth-sync fetch error', error)
+    return null
   }
 }
 
@@ -249,16 +282,23 @@ export async function initAuth () {
         isReady: true,
         isAuthenticated: snapshot.isAuthenticated,
         user: snapshot.user,
-        roles: snapshot.roles
+        profile: snapshot.profile || cloneProfile(getCurrentUser()),
+        lastSyncError: null
       }
       if (snapshot.isAuthenticated && snapshot.user) {
-        applyStoredUserFromAuth0(snapshot.user)
+        const stored = applyStoredUserFromAuth0(snapshot.user)
+        if (stored) {
+          authState.profile = cloneProfile(stored)
+        }
       } else {
-        setWindowActiveUser(getCurrentUser())
+        const fallback = getCurrentUser()
+        setWindowActiveUser(fallback)
+        authState.profile = cloneProfile(fallback)
       }
     } else {
-      authState = { ...defaultState, isReady: true, roles: [] }
-      setWindowActiveUser(getCurrentUser())
+      const fallback = getCurrentUser()
+      authState = { ...defaultState, isReady: true, profile: cloneProfile(fallback) }
+      setWindowActiveUser(fallback)
     }
     publishState(authState)
     return cloneAuthState()
@@ -269,24 +309,38 @@ export async function initAuth () {
   try {
     const isAuthenticated = await client.isAuthenticated()
     const user = isAuthenticated ? await client.getUser() : null
+    let profile = null
     if (isAuthenticated && user) {
-      applyStoredUserFromAuth0(user)
+      const stored = applyStoredUserFromAuth0(user)
+      profile = stored ? cloneProfile(stored) : cloneProfile(getCurrentUser())
     } else {
       clearStoredUser()
+      profile = cloneProfile(getCurrentUser())
     }
     authState = {
       isReady: true,
       isAuthenticated,
       user,
-      roles: []
+      profile,
+      lastSyncError: null
     }
     if (isAuthenticated && user) {
-      await syncUserWithBackend()
+      const merged = await syncUserWithBackend()
+      if (merged) {
+        authState.profile = cloneProfile(merged)
+      } else if (!authState.profile) {
+        authState.profile = cloneProfile(getCurrentUser())
+      }
     }
   } catch (error) {
     console.error('Kunne ikke læse Auth0-status', error)
-    authState = { ...defaultState, isReady: true, roles: [] }
     clearStoredUser()
+    authState = {
+      ...defaultState,
+      isReady: true,
+      profile: cloneProfile(getCurrentUser()),
+      lastSyncError: error?.message || null
+    }
   }
 
   publishState(authState)
@@ -348,16 +402,7 @@ export function getAuthState () {
   return cloneAuthState()
 }
 
-export function getRoles () {
-  return Array.isArray(authState.roles) ? authState.roles.slice() : []
-}
-
-export function isAdmin () {
-  const roles = Array.isArray(authState.roles) ? authState.roles : []
-  if (roles.some(role => role?.role === 'superadmin' || role?.role === 'tenant_admin')) {
-    return true
-  }
-  const user = getCurrentUser()
-  const role = typeof user?.role === 'string' ? user.role.trim() : ''
-  return role === 'owner' || role === 'firmAdmin' || role === 'firma-admin'
+export function getUserProfileSnapshot () {
+  const profile = authState.profile || getCurrentUser()
+  return cloneProfile(profile)
 }

@@ -13,6 +13,40 @@ type RolePayload = {
   role: string
 }
 
+const TENANT_ROLE_MAP = new Map<string, string>([
+  ['owner', 'owner'],
+  ['superadmin', 'owner'],
+  ['tenant_admin', 'tenantAdmin'],
+  ['tenantadmin', 'tenantAdmin'],
+  ['tenant-admin', 'tenantAdmin'],
+  ['worker', 'worker'],
+])
+
+const mapTenantRole = (role: string) => {
+  if (!role) return 'worker'
+  const normalized = role.trim().toLowerCase()
+  return TENANT_ROLE_MAP.get(normalized) ?? 'worker'
+}
+
+const deriveGlobalRoles = (memberships: RolePayload[]) => {
+  const set = new Set<string>()
+  memberships.forEach(entry => {
+    const role = mapTenantRole(entry.role)
+    if (role === 'owner') {
+      set.add('owner')
+      set.add('tenantAdmin')
+    } else if (role === 'tenantAdmin') {
+      set.add('tenantAdmin')
+    } else {
+      set.add('worker')
+    }
+  })
+  if (set.size === 0) {
+    set.add('worker')
+  }
+  return Array.from(set)
+}
+
 const json = (status: number, body: unknown) => ({
   statusCode: status,
   headers: { 'Content-Type': 'application/json' },
@@ -168,11 +202,25 @@ const handler = async (event: any) => {
     }
   }
 
+  const canonicalTenants = roles.map(role => ({
+    id: role.tenantUuid,
+    slug: role.tenantSlug,
+    role: mapTenantRole(role.role),
+  }))
+
   return json(200, {
     ok: true,
-    userId: sub,
-    userUuid: userRecord.id,
-    roles: roles.map(role => ({ tenantId: role.tenantId, role: role.role })),
+    user: {
+      id: userRecord.id,
+      authId: sub,
+      email,
+      displayName: nameCandidate || email,
+      roles: deriveGlobalRoles(roles),
+      tenants: canonicalTenants,
+      metadata: {
+        lastLoginAt: now.toISOString(),
+      },
+    },
   })
 }
 

@@ -28,9 +28,13 @@ export function canPerformAction ({ user, action, rolePermissions, fallbackAllow
     return isFallbackAllowed(action, fallbackAllow)
   }
   if (!rolePermissions || typeof rolePermissions !== 'object') return false
-  const role = typeof user.role === 'string' ? user.role : ''
-  if (!role) return false
-  const permissions = rolePermissions[role]
-  if (!permissions || typeof permissions !== 'object') return false
-  return Boolean(permissions[action])
+  const roles = Array.isArray(user.roles) && user.roles.length
+    ? user.roles
+    : (typeof user.role === 'string' && user.role ? [user.role] : [])
+  if (!roles.length) return false
+  return roles.some(roleName => {
+    const permissions = rolePermissions[roleName]
+    if (!permissions || typeof permissions !== 'object') return false
+    return Boolean(permissions[action])
+  })
 }

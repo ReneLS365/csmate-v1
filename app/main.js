@@ -15,15 +15,19 @@ import {
   signupWithRedirect,
   logout as authLogout,
   getAuthState,
-  getRoles,
-  isAdmin,
+  getUserProfileSnapshot,
   getAccessToken
 } from './src/auth/auth0-client.js'
 import {
   getCurrentUser as getStoredUser,
   setCurrentUser as setStoredCurrentUser,
   getAllUsers,
-  updateUserRole as updateStoredUserRole
+  updateUserRole as updateStoredUserRole,
+  getUserTenants,
+  getUserRoles,
+  isOwner,
+  isTenantAdmin,
+  canSeeAdminTab
 } from './src/state/users.js'
 import { setupPwaInstall } from './src/pwa-install.js'
 import {
@@ -59,7 +63,7 @@ let materialsVirtualListController = null
 let latestAuthState = { isAuthenticated: false, user: null }
 let adminViewInitialized = false
 let adminViewInitPromise = null
-let lastAdminRolesSignature = ''
+let lastAdminTenantsSignature = ''
 
 function setLatestAuthState(state) {
   latestAuthState = {
@@ -67,6 +71,17 @@ function setLatestAuthState(state) {
     user: state?.user ? { ...state.user } : null
   }
   return latestAuthState
+}
+
+function getActiveProfile () {
+  const profile = getUserProfileSnapshot()
+  if (profile) return profile
+  return getStoredUser()
+}
+
+function canActiveUserAccessAdmin () {
+  const profile = getActiveProfile()
+  return canSeeAdminTab(profile)
 }
 
 function syncAuthUiFromState() {
@@ -213,7 +228,7 @@ function syncActiveTabBySection(activeSectionId) {
 function setActiveTab(tabName) {
   if (!tabName) return;
   const normalizedTab = normalizeKey(tabName);
-  if (normalizedTab === 'admin' && !isAdmin()) {
+  if (normalizedTab === 'admin' && !canActiveUserAccessAdmin()) {
     return;
   }
   const section = mapTabToSection(tabName);
@@ -259,20 +274,21 @@ function updateAdminTabVisibility() {
   const adminSection = document.getElementById('view-admin');
   if (!adminTabBtn || !adminSection) return;
 
-  if (isAdmin()) {
+  const profile = getActiveProfile();
+  if (canSeeAdminTab(profile)) {
     adminTabBtn.classList.remove('hidden');
     adminTabBtn.removeAttribute('hidden');
     adminTabBtn.removeAttribute('aria-hidden');
-    const roles = getRoles();
+    const tenants = getUserTenants(profile);
     const signature = JSON.stringify(
-      roles
-        .filter(role => role && typeof role.tenantId === 'string' && role.tenantId)
-        .map(role => `${role.tenantId}:${role.role || ''}`)
+      tenants
+        .filter(tenant => tenant && (tenant.id || tenant.slug))
+        .map(tenant => `${tenant.id || tenant.slug}:${tenant.role || ''}`)
         .sort()
     );
-    const hasChanged = signature !== lastAdminRolesSignature;
+    const hasChanged = signature !== lastAdminTenantsSignature;
     if (hasChanged) {
-      lastAdminRolesSignature = signature;
+      lastAdminTenantsSignature = signature;
       adminViewInitialized = false;
       adminViewInitPromise = null;
       if (!adminSection.hasAttribute('hidden')) {
@@ -294,7 +310,7 @@ function updateAdminTabVisibility() {
     adminSection.setAttribute('aria-hidden', 'true');
     adminSection.style.display = 'none';
     resetAdminViewState();
-    lastAdminRolesSignature = '';
+    lastAdminTenantsSignature = '';
     if (wasActive) {
       setActiveTab('job');
     }
@@ -302,7 +318,7 @@ function updateAdminTabVisibility() {
 }
 
 async function initAdminView() {
-  if (!isAdmin()) return;
+  if (!canActiveUserAccessAdmin()) return;
   if (adminViewInitialized) return;
   if (adminViewInitPromise) {
     await adminViewInitPromise;
@@ -317,20 +333,23 @@ async function initAdminView() {
       return;
     }
 
-    const roles = getRoles();
-    const tenantIds = Array.from(
-      new Set(
-        roles
-          .filter(role => role && typeof role.tenantId === 'string' && role.tenantId.trim())
-          .map(role => role.tenantId.trim())
-      )
-    );
+    const profile = getActiveProfile();
+    const tenantOptions = getUserTenants(profile)
+      .filter(entry => entry && typeof entry.id === 'string' && entry.id.trim())
+      .map(entry => ({
+        id: entry.id.trim(),
+        label: typeof entry.slug === 'string' && entry.slug.trim() ? entry.slug.trim() : entry.id.trim()
+      }));
 
-    select.innerHTML = tenantIds
-      .map(id => `<option value="${id}">${id}</option>`)
-      .join('');
+    select.innerHTML = '';
+    tenantOptions.forEach(option => {
+      const element = document.createElement('option');
+      element.value = option.id;
+      element.textContent = option.label;
+      select.appendChild(element);
+    });
 
-    if (tenantIds.length === 0) {
+    if (tenantOptions.length === 0) {
       container.innerHTML = '<p>Ingen firmaer tilknyttet din bruger.</p>';
       adminViewInitialized = true;
       return;
@@ -346,7 +365,7 @@ async function initAdminView() {
       select.dataset.adminBound = 'true';
     }
 
-    const initialTenant = select.value || tenantIds[0];
+    const initialTenant = select.value || tenantOptions[0].id;
     if (!select.value) {
       select.value = initialTenant;
     }
@@ -440,7 +459,7 @@ function renderAdminUsersTable(tenantId, users) {
   });
 
   const validUsers = Array.isArray(users)
-    ? users.filter(user => user && typeof user.userId === 'string' && user.userId)
+    ? users.filter(user => user && (typeof user.id === 'string' ? user.id : user.userId))
     : [];
 
   if (validUsers.length === 0) {
@@ -461,22 +480,31 @@ function renderAdminUsersTable(tenantId, users) {
       <tbody>
         ${validUsers
           .map(user => {
-            const userId = escapeHtml(user.userId);
+            const userId = escapeHtml(user.id || user.userId || '');
             const email = escapeHtml(user.email || '');
-            const name = escapeHtml(user.name || '');
-            const role = typeof user.role === 'string' ? user.role : '';
+            const name = escapeHtml(user.displayName || user.name || '');
+            const memberships = Array.isArray(user.tenants) ? user.tenants : [];
+            const membership = memberships.find(entry => {
+              if (!entry) return false;
+              const id = typeof entry.id === 'string' ? entry.id : '';
+              const slug = typeof entry.slug === 'string' ? entry.slug : '';
+              return id === tenantId || slug === tenantId;
+            });
+            const role = typeof membership?.role === 'string' ? membership.role : (Array.isArray(user.roles) ? user.roles[0] : '');
+            const selectDisabled = role === 'owner';
             return `
           <tr data-user-id="${userId}">
             <td>${email}</td>
             <td>${name}</td>
             <td>
-              <select class="admin-role-select">
+              <select class="admin-role-select" ${selectDisabled ? 'disabled' : ''}>
                 <option value="worker" ${role === 'worker' ? 'selected' : ''}>Medarbejder</option>
-                <option value="tenant_admin" ${role === 'tenant_admin' ? 'selected' : ''}>Firma admin</option>
+                <option value="tenantAdmin" ${role === 'tenantAdmin' ? 'selected' : ''}>Firma admin</option>
+                ${role === 'owner' ? '<option value="owner" selected>Owner</option>' : ''}
               </select>
             </td>
             <td>
-              <button type="button" class="admin-save-role">Gem</button>
+              <button type="button" class="admin-save-role" ${selectDisabled ? 'disabled' : ''}>Gem</button>
             </td>
           </tr>
         `;
@@ -514,10 +542,12 @@ async function saveAdminUserRole(tenantId, userId, role) {
     return false;
   }
 
+  const canonicalRole = normalizeRoleValue(role) || 'worker';
+
   const payload = {
     tenantId,
     userId,
-    role
+    role: canonicalRole
   };
 
   let response;
@@ -546,6 +576,7 @@ async function saveAdminUserRole(tenantId, userId, role) {
     return false;
   }
 
+  await loadAdminUsersForTenant(tenantId);
   return true;
 }
 
@@ -695,6 +726,18 @@ const ROLE_PERMISSIONS = {
     canEditLon: true,
     canManageUsers: true
   },
+  tenantAdmin: {
+    canEditGlobalTemplates: false,
+    canEditPrices: true,
+    canEditWages: true,
+    canCreateJobs: true,
+    canDeleteJobs: true,
+    canLockJobs: true,
+    canSendJobs: true,
+    canEditMaterials: true,
+    canEditLon: true,
+    canManageUsers: true
+  },
   firmAdmin: {
     canEditGlobalTemplates: false,
     canEditPrices: true,
@@ -744,6 +787,18 @@ const ROLE_PERMISSIONS = {
     canManageUsers: false
   },
   montor: {
+    canEditGlobalTemplates: false,
+    canEditPrices: false,
+    canEditWages: false,
+    canCreateJobs: false,
+    canDeleteJobs: false,
+    canLockJobs: false,
+    canSendJobs: false,
+    canEditMaterials: true,
+    canEditLon: true,
+    canManageUsers: false
+  },
+  worker: {
     canEditGlobalTemplates: false,
     canEditPrices: false,
     canEditWages: false,
@@ -1995,21 +2050,17 @@ function handleSagsinfoChange(event) {
   renderJobList();
 }
 
-const USER_ROLE_OPTIONS = ['owner', 'firmAdmin', 'formand', 'montor', 'user'];
+const USER_ROLE_OPTIONS = ['owner', 'tenantAdmin', 'worker', 'guest'];
 
 function normalizeRoleValue (role) {
   if (typeof role !== 'string') return '';
   const trimmed = role.trim();
   if (!trimmed) return '';
   const lower = trimmed.toLowerCase();
-  if (lower === 'firma-admin' || lower === 'firmadmin') return 'firmAdmin';
-  if (lower === 'foreman') return 'formand';
-  if (lower === 'formand') return 'formand';
-  if (lower === 'montør') return 'montor';
-  if (lower === 'montor') return 'montor';
-  if (lower === 'owner') return 'owner';
-  if (lower === 'user' || lower === 'bruger') return 'user';
-  if (lower === 'guest') return 'guest';
+  if (lower === 'firma-admin' || lower === 'firmadmin' || lower === 'tenant_admin' || lower === 'tenantadmin' || lower === 'formand' || lower === 'foreman' || lower === 'admin') return 'tenantAdmin';
+  if (lower === 'montør' || lower === 'montor' || lower === 'worker' || lower === 'user' || lower === 'bruger') return 'worker';
+  if (lower === 'owner' || lower === 'superadmin' || lower === 'ejer') return 'owner';
+  if (lower === 'guest' || lower === 'gæst' || lower === 'gaest') return 'guest';
   return trimmed;
 }
 
@@ -2017,12 +2068,9 @@ function formatRoleLabel (role) {
   const normalized = normalizeRoleValue(role);
   const labels = {
     owner: 'Owner',
-    firmAdmin: 'Firma-admin',
-    'firma-admin': 'Firma-admin',
-    formand: 'Formand',
-    foreman: 'Formand',
-    montor: 'Montør',
-    user: 'Bruger',
+    tenantAdmin: 'Firma-admin',
+    worker: 'Medarbejder',
+    guest: 'Gæst',
     guest: 'Gæst'
   };
   if (labels[normalized]) return labels[normalized];
@@ -2053,8 +2101,8 @@ function getAuth0DisplayName (state = latestAuthState) {
 }
 
 function getActiveUserName () {
-  const name = activeUser?.name;
-  return typeof name === 'string' ? name.trim() : '';
+  const candidate = typeof activeUser?.displayName === 'string' ? activeUser.displayName : activeUser?.name;
+  return typeof candidate === 'string' ? candidate.trim() : '';
 }
 
 function updateAuthUi (isAuthenticated, user) {
@@ -2266,7 +2314,8 @@ function setupUserManagementUi () {
 
 function applyRoleGuards (user = activeUser) {
   if (typeof document !== 'undefined') {
-    const role = normalizeRoleValue(user?.role) || 'guest';
+    const roles = getUserRoles(user);
+    const role = roles.length > 0 ? roles[0] : normalizeRoleValue(user?.role) || 'guest';
     document.body?.setAttribute('data-user-role', role);
   }
   updatePermissionControls();
@@ -2274,8 +2323,19 @@ function applyRoleGuards (user = activeUser) {
 
 function applyUserToUi (user) {
   if (user && typeof user === 'object') {
-    const normalizedRole = normalizeRoleValue(user.role);
-    activeUser = { ...user, role: normalizedRole || user.role || '' };
+    const roles = getUserRoles(user);
+    const primaryRole = roles.length > 0 ? roles[0] : normalizeRoleValue(user.role) || user.role || '';
+    activeUser = {
+      ...user,
+      displayName: typeof user.displayName === 'string' && user.displayName.trim()
+        ? user.displayName.trim()
+        : (typeof user.name === 'string' && user.name.trim() ? user.name.trim() : user.email || ''),
+      roles,
+      role: primaryRole
+    };
+    if (Array.isArray(user.tenants)) {
+      activeUser.tenants = user.tenants.map(entry => ({ ...entry }));
+    }
   } else {
     activeUser = null;
   }
