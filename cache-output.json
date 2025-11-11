@@ -1,7 +1,7 @@
 {
-  "version": "v20251110T073136-857e3915",
+  "version": "v20251111T141737",
   "cachePrefix": "csmate",
-  "cacheName": "csmate-v20251110T073136-857e3915",
+  "cacheName": "csmate-v20251111T141737",
   "precache": [
     {
       "url": "/",
@@ -157,8 +157,8 @@
       "url": "/src/data/materials-static.js",
       "file": "app/src/data/materials-static.js",
       "exists": true,
-      "bytes": 16739,
-      "sha256": "b6e02e88bc5d48bb329855f718ccf507959afe52e5f2eba4b29b8548f3ed2307"
+      "bytes": 16730,
+      "sha256": "2072cada70a28c4d4b1bfb30609b4a0109b17fa3d7eb59afcce36b03953146c3"
     }
   ],
   "dataMatchers": [
