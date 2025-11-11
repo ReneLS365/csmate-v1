@@ -1,8 +1,10 @@
 import { isOwnerEmail } from '../auth0-config.js'
 
 const STORAGE_KEY = 'csmate.users.state.v1'
+const LEGACY_STORAGE_KEY = 'csmate.user.v1'
 const STORAGE_VERSION = 1
 const DEFAULT_ROLE = 'user'
+const DEFAULT_OFFLINE_ROLE = 'formand'
 const ELEVATED_ROLES = new Set(['owner', 'firmAdmin'])
 
 function hasStorage () {
@@ -13,6 +15,32 @@ function normalizeEmail (email) {
   if (typeof email !== 'string') return null
   const trimmed = email.trim()
   return trimmed ? trimmed.toLowerCase() : null
+}
+
+function normalizeLegacyRole (role) {
+  if (typeof role !== 'string') return DEFAULT_OFFLINE_ROLE
+  const trimmed = role.trim()
+  if (!trimmed) return DEFAULT_OFFLINE_ROLE
+  const lower = trimmed.toLowerCase()
+  if (lower === 'firma-admin' || lower === 'firmadmin' || lower === 'firma admin') return 'firmAdmin'
+  if (lower === 'admin' || lower === 'superadmin') return 'firmAdmin'
+  if (lower === 'owner' || lower === 'ejer') return 'owner'
+  if (lower === 'formand' || lower === 'foreman') return 'formand'
+  if (lower === 'montør' || lower === 'montor') return 'montor'
+  if (lower === 'worker' || lower === 'bruger' || lower === 'user') return 'user'
+  if (lower === 'guest' || lower === 'gæst' || lower === 'gaest') return 'guest'
+  return trimmed
+}
+
+function generateUniqueId (state, base) {
+  const users = Array.isArray(state?.users) ? state.users : []
+  let id = base
+  let counter = 1
+  while (users.some(user => user?.id === id)) {
+    counter += 1
+    id = `${base}:${counter}`
+  }
+  return id
 }
 
 function cloneMetadata (metadata) {
@@ -97,7 +125,140 @@ function loadState () {
   }
 }
 
-let state = loadState()
+function migrateLegacyState (state) {
+  if (!hasStorage()) return { state, changed: false }
+
+  let raw = null
+  try {
+    raw = localStorage.getItem(LEGACY_STORAGE_KEY)
+  } catch (error) {
+    console.warn('Legacy user state read failed', error)
+    return { state, changed: false }
+  }
+
+  if (!raw) return { state, changed: false }
+
+  let legacy
+  try {
+    legacy = JSON.parse(raw)
+  } catch (error) {
+    console.warn('Legacy user state parse failed', error)
+    try {
+      localStorage.removeItem(LEGACY_STORAGE_KEY)
+    } catch (cleanupError) {
+      console.warn('Legacy user cleanup failed', cleanupError)
+    }
+    return { state, changed: false }
+  }
+
+  if (!legacy || typeof legacy !== 'object') {
+    try {
+      localStorage.removeItem(LEGACY_STORAGE_KEY)
+    } catch (cleanupError) {
+      console.warn('Legacy user cleanup failed', cleanupError)
+    }
+    return { state, changed: false }
+  }
+
+  const email = typeof legacy.email === 'string' ? legacy.email : null
+  const emailKey = normalizeEmail(email)
+
+  let id = typeof legacy.id === 'string' && legacy.id.trim() ? legacy.id.trim() : null
+  if (!id) {
+    const base = emailKey ? `email:${emailKey}` : `legacy:${normalizeLegacyRole(legacy.role || '')}`
+    id = generateUniqueId(state, base || 'legacy:offline')
+  }
+
+  const now = Date.now()
+  const candidate = normalizeStoredUser({
+    id,
+    email,
+    emailKey,
+    role: normalizeLegacyRole(legacy.role),
+    name: typeof legacy.name === 'string' && legacy.name.trim() ? legacy.name.trim() : (email || 'Offline bruger'),
+    createdAt: Number.isFinite(legacy.createdAt) ? legacy.createdAt : now,
+    updatedAt: now,
+    lastLoginAt: now,
+    metadata: {
+      ...cloneMetadata(legacy.metadata),
+      legacyRole: legacy.role || null,
+      legacyMigrated: true
+    }
+  })
+
+  if (!candidate) {
+    try {
+      localStorage.removeItem(LEGACY_STORAGE_KEY)
+    } catch (cleanupError) {
+      console.warn('Legacy user cleanup failed', cleanupError)
+    }
+    return { state, changed: false }
+  }
+
+  const existingIndex = state.users.findIndex(user => user?.id === candidate.id)
+  if (existingIndex >= 0) {
+    state.users[existingIndex] = candidate
+  } else {
+    state.users.push(candidate)
+  }
+  state.currentUserId = candidate.id
+
+  try {
+    localStorage.removeItem(LEGACY_STORAGE_KEY)
+  } catch (cleanupError) {
+    console.warn('Legacy user cleanup failed', cleanupError)
+  }
+
+  return { state, changed: true }
+}
+
+function ensureDefaultUserState (state) {
+  const users = Array.isArray(state.users) ? state.users : []
+  if (users.length === 0) {
+    const now = Date.now()
+    const baseId = 'local:default-user'
+    const id = generateUniqueId({ users }, baseId)
+    const defaultUser = normalizeStoredUser({
+      id,
+      role: DEFAULT_OFFLINE_ROLE,
+      name: 'Offline montør',
+      createdAt: now,
+      updatedAt: now,
+      lastLoginAt: now,
+      metadata: { source: 'default-offline' }
+    })
+    if (defaultUser) {
+      users.push(defaultUser)
+      state.currentUserId = defaultUser.id
+      return { state, changed: true }
+    }
+  }
+
+  if (!state.currentUserId && users.length > 0) {
+    state.currentUserId = users[0].id
+    return { state, changed: true }
+  }
+
+  return { state, changed: false }
+}
+
+function prepareInitialState () {
+  let state = loadState()
+  let shouldPersist = false
+
+  const migrated = migrateLegacyState(state)
+  state = migrated.state
+  shouldPersist = shouldPersist || migrated.changed
+
+  const ensured = ensureDefaultUserState(state)
+  state = ensured.state
+  shouldPersist = shouldPersist || ensured.changed
+
+  return { state, shouldPersist }
+}
+
+const preparedState = prepareInitialState()
+let state = preparedState.state
 
 function persistState () {
   if (!hasStorage()) return
@@ -121,6 +282,10 @@ function persistState () {
   } catch (error) {
     console.warn('User state persist failed', error)
   }
+}
+
+if (preparedState.shouldPersist) {
+  persistState()
 }
 
 function resolveUser (identifier) {
@@ -160,7 +325,12 @@ function touchUserTimestamps (user, options = {}) {
 }
 
 export function getCurrentUser () {
-  const user = resolveUser(state.currentUserId)
+  let user = resolveUser(state.currentUserId)
+  if (!user && state.users.length > 0) {
+    user = state.users[0]
+    state.currentUserId = user.id
+    persistState()
+  }
   return cloneUser(user)
 }
 
@@ -178,7 +348,10 @@ export function getAllUsers () {
 }
 
 export function setCurrentUser (identifier) {
-  const user = resolveUser(identifier)
+  let user = resolveUser(identifier)
+  if (!user && (!identifier || (typeof identifier === 'string' && !identifier.trim()))) {
+    user = state.users[0] || null
+  }
   state.currentUserId = user ? user.id : null
   persistState()
   return cloneUser(user)

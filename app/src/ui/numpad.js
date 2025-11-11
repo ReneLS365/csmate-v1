@@ -114,10 +114,104 @@ export function evalExpr (expr, base = 0) {
   const expression = /^[+\-*/]/.test(normalized) ? `${baseNumber}${normalized}` : normalized
   if (!/^[0-9.+\-*/]*$/.test(expression)) throw new Error('Invalid expression')
 
-  // eslint-disable-next-line no-new-func
-  const value = Function(`"use strict";return (${expression || baseNumber});`)()
-  if (!Number.isFinite(value)) throw new Error('Invalid result')
-  return value
+  const tokens = []
+  let index = 0
+  let expectNumber = true
+  const length = expression.length
+
+  const parseNumber = (startIndex, sign = 1) => {
+    let end = startIndex
+    while (end < length && /[0-9.]/.test(expression[end])) {
+      end += 1
+    }
+    if (end === startIndex) throw new Error('Invalid expression')
+    const segment = expression.slice(startIndex, end)
+    if (!/^\d*\.?\d*$/.test(segment)) throw new Error('Invalid expression')
+    const value = Number.parseFloat(segment || '0') * sign
+    if (!Number.isFinite(value)) throw new Error('Invalid expression')
+    tokens.push(value)
+    expectNumber = false
+    return end
+  }
+
+  while (index < length) {
+    const char = expression[index]
+    if (char === '+' || char === '-') {
+      if (expectNumber) {
+        const sign = char === '-' ? -1 : 1
+        index = parseNumber(index + 1, sign)
+        continue
+      }
+      tokens.push(char)
+      expectNumber = true
+      index += 1
+      continue
+    }
+    if (char === '*' || char === '/') {
+      if (expectNumber) throw new Error('Invalid expression')
+      tokens.push(char)
+      expectNumber = true
+      index += 1
+      continue
+    }
+    if (/[0-9.]/.test(char)) {
+      index = parseNumber(index)
+      continue
+    }
+    throw new Error('Invalid expression')
+  }
+
+  if (expectNumber) throw new Error('Invalid expression')
+
+  const values = []
+  const ops = []
+  const precedence = { '+': 1, '-': 1, '*': 2, '/': 2 }
+
+  const applyOperator = () => {
+    if (values.length < 2) throw new Error('Invalid expression')
+    const right = values.pop()
+    const left = values.pop()
+    const operator = ops.pop()
+    let result
+    switch (operator) {
+      case '+':
+        result = left + right
+        break
+      case '-':
+        result = left - right
+        break
+      case '*':
+        result = left * right
+        break
+      case '/':
+        result = left / right
+        break
+      default:
+        throw new Error('Invalid expression')
+    }
+    if (!Number.isFinite(result)) throw new Error('Invalid result')
+    values.push(result)
+  }
+
+  tokens.forEach(token => {
+    if (typeof token === 'number') {
+      values.push(token)
+      return
+    }
+    while (ops.length > 0 && precedence[ops[ops.length - 1]] >= precedence[token]) {
+      applyOperator()
+    }
+    ops.push(token)
+  })
+
+  while (ops.length > 0) {
+    applyOperator()
+  }
+
+  if (values.length !== 1) throw new Error('Invalid expression')
+  const result = values[0]
+  if (!Number.isFinite(result)) throw new Error('Invalid result')
+  return result
 }
 
 function render () {
