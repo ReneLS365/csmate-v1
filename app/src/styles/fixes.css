@@ -81,3 +81,235 @@
   bottom: auto !important;
   transform: none !important;
 }
+
+/* === Hjælp-fane layout og responsivitet === */
+#tab-help {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1rem 0 2.5rem;
+}
+
+#tab-help .help-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+#tab-help .help-lead {
+  max-width: 44rem;
+}
+
+#tab-help .help-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.5rem;
+}
+
+@media (min-width: 720px) {
+  #tab-help .help-grid {
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  }
+}
+
+#tab-help .help-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
+}
+
+#tab-help .help-card h3 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+#tab-help details {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 0.6rem 0.9rem;
+}
+
+#tab-help details summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+#tab-help details p {
+  margin: 0.5rem 0 0;
+}
+
+#tab-help .shortcut-list {
+  display: grid;
+  gap: 0.6rem;
+}
+
+#tab-help .shortcut-list div {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+#tab-help .shortcut-list dt {
+  margin: 0;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+#tab-help .shortcut-list dd {
+  margin: 0;
+  color: var(--muted);
+}
+
+#tab-help .help-knowledge-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+@media (min-width: 600px) {
+  #tab-help .help-knowledge-grid {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  }
+}
+
+#tab-help .help-reference-list {
+  margin: 0.5rem 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--muted);
+}
+
+#tab-help .help-reference-list li::before {
+  content: '•';
+  margin-right: 0.5rem;
+}
+
+#tab-help a {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+#tab-help .help-card ol,
+#tab-help .help-card ul {
+  padding-left: 1.1rem;
+  margin: 0;
+}
+
+#tab-help .help-card li {
+  margin: 0.25rem 0;
+}
+
+#tab-help .dev-panel {
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--panel);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+}
+
+#tab-help .dev-panel__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+#tab-help .dev-panel__header h3 {
+  margin: 0;
+}
+
+#tab-help .dev-panel__grid {
+  display: grid;
+  gap: 1.25rem;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 880px) {
+  #tab-help .dev-panel__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+#tab-help .dev-panel__card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 14px;
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+#tab-help .dev-panel__card h4 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+#tab-help .dev-panel__meta {
+  display: grid;
+  gap: 0.55rem;
+  margin: 0;
+}
+
+#tab-help .dev-panel__meta div {
+  display: grid;
+  grid-template-columns: minmax(120px, 1fr) minmax(0, 1.4fr);
+  gap: 0.75rem;
+}
+
+#tab-help .dev-panel__meta dt {
+  margin: 0;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+#tab-help .dev-panel__meta dd {
+  margin: 0;
+  word-break: break-word;
+}
+
+#tab-help .dev-panel__health {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+  color: var(--muted);
+}
+
+#tab-help .dev-panel__health li {
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace);
+}
+
+#tab-help .dev-panel__card pre {
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 10px;
+  padding: 0.75rem;
+  max-height: 320px;
+  overflow: auto;
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.statusbar.syncing {
+  background-image: linear-gradient(90deg, rgba(59, 130, 246, 0.2), rgba(59, 130, 246, 0.05));
+  border-bottom-color: rgba(59, 130, 246, 0.35);
+}
+
+.statusbar.syncing #status-text {
+  font-weight: 600;
+}
+
+.statusbar.syncing .btn {
+  opacity: 0.75;
+}

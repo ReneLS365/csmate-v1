@@ -1,38 +1,38 @@
 {
-  "version": "v20251111T151758",
+  "version": "v20251111T165247",
   "cachePrefix": "csmate",
-  "cacheName": "csmate-v20251111T151758",
+  "cacheName": "csmate-v20251111T165247",
   "precache": [
     {
       "url": "/",
       "file": "app/index.html",
       "aliasFor": "/index.html",
       "exists": true,
-      "bytes": 32251,
-      "sha256": "755d617b036fe6858bd37a88875930a51e961dc5e95f6c163113a57f510e5316"
+      "bytes": 34936,
+      "sha256": "cff7f46f73a36b3f0673a59bd0f53e4f30dd739ea97affe632bf2e9d1c9dc336"
     },
     {
       "url": "/?source=pwa",
       "file": "app/index.html",
       "exists": true,
-      "bytes": 32251,
-      "sha256": "755d617b036fe6858bd37a88875930a51e961dc5e95f6c163113a57f510e5316",
+      "bytes": 34936,
+      "sha256": "cff7f46f73a36b3f0673a59bd0f53e4f30dd739ea97affe632bf2e9d1c9dc336",
       "duplicateOf": "app/index.html"
     },
     {
       "url": "/index.html",
       "file": "app/index.html",
       "exists": true,
-      "bytes": 32251,
-      "sha256": "755d617b036fe6858bd37a88875930a51e961dc5e95f6c163113a57f510e5316",
+      "bytes": 34936,
+      "sha256": "cff7f46f73a36b3f0673a59bd0f53e4f30dd739ea97affe632bf2e9d1c9dc336",
       "duplicateOf": "app/index.html"
     },
     {
       "url": "/main.js",
       "file": "app/main.js",
       "exists": true,
-      "bytes": 173949,
-      "sha256": "d8101588af46840cf8631d2c2ad8f21ac68e687cb221f1d494c6d1eb9afa1ec0"
+      "bytes": 174260,
+      "sha256": "6b90bc1d7c5a9d75c3e86921184c0e5b747406cca89be2ced5eb715828bb8901"
     },
     {
       "url": "/style.css",
@@ -129,8 +129,8 @@
       "url": "/src/styles/fixes.css",
       "file": "app/src/styles/fixes.css",
       "exists": true,
-      "bytes": 2337,
-      "sha256": "1163a0839555715e9c9e347830cf3d451019203c977539bc092253f1087d9e5f"
+      "bytes": 6498,
+      "sha256": "6b419c75f85b95e5c9003f71d7f9e014b5a7903de22439554e500302f3e4fbc3"
     },
     {
       "url": "/src/globals.js",
@@ -143,15 +143,15 @@
       "url": "/src/dev.js",
       "file": "app/src/dev.js",
       "exists": true,
-      "bytes": 3600,
-      "sha256": "43aab1a3ada1eda34a4bc7c23c08af23a829fd43c174461f5da7fc5eeeeea0b3"
+      "bytes": 14322,
+      "sha256": "c3288df1e2d960d050e3d7992a48993e4450b06e9b4dbad2a8a685585b40ac51"
     },
     {
       "url": "/src/keyboard.js",
       "file": "app/src/keyboard.js",
       "exists": true,
-      "bytes": 986,
-      "sha256": "a84a3709378ebe39235e2446ad151f9a4c6a3ca4c2c761fa4097b23cb4764484"
+      "bytes": 3268,
+      "sha256": "7e674105786e1e195dba47e78f0a71b0dcadd2f0264c3369c2f8c11a8462f472"
     },
     {
       "url": "/src/data/materials-static.js",

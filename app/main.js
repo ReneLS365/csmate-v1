@@ -89,6 +89,7 @@ function syncAuthUiFromState() {
   const latest = setLatestAuthState(state)
   updateAuthUi(latest.isAuthenticated, latest.user)
   updateAdminTabVisibility()
+  mountDevIfHash({ reason: 'auth-state' })
   return latest
 }
 
@@ -1012,11 +1013,20 @@ if (typeof document !== 'undefined') {
 
 if (typeof window !== 'undefined') {
   window.addEventListener('DOMContentLoaded', () => {
-    wireShortcuts()
+    mountDevIfHash({
+      getActiveUser: () => activeUser,
+      getAuthSnapshot: () => latestAuthState,
+      reason: 'init'
+    })
+    wireShortcuts({
+      onDevtools: () => mountDevIfHash({
+        reason: 'shortcut',
+        forceOpen: true,
+        focus: true
+      })
+    })
     wireStatusbar()
     scheduleJobStoreListener()
-    wireShortcuts()
-    mountDevIfHash()
   })
   scheduleJobStoreListener()
 }
@@ -2347,6 +2357,7 @@ function applyUserToUi (user) {
   renderUserAdminTable();
   renderJobList();
   syncAuthUiFromState();
+  mountDevIfHash({ reason: 'user-change' });
 }
 
 if (typeof window !== 'undefined') {
