@@ -25,7 +25,7 @@ const LEGACY_STORAGE_KEY = 'csmate.user.v1'
 const STORAGE_VERSION = 1
 const DEFAULT_GLOBAL_ROLE = 'worker'
 const DEFAULT_OFFLINE_ROLE = 'formand'
-const ELEVATED_ROLES = new Set(['owner'])
+const ELEVATED_ROLES = new Set(['owner', 'tenantAdmin'])
 
 const GLOBAL_ROLE_ALIASES = new Map([
   ['owner', 'owner'],

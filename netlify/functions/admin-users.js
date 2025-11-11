@@ -48,13 +48,24 @@ async function findUserIdBySub(sub) {
   return record?.id || null
 }
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+const isUuid = (value) => UUID_PATTERN.test(value)
+
 async function resolveTenantRecord(tenantKey) {
   const normalized = typeof tenantKey === 'string' ? tenantKey.trim() : ''
   if (!normalized) return null
+
+  const matchers = []
+  if (isUuid(normalized)) {
+    matchers.push(eq(tenants.id, normalized))
+  }
+  matchers.push(eq(tenants.slug, normalized))
+
   const [record] = await db
     .select({ id: tenants.id, slug: tenants.slug })
     .from(tenants)
-    .where(or(eq(tenants.id, normalized), eq(tenants.slug, normalized)))
+    .where(matchers.length === 1 ? matchers[0] : or(...matchers))
     .limit(1)
   return record || null
 }
