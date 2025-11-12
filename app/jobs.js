@@ -71,6 +71,9 @@ export function saveJobs(nextJobs) {
   const jobs = Array.isArray(nextJobs) ? nextJobs.map(job => ({ ...job })) : [];
   jobsCache = jobs;
   writeJobsToStorage(jobsCache);
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('csmate:jobs-changed', { detail: { count: jobsCache.length } }));
+  }
   return jobsCache.slice();
 }
 

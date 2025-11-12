@@ -1,45 +1,45 @@
 {
-  "version": "v20251112T133057",
+  "version": "v20240216T120000",
   "cachePrefix": "csmate",
-  "cacheName": "csmate-v20251112T133057",
+  "cacheName": "csmate-v20240216T120000",
   "precache": [
     {
       "url": "/",
       "file": "app/index.html",
       "aliasFor": "/index.html",
       "exists": true,
-      "bytes": 35129,
-      "sha256": "5d815be815cb39d9caf1082600b37bcf53106876a0a759aa198377b83499f752"
+      "bytes": 35712,
+      "sha256": "02f8e6a4d683f790e762f9dafdbec80488be2695a4ecd25d476e4f2dc1cc8fe7"
     },
     {
       "url": "/?source=pwa",
       "file": "app/index.html",
       "exists": true,
-      "bytes": 35129,
-      "sha256": "5d815be815cb39d9caf1082600b37bcf53106876a0a759aa198377b83499f752",
+      "bytes": 35712,
+      "sha256": "02f8e6a4d683f790e762f9dafdbec80488be2695a4ecd25d476e4f2dc1cc8fe7",
       "duplicateOf": "app/index.html"
     },
     {
       "url": "/index.html",
       "file": "app/index.html",
       "exists": true,
-      "bytes": 35129,
-      "sha256": "5d815be815cb39d9caf1082600b37bcf53106876a0a759aa198377b83499f752",
+      "bytes": 35712,
+      "sha256": "02f8e6a4d683f790e762f9dafdbec80488be2695a4ecd25d476e4f2dc1cc8fe7",
       "duplicateOf": "app/index.html"
     },
     {
       "url": "/main.js",
       "file": "app/main.js",
       "exists": true,
-      "bytes": 174725,
-      "sha256": "5250b69501815d824ffd833fb0ee96ab199b803c2b95764ccaa14bf4aa06707c"
+      "bytes": 176363,
+      "sha256": "d370eb29f6f3d849d36ce9d300090948ff82f84f161c5c44f6a604775b6939c2"
     },
     {
       "url": "/style.css",
       "file": "app/style.css",
       "exists": true,
-      "bytes": 24748,
-      "sha256": "af756d579550d56a6af8aad1a8eff81b1aacc716dddbd7f6075c1f53e4ee53cd"
+      "bytes": 25375,
+      "sha256": "6c4e41bd624787838980f472086f83634e2f93c4e5d7de53b86290418c415c19"
     },
     {
       "url": "/print.css",
@@ -145,6 +145,13 @@
       "exists": true,
       "bytes": 14322,
       "sha256": "c3288df1e2d960d050e3d7992a48993e4450b06e9b4dbad2a8a685585b40ac51"
+    },
+    {
+      "url": "/src/dev/panel.js",
+      "file": "app/src/dev/panel.js",
+      "exists": true,
+      "bytes": 8367,
+      "sha256": "ef88ec2a5598b3a8135474f7b20391cfe63b06e2153fb6ebf74ba005c76d4bca"
     },
     {
       "url": "/src/keyboard.js",

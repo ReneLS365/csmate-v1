@@ -94,6 +94,7 @@
     <header data-allow-click>
       <div class="bar">
         <h1 class="ttl">akkordseddel</h1>
+        <div id="job-health" aria-live="polite" title="Jobstatus: materialer, kø, sidst gemt"></div>
       </div>
       <nav class="tab-bar" aria-label="Hovednavigation">
         <button id="btnJobs" class="tab-btn" data-tab="job" data-section="jobs" type="button">Job</button>
@@ -287,7 +288,7 @@
     </section>
 
     <div class="row btn-group no-print">
-      <button id="btnExportCSV" type="button" disabled>Del til E‑komplet (CSV)</button>
+      <button id="btnExportCSV" type="button" disabled data-testid="export-csv">Del til E‑komplet (CSV)</button>
       <button id="btnExportAll" type="button" disabled data-online-only>Eksportér PDF + CSV</button>
       <button id="btnExportZip" type="button" disabled data-online-only>Del til E‑komplet (ZIP)</button>
     </div>

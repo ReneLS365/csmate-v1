@@ -1,7 +1,7 @@
 // app/src/backup.js
 import { downloadBlob, ts } from './exports.js'
 
-export function exportFullBackup () {
+export function exportFullBackup (options = {}) {
   const payload = {
     meta: {
       app: 'CSMate',
@@ -14,6 +14,12 @@ export function exportFullBackup () {
       ? window.TemplateStore.activeMeta()
       : (window.TemplateStore?.templates || {})
   }
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
-  downloadBlob(`csmate-backup-${ts()}.json`, blob)
+  const content = JSON.stringify(payload, null, 2)
+  const fileName = `csmate-backup-${ts()}.json`
+  if (options?.preview) {
+    return { payload, content, fileName }
+  }
+  const blob = new Blob([content], { type: 'application/json' })
+  downloadBlob(fileName, blob)
+  return { payload, content, fileName }
 }
