@@ -27,7 +27,10 @@ export async function guardedFetch (input, init = {}) {
   }
   return new Response(JSON.stringify(payload), {
     status: 503,
-    headers: { 'Content-Type': 'application/json' }
+    headers: {
+      'Content-Type': 'application/json',
+      'X-CSMate-Offline': '1'
+    }
   })
 }
 

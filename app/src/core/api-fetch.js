@@ -42,6 +42,11 @@ export async function apiFetch (input, init = {}) {
     return response
   }
 
+  const offlineHeader = response.headers?.get('X-CSMate-Offline')
+  if (offlineHeader !== '1') {
+    return response
+  }
+
   if (!WRITE_METHODS.has(method)) {
     return new Response(JSON.stringify({ ok: false, offline: true }), {
       status: 503,
