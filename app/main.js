@@ -66,10 +66,11 @@ if (typeof window !== 'undefined') {
     if (!event.shiftKey) return
     const key = typeof event.key === 'string' ? event.key : ''
     if (key === 'D' || key === 'd') {
+      if (!canActiveUserAccessAdmin()) return
       openDevPanel()
     }
   })
-  if (window.location.hash === '#dev') {
+  if (window.location.hash === '#dev' && canActiveUserAccessAdmin()) {
     openDevPanel()
   }
   ;(async () => {
