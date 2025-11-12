@@ -11,8 +11,7 @@ import { sha256Hex, constantTimeEquals } from './src/lib/sha256.js'
 import { ensureExportLibs, ensureZipLib, prefetchExportLibs } from './src/features/export/lazy-libs.js'
 import {
   initAuth,
-  loginWithRedirect,
-  signupWithRedirect,
+  bindAuthButtons,
   logout as authLogout,
   getAuthState,
   getUserProfileSnapshot,
@@ -2368,51 +2367,13 @@ if (typeof window !== 'undefined') {
 function initAuthButtons () {
   if (typeof document === 'undefined') return;
 
-  const loginBtn = document.querySelector('[data-auth="login"]');
-  if (loginBtn) {
-    loginBtn.addEventListener('click', event => {
-      event.preventDefault();
-      loginWithRedirect();
-    });
-  }
-
-  const signupBtn = document.querySelector('[data-auth="signup"]');
-  if (signupBtn) {
-    signupBtn.addEventListener('click', event => {
-      event.preventDefault();
-      signupWithRedirect();
-    });
-  }
-
-  const offlineBtn = document.querySelector('[data-auth="offline"]');
-  if (offlineBtn) {
-    offlineBtn.addEventListener('click', event => {
-      event.preventDefault();
-      window.CSMATE_AUTH = {
-        ...(window.CSMATE_AUTH || {}),
-        isReady: true,
-        isAuthenticated: false,
-        user: null,
-        offline: true
-      };
-      setLatestAuthState({ isAuthenticated: false, user: null });
-      updateAuthUi(false, null);
-    });
-  }
+  bindAuthButtons();
 
   const logoutBtn = document.querySelector('[data-auth="logout"]');
   if (logoutBtn) {
     logoutBtn.addEventListener('click', event => {
       event.preventDefault();
       authLogout();
-    });
-  }
-
-  const switchBtn = document.getElementById('btn-switch-user');
-  if (switchBtn) {
-    switchBtn.addEventListener('click', event => {
-      event.preventDefault();
-      loginWithRedirect();
     });
   }
 }

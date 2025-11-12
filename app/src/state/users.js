@@ -511,6 +511,77 @@ export function setCurrentUser (identifier) {
   return cloneUser(user)
 }
 
+export function ensureOfflineUserProfile (profile = {}) {
+  const offlineId = 'offline:montor'
+  const now = Date.now()
+
+  const displayName = typeof profile.displayName === 'string' && profile.displayName.trim()
+    ? profile.displayName.trim()
+    : (typeof profile.name === 'string' && profile.name.trim()
+        ? profile.name.trim()
+        : 'Offline montør')
+
+  const email = typeof profile.email === 'string' && profile.email.trim()
+    ? profile.email.trim()
+    : null
+
+  const normalizedRoles = normalizeGlobalRoles(profile.roles, DEFAULT_GLOBAL_ROLE)
+  const finalRoles = normalizedRoles.includes('worker')
+    ? normalizedRoles.slice()
+    : normalizedRoles.concat(['worker'])
+  const primaryRole = finalRoles[0] || DEFAULT_GLOBAL_ROLE
+
+  const tenantEntries = normalizeTenantMemberships(profile.tenants)
+  if (tenantEntries.length === 0) {
+    tenantEntries.push({ id: 'offline-local', role: 'worker' })
+  }
+
+  let user = state.users.find(candidate => candidate?.id === offlineId) || null
+  const metadata = {
+    offline: true,
+    ...cloneMetadata(profile.metadata)
+  }
+
+  if (!user) {
+    const stored = normalizeStoredUser({
+      id: offlineId,
+      email,
+      role: primaryRole,
+      roles: finalRoles,
+      tenants: tenantEntries,
+      name: displayName,
+      displayName,
+      createdAt: now,
+      updatedAt: now,
+      lastLoginAt: now,
+      metadata
+    })
+    if (!stored) return null
+    user = stored
+    state.users.push(user)
+  } else {
+    user.email = email || user.email || null
+    user.emailKey = email ? normalizeEmail(email) : user.emailKey || (user.email ? normalizeEmail(user.email) : null)
+    user.role = primaryRole
+    user.roles = finalRoles.slice()
+    user.tenants = tenantEntries.map(entry => ({ ...entry }))
+    user.name = displayName
+    user.displayName = displayName
+    user.metadata = {
+      ...cloneMetadata(user.metadata),
+      ...metadata
+    }
+    if (!Number.isFinite(user.createdAt)) {
+      user.createdAt = now
+    }
+    user.updatedAt = now
+    user.lastLoginAt = now
+  }
+
+  persistState()
+  return cloneUser(user)
+}
+
 export function ensureOwnerUser (email, defaults = {}) {
   const emailKey = normalizeEmail(email)
   if (!emailKey) return null
