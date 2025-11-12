@@ -1,5 +1,6 @@
 import './src/features/pctcalc/pctcalc.js'
 import { mountDevIfHash } from './src/dev.js'
+import { openDevPanel } from './src/dev/panel.js'
 import { wireShortcuts } from './src/keyboard.js'
 import { registerJobStoreHooks } from './src/globals.js'
 import { initMaterialsScrollLock } from './src/modules/materialsScrollLock.js'
@@ -61,6 +62,17 @@ import {
 
 if (typeof window !== 'undefined') {
   initSwBridge()
+  window.addEventListener('keydown', event => {
+    if (!event.shiftKey) return
+    const key = typeof event.key === 'string' ? event.key : ''
+    if (key === 'D' || key === 'd') {
+      if (!canActiveUserAccessAdmin()) return
+      openDevPanel()
+    }
+  })
+  if (window.location.hash === '#dev' && canActiveUserAccessAdmin()) {
+    openDevPanel()
+  }
   ;(async () => {
     try {
       const { size, onChange } = await import('./src/core/net-queue.js')
@@ -150,6 +162,18 @@ loadDefaultAdminCode()
 // Initialize click guard for admin lock functionality
 if (typeof document !== 'undefined') {
   initClickGuard()
+  const devCloseButton = document.getElementById('close-dev')
+  if (devCloseButton) {
+    devCloseButton.addEventListener('click', () => {
+      const dialog = document.getElementById('dev-panel')
+      if (!dialog) return
+      if (typeof dialog.close === 'function') {
+        dialog.close()
+      } else {
+        dialog.removeAttribute('open')
+      }
+    })
+  }
 }
 
 // --- Utility Functions ---

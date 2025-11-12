@@ -1,5 +1,5 @@
 /* CSMate Service Worker – Workbox-inspired offline shell */
-const VERSION = 'v20251112T133057'; // replaced automatically during build
+const VERSION = 'v20240216T120000'; // replaced automatically during build
 const SW_VERSION = VERSION;
 const CACHE_VERSION = VERSION; // replaced automatically during build
 const CACHE_PREFIX = 'csmate';
@@ -24,6 +24,7 @@ const PRECACHE = [
   '/src/styles/fixes.css',
   '/src/globals.js',
   '/src/dev.js',
+  '/src/dev/panel.js',
   '/src/keyboard.js',
   '/src/data/materials-static.js'
 ];
