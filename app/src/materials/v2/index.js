@@ -7,6 +7,7 @@ import {
   storeAdminState
 } from '../featureFlags.ts'
 import { createMaterialsRenderer } from './renderer.js'
+import { apiFetch } from '../../core/api-fetch.js'
 
 const DB_NAME = 'materials_v2'
 const DB_VERSION = 1
@@ -165,11 +166,14 @@ function persistKnownFirm (firmId, label) {
 }
 
 async function verifyAdminCode (firmId, code) {
-  const response = await fetch('/.netlify/functions/admin-update', {
+  const response = await apiFetch('/.netlify/functions/admin-update', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ action: 'verify', firmId, code })
   })
+  if (response.status === 202) {
+    return false
+  }
   if (response.status === 401) {
     return false
   }
@@ -181,7 +185,7 @@ async function verifyAdminCode (firmId, code) {
 }
 
 async function updateTenantPrices (firmId, diff) {
-  const response = await fetch('/.netlify/functions/admin-update', {
+  const response = await apiFetch('/.netlify/functions/admin-update', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -191,6 +195,9 @@ async function updateTenantPrices (firmId, diff) {
       removals: diff?.removals || []
     })
   })
+  if (response.status === 202) {
+    return { queued: true, offline: true }
+  }
   if (!response.ok) {
     throw new Error(`Gem fejl: ${response.status}`)
   }

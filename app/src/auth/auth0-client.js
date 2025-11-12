@@ -4,6 +4,7 @@ import {
   setCurrentUser,
   mergeRemoteUserProfile
 } from '../state/users.js'
+import { apiFetch } from '../core/api-fetch.js'
 
 let offlineStoreModulePromise = null
 
@@ -307,7 +308,7 @@ async function syncUserWithBackend () {
   }
 
   try {
-    const response = await fetch('/.netlify/functions/auth-sync', {
+    const response = await apiFetch('/.netlify/functions/auth-sync', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -319,6 +320,11 @@ async function syncUserWithBackend () {
         name
       })
     })
+
+    if (response.status === 202) {
+      authState.lastSyncError = 'offline'
+      return null
+    }
 
     if (!response.ok) {
       let errorMessage = ''

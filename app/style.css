@@ -472,3 +472,16 @@ round:rgba(255,255,255,0.03)}
 .grid.two{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
 @media (max-width:800px){.grid.two{grid-template-columns:1fr}}
 kbd{padding:0 0.35rem;border:1px solid #ccc;border-bottom-width:2px;border-radius:4px;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;font-size:0.85em}
+#status-badge{
+  align-self:flex-end;
+  margin:0.25rem 0.75rem 0;
+  padding:0.25rem 0.75rem;
+  border-radius:0.75rem;
+  font-weight:700;
+  font-size:0.85rem;
+  background:#444;
+  color:#fff;
+  box-shadow:0 2px 6px rgba(0,0,0,0.2);
+}
+#status-badge.badge-offline{background:#b00020;}
+#status-badge.badge-online{background:#2e7d32;}

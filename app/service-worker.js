@@ -1,5 +1,5 @@
 /* CSMate Service Worker – Workbox-inspired offline shell */
-const VERSION = 'v20251112T091923'; // replaced automatically during build
+const VERSION = 'v20251112T133057'; // replaced automatically during build
 const SW_VERSION = VERSION;
 const CACHE_VERSION = VERSION; // replaced automatically during build
 const CACHE_PREFIX = 'csmate';
@@ -306,4 +306,32 @@ self.addEventListener('fetch', (event) => {
   }
 
   event.respondWith(staleWhileRevalidate(request, RUNTIME_CACHE_NAMES.assets));
+});
+
+self.addEventListener('sync', (event) => {
+  if (event.tag !== 'csmate-sync-queue') return;
+  event.waitUntil((async () => {
+    const clientsList = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    clientsList.forEach(client => client.postMessage({ type: 'QUEUE_DRAIN' }));
+  })());
+});
+
+self.addEventListener('message', (event) => {
+  if (!event.data || event.data.type !== 'REQUEST_SYNC') return;
+  if (self.registration.sync) {
+    event.waitUntil((async () => {
+      try {
+        await self.registration.sync.register('csmate-sync-queue');
+      } catch (error) {
+        console.warn('Background sync registration fejlede', error);
+        const clientsList = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+        clientsList.forEach(client => client.postMessage({ type: 'QUEUE_DRAIN' }));
+      }
+    })());
+    return;
+  }
+  event.waitUntil((async () => {
+    const clientsList = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    clientsList.forEach(client => client.postMessage({ type: 'QUEUE_DRAIN' }));
+  })());
 });

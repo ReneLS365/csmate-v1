@@ -55,8 +55,9 @@
       <span class="status-dot offline" id="status-dot"></span>
       <span id="status-text">Offline</span>
       <span class="muted">Sidst synkroniseret: <span id="last-sync">-</span></span>
-      <button id="btn-sync-now" class="btn small">Synkronisér nu</button>
+      <button id="btn-sync-now" class="btn small" data-online-only>Synkronisér nu</button>
     </div>
+    <div id="status-badge" aria-live="polite" style="display:none"></div>
     <div class="user-menu no-print">
       <div class="auth-controls">
         <span
@@ -211,14 +212,14 @@
       <div class="form-actions no-print">
         <button id="btnOpenGuideModal" type="button">Åbn guide</button>
         <div class="job-action-group">
-          <button id="btnLockJob" type="button" disabled>Lås akkordseddel</button>
-          <button id="btnMarkSent" type="button" disabled>Marker som fremsendt</button>
+          <button id="btnLockJob" type="button" disabled data-online-only>Lås akkordseddel</button>
+          <button id="btnMarkSent" type="button" disabled data-online-only>Marker som fremsendt</button>
         </div>
       </div>
     </fieldset>
     <section id="job-export" class="card">
       <h3>Eksport</h3>
-      <button id="btn-export-all" class="btn primary">Eksportér alt for dette job</button>
+      <button id="btn-export-all" class="btn primary" data-online-only>Eksportér alt for dette job</button>
       <small id="export-help" class="muted">Kræver udfyldt sagsinfo</small>
     </section>
   </section>
@@ -278,8 +279,8 @@
 
     <div class="row btn-group no-print">
       <button id="btnExportCSV" type="button" disabled>Del til E‑komplet (CSV)</button>
-      <button id="btnExportAll" type="button" disabled>Eksportér PDF + CSV</button>
-      <button id="btnExportZip" type="button" disabled>Del til E‑komplet (ZIP)</button>
+      <button id="btnExportAll" type="button" disabled data-online-only>Eksportér PDF + CSV</button>
+      <button id="btnExportZip" type="button" disabled data-online-only>Del til E‑komplet (ZIP)</button>
     </div>
     <p id="actionHint" class="hint no-print">Udfyld Sagsinfo for at fortsætte.</p>
 
@@ -409,7 +410,7 @@
     <fieldset>
       <legend>Historik</legend>
       <div class="history-actions">
-        <button id="btnExportAudit" type="button" disabled>Eksporter audit-log (CSV)</button>
+        <button id="btnExportAudit" type="button" disabled data-online-only>Eksporter audit-log (CSV)</button>
       </div>
       <div class="history-table-wrapper">
         <table class="history-table">
