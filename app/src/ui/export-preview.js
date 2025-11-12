@@ -66,7 +66,8 @@ export function showExportPreview (data, type = 'csv', options = {}) {
     </form>`;
   document.body.append(dlg);
 
-  const text = normaliseText(data, type).slice(0, 200000);
+  const fullText = normaliseText(data, type);
+  const text = fullText.length > 200000 ? fullText.slice(0, 200000) : fullText;
   const pre = dlg.querySelector('#export-preview-pre');
   if (pre) pre.textContent = text;
 
@@ -86,7 +87,7 @@ export function showExportPreview (data, type = 'csv', options = {}) {
   if (downloadButton) {
     downloadButton.addEventListener('click', () => {
       dlg.close();
-      triggerDownload(text, type, options?.fileName);
+      triggerDownload(fullText, type, options?.fileName);
     });
   }
   const cancelButton = dlg.querySelector('#dl-cancel-2');

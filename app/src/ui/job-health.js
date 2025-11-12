@@ -60,7 +60,30 @@ export async function renderJobHealth () {
   } catch {
     jobs = [];
   }
-  const active = Array.isArray(jobs) && jobs.length ? jobs[jobs.length - 1] : null;
+
+  let active = null;
+  let activeId = null;
+  if (typeof window !== 'undefined') {
+    const store = window.JobStore;
+    if (store && typeof store.getActiveJob === 'function') {
+      try {
+        const storeJob = store.getActiveJob();
+        if (storeJob && typeof storeJob === 'object') {
+          active = storeJob;
+          activeId = storeJob.id || null;
+        }
+      } catch {}
+    }
+  }
+
+  if (!active && Array.isArray(jobs) && jobs.length) {
+    if (activeId) {
+      active = jobs.find(job => job && job.id === activeId) || null;
+    }
+    if (!active) {
+      active = jobs[jobs.length - 1];
+    }
+  }
   const materials = countMaterials(active);
   const updatedAt = active?.updatedAt || active?.createdAt || null;
   const lastSaved = updatedAt ? formatTimestamp(updatedAt) : '–';
