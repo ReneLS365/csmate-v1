@@ -36,13 +36,15 @@ import {
   registerPDFEngine,
   registerEkompletEngine
 } from './src/exports.js'
-import { wireStatusbar, queueChange } from './src/sync.js'
+import { wireStatusbar, queueChange, pendingCount } from './src/sync.js'
 import { exportFullBackup } from './src/backup.js'
 import { installLazyNumpad } from './src/ui/numpad.lazy.js'
 import { createVirtualMaterialsList } from './src/modules/materialsVirtualList.js'
 import { initClickGuard } from './src/ui/Guards/ClickGuard.js'
 import { setAdminOk, setLock } from './src/state/admin.js'
 import { canPerformAction } from './src/utils/permissions.js'
+import { applyOnlineState, setOfflineUserFlag } from './src/core/net-guard.js'
+import { initSwBridge } from './src/core/sw-bridge.js'
 import {
   loadJobs,
   getJobs,
@@ -56,6 +58,42 @@ import {
   markJobSent,
   setAuditUserResolver
 } from './jobs.js'
+
+if (typeof window !== 'undefined') {
+  initSwBridge()
+  ;(async () => {
+    try {
+      const { size, onChange } = await import('./src/core/net-queue.js')
+      const renderBadgeMeta = async () => {
+        const badge = document.getElementById('status-badge')
+        if (!badge) return
+        const writeQueue = await size()
+        const jobQueue = pendingCount()
+        const parts = []
+        if (writeQueue > 0) {
+          parts.push(`${writeQueue} ventende synk`)
+        }
+        if (jobQueue > 0) {
+          parts.push(`${jobQueue} lokale ændring${jobQueue === 1 ? '' : 'er'}`)
+        }
+        const message = parts.join(' • ')
+        if (message) {
+          badge.dataset.title = message
+          badge.setAttribute('title', message)
+        } else {
+          delete badge.dataset.title
+          badge.removeAttribute('title')
+        }
+        badge.dataset.pendingQueue = String(writeQueue)
+      }
+      onChange(() => { renderBadgeMeta() })
+      window.addEventListener('csmate:pending-change', () => { renderBadgeMeta() })
+      await renderBadgeMeta()
+    } catch (error) {
+      console.warn('Kunne ikke initialisere net-queue badge', error)
+    }
+  })()
+}
 
 let DEFAULT_ADMIN_CODE_HASH = ''
 let materialsVirtualListController = null
@@ -2348,6 +2386,12 @@ function applyUserToUi (user) {
   } else {
     activeUser = null;
   }
+  if (typeof window !== 'undefined') {
+    window.csmate = window.csmate || {};
+    window.csmate.currentUser = activeUser;
+  }
+  setOfflineUserFlag(Boolean(activeUser?.offline));
+  applyOnlineState();
   setAuditUserResolver(() => {
     const name = getActiveUserName();
     return name || null;

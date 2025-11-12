@@ -1,3 +1,5 @@
+import { isEffectivelyOnline, ONLINE_EVENT_NAME } from './core/net-guard.js'
+
 const QUEUE_KEY = 'csmate.sync.queue.v1'
 const LAST_SYNC_KEY = 'csmate.sync.last'
 
@@ -5,7 +7,7 @@ const memoryQueue = { jobChanges: [] }
 let memoryLastSync = null
 let syncHandler = async () => ({ ok: true })
 let isSyncing = false
-let currentOnline = typeof navigator !== 'undefined' ? navigator.onLine : true
+let currentOnline = isEffectivelyOnline()
 let statusElements = null
 let statusResetTimer = null
 
@@ -271,7 +273,7 @@ export function wireStatusbar () {
   const els = ensureStatusElements()
   if (!els) return
 
-  applyOnlineState(typeof navigator !== 'undefined' ? navigator.onLine : true)
+  applyOnlineState(isEffectivelyOnline())
   updateLastSyncDisplay()
   updateBadge()
 
@@ -287,8 +289,12 @@ export function wireStatusbar () {
   }
 
   if (typeof window !== 'undefined') {
-    window.addEventListener('online', () => applyOnlineState(true))
-    window.addEventListener('offline', () => applyOnlineState(false))
+    window.addEventListener('online', () => applyOnlineState(isEffectivelyOnline()))
+    window.addEventListener('offline', () => applyOnlineState(isEffectivelyOnline()))
+    window.addEventListener(ONLINE_EVENT_NAME, event => {
+      const state = typeof event?.detail?.online === 'boolean' ? event.detail.online : isEffectivelyOnline()
+      applyOnlineState(state)
+    })
     window.addEventListener('storage', event => {
       if (event.key === QUEUE_KEY) {
         updateBadge()
@@ -315,5 +321,5 @@ export function __resetSyncStateForTests () {
   isSyncing = false
   statusElements = null
   statusResetTimer = null
-  currentOnline = typeof navigator !== 'undefined' ? navigator.onLine : true
+  currentOnline = isEffectivelyOnline()
 }

@@ -789,6 +789,7 @@ Denne rapport opsummerer alle ændringer fra PR #125 og frem til seneste commit 
 ### Større bugs / UX-problemer
 - ~~Playwright e2e-tests for numpad forbedringer timeout’er i beforeEach på grund af den låste `+ Tilføj mand`-knap (mobil fullscreen + admin lock).~~ Løst via rolle- og numpad-fix; suitene passerer nu. 【136796†L1-L5】【43bea9†L1-L10】
 - ~~Auth UI tests viser at admin-scenariet fortsat fejler efter flere iterations (PR #152–#159), hvilket tyder på at rolle-synk/back-end integration ikke fungerer i UI.~~ Løst – admin-scenarierne passerer. 【2fdabc†L1-L8】
+- [x] Offline-UX styrket: synlig badge, skrivekø med backoff og NetGuard-disable er implementeret inkl. Vitest + Playwright dækning.
 
 ### Manglende dele / TODOs
 - E2E-suiter (`npm run e2e`) fejler i miljøet pga. manglende systembiblioteker til Chrome/Chromium – installer deps før næste kørsler. 【a41761†L1-L210】
