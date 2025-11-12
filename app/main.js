@@ -40,11 +40,13 @@ import {
 import { wireStatusbar, queueChange, pendingCount } from './src/sync.js'
 import { exportFullBackup } from './src/backup.js'
 import { installLazyNumpad } from './src/ui/numpad.lazy.js'
+import { showExportPreview } from './src/ui/export-preview.js'
 import { createVirtualMaterialsList } from './src/modules/materialsVirtualList.js'
 import { initClickGuard } from './src/ui/Guards/ClickGuard.js'
 import { setAdminOk, setLock } from './src/state/admin.js'
 import { canPerformAction } from './src/utils/permissions.js'
 import { applyOnlineState, setOfflineUserFlag } from './src/core/net-guard.js'
+import { renderJobHealth } from './src/ui/job-health.js'
 import { initSwBridge } from './src/core/sw-bridge.js'
 import {
   loadJobs,
@@ -999,9 +1001,11 @@ async function handleGlobalClick (event) {
     }
   } else if (target.id === 'btn-backup') {
     try {
-      exportFullBackup()
+      const result = exportFullBackup({ preview: true });
+      if (!result) return;
+      showExportPreview(result.content ?? result.payload, 'json', { fileName: result.fileName });
     } catch (err) {
-      console.error(err)
+      console.error(err);
       alert('Backup eksport fejlede. Se console.')
     }
   }
@@ -5274,7 +5278,12 @@ async function initApp() {
       }
     });
 
-    document.getElementById('btnExportCSV')?.addEventListener('click', () => downloadCSV());
+    document.getElementById('btnExportCSV')?.addEventListener('click', () => {
+      const payload = buildCSVPayload();
+      if (!payload) return;
+      showExportPreview(payload.content, 'csv', { fileName: payload.fileName });
+      updateActionHint('Forhåndsvisning af CSV er klar. Tryk Download for at gemme.', 'info');
+    });
 
     document.getElementById('btnExportAll')?.addEventListener('click', async () => {
       await exportAll();
@@ -5364,6 +5373,14 @@ async function initApp() {
   document.getElementById('btnLockJob')?.addEventListener('click', () => lockCurrentJob());
   document.getElementById('btnMarkSent')?.addEventListener('click', () => markCurrentJobSent());
   document.getElementById('btnExportAudit')?.addEventListener('click', () => exportAuditLogCsv());
+
+  document.querySelectorAll('button.icon-btn:not([aria-label])').forEach(btn => {
+    const tooltip = btn.getAttribute('data-tooltip');
+    const text = typeof btn.textContent === 'string' ? btn.textContent.trim() : '';
+    const label = btn.title || tooltip || text || 'Knap';
+    btn.setAttribute('aria-label', label);
+  });
+  renderJobHealth();
 }
 
 registerJobStoreHooks({
