@@ -50,6 +50,15 @@
 </head>
 <body>
   <a class="skip-to-content" href="#main">Spring til indhold</a>
+  <dialog id="dev-panel" role="dialog" aria-modal="true" aria-labelledby="dev-panel-title">
+    <h3 id="dev-panel-title">Dev Panel</h3>
+    <p>SW-version: <span class="swver">N/A</span></p>
+    <p>Build-tid: <span class="build-time">Ukendt</span></p>
+    <p>Tenant: <span class="tenant">–</span></p>
+    <p>Bruger: <span class="tenant-user">–</span></p>
+    <ul class="error-log"></ul>
+    <button id="close-dev" type="button">Luk</button>
+  </dialog>
   <div class="statusbar-container">
     <div id="statusbar" class="statusbar offline">
       <span class="status-dot offline" id="status-dot"></span>
