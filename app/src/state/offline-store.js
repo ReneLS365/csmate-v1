@@ -42,8 +42,37 @@ function removeKey (key) {
   }
 }
 
+function isObject (value) {
+  return value && typeof value === 'object'
+}
+
+function mergeOfflineProfile (cached, profile) {
+  if (!isObject(cached)) return { ...profile }
+  const merged = { ...cached, ...profile }
+  if (!('roles' in profile) && Array.isArray(cached.roles)) {
+    merged.roles = cached.roles.slice()
+  }
+  if (!('tenants' in profile) && Array.isArray(cached.tenants)) {
+    merged.tenants = cached.tenants.map(entry => ({ ...entry }))
+  }
+  if (!('metadata' in profile) && isObject(cached.metadata)) {
+    merged.metadata = { ...cached.metadata }
+  }
+  return merged
+}
+
+function isEmptyProfile (profile) {
+  if (!isObject(profile)) return true
+  return Object.keys(profile).length === 0
+}
+
 export function ensureOfflineUser (profile = {}) {
-  const ensured = ensureOfflineUserProfile(profile)
+  const cached = getCachedOfflineUser()
+  const baseProfile = isEmptyProfile(profile)
+    ? (cached || profile)
+    : mergeOfflineProfile(cached, profile)
+
+  const ensured = ensureOfflineUserProfile(baseProfile)
   if (!ensured) return null
   const offlineSnapshot = {
     ...ensured,
