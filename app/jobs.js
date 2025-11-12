@@ -1,6 +1,31 @@
 const JOBS_STORAGE_KEY = 'csmate.jobs.v1';
 let jobsCache = null;
 let auditUserResolver = null;
+let offlineStoreSyncPromise = null;
+
+function ensureOfflineStoreModule() {
+  if (offlineStoreSyncPromise) return offlineStoreSyncPromise;
+  if (typeof localStorage === 'undefined') return null;
+  offlineStoreSyncPromise = import('./src/state/offline-store.js').catch(error => {
+    console.warn('Offline store sync fejlede', error);
+    return null;
+  });
+  return offlineStoreSyncPromise;
+}
+
+function syncOfflineJobsCache(jobs) {
+  const modulePromise = ensureOfflineStoreModule();
+  if (!modulePromise || typeof modulePromise.then !== 'function') return;
+  modulePromise
+    .then(module => {
+      if (module && typeof module.replaceJobsCache === 'function') {
+        module.replaceJobsCache(jobs);
+      }
+    })
+    .catch(error => {
+      console.warn('Offline job-cache sync fejl', error);
+    });
+}
 
 function readJobsFromStorage() {
   if (typeof localStorage === 'undefined') return [];
@@ -20,6 +45,7 @@ function writeJobsToStorage(jobs) {
   if (typeof localStorage === 'undefined') return;
   try {
     localStorage.setItem(JOBS_STORAGE_KEY, JSON.stringify(jobs));
+    syncOfflineJobsCache(jobs);
   } catch (error) {
     console.warn('Kunne ikke gemme jobs', error);
   }

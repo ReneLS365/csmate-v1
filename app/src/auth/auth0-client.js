@@ -5,6 +5,30 @@ import {
   mergeRemoteUserProfile
 } from '../state/users.js'
 
+let offlineStoreModulePromise = null
+
+function loadOfflineStoreModule () {
+  if (!offlineStoreModulePromise) {
+    offlineStoreModulePromise = import('../state/offline-store.js').catch(error => {
+      console.warn('Offline store could ikke indlæses', error)
+      return null
+    })
+  }
+  return offlineStoreModulePromise
+}
+
+async function withOfflineStore (callback) {
+  if (typeof callback !== 'function') return null
+  try {
+    const module = await loadOfflineStoreModule()
+    if (!module) return null
+    return await callback(module)
+  } catch (error) {
+    console.warn('Offline store callback fejlede', error)
+    return null
+  }
+}
+
 const defaultState = Object.freeze({
   isReady: false,
   isAuthenticated: false,
@@ -129,6 +153,117 @@ function publishState (state) {
     nextState.offline = true
   }
   window.CSMATE_AUTH = nextState
+  if (nextState.profile) {
+    withOfflineStore(module => module?.cacheOfflineProfile?.(nextState.profile))
+  }
+}
+
+const AUTH_BUTTON_SELECTORS = Object.freeze({
+  login: ['#login', '#btn-login', '[data-action="login"]', '[data-auth="login"]'],
+  signup: ['#signup', '#btn-signup', '[data-action="signup"]', '[data-auth="signup"]'],
+  switch: ['#switch', '#btn-switch-user', '[data-action="switch"]', '[data-auth="switch"]'],
+  offline: ['#offline', '#btn-offline', '[data-action="offline"]', '[data-auth="offline"]']
+})
+
+const AUTH_BUTTON_HANDLERS = Object.freeze({
+  login: handleLoginClick,
+  signup: handleSignupClick,
+  switch: handleSwitchUserClick,
+  offline: handleOfflineLoginClick
+})
+
+async function handleLoginClick () {
+  return loginWithRedirect()
+}
+
+async function handleSignupClick () {
+  return signupWithRedirect()
+}
+
+async function handleSwitchUserClick () {
+  clearStoredUser()
+  authState = {
+    ...defaultState,
+    isReady: true,
+    profile: cloneProfile(getCurrentUser()),
+    lastSyncError: null
+  }
+  publishState(authState)
+  await withOfflineStore(module => module?.clearOfflineUser?.())
+  if (typeof window !== 'undefined' && window.CSMATE_AUTH) {
+    delete window.CSMATE_AUTH.offline
+  }
+}
+
+async function handleOfflineLoginClick () {
+  const offlineUser = await withOfflineStore(module => module?.ensureOfflineUser?.())
+  if (!offlineUser) return null
+  const snapshot = {
+    ...offlineUser,
+    offline: true
+  }
+  setWindowActiveUser(snapshot)
+  authState = {
+    isReady: true,
+    isAuthenticated: false,
+    user: null,
+    profile: cloneProfile(snapshot),
+    lastSyncError: null
+  }
+  if (typeof window !== 'undefined') {
+    window.CSMATE_AUTH = {
+      ...(window.CSMATE_AUTH || {}),
+      isReady: true,
+      isAuthenticated: false,
+      user: null,
+      profile: cloneProfile(snapshot),
+      offline: true
+    }
+  }
+  publishState(authState)
+  return snapshot
+}
+
+function bindHandlerToElement (element, handler) {
+  if (!element || typeof handler !== 'function') return
+  element.onclick = async event => {
+    if (event && typeof event.preventDefault === 'function') {
+      event.preventDefault()
+    }
+    try {
+      await handler(event)
+    } catch (error) {
+      console.error('Auth handler fejlede', error)
+    }
+  }
+  if (element.removeAttribute) {
+    element.removeAttribute('disabled')
+  }
+  if (element.style && !element.style.cursor) {
+    element.style.cursor = 'pointer'
+  }
+}
+
+function findAuthButton (key) {
+  const selectors = AUTH_BUTTON_SELECTORS[key] || []
+  for (let index = 0; index < selectors.length; index += 1) {
+    const selector = selectors[index]
+    if (!selector || typeof selector !== 'string') continue
+    const element = document.querySelector(selector)
+    if (element) return element
+  }
+  return null
+}
+
+export function bindAuthButtons () {
+  if (typeof document === 'undefined') return
+  Object.keys(AUTH_BUTTON_HANDLERS).forEach(key => {
+    const element = findAuthButton(key)
+    const handler = AUTH_BUTTON_HANDLERS[key]
+    if (element && handler) {
+      bindHandlerToElement(element, handler)
+    }
+  })
 }
 
 function cloneAuthState (state = authState) {
