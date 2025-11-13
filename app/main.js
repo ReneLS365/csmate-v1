@@ -24,7 +24,7 @@ import {
   getUserProfile as headerGetUserProfile,
   isAnyAdmin as headerIsAnyAdmin,
   getRoleFlags as headerGetRoleFlags,
-  login as authLogin
+  login
 } from './auth.js'
 import {
   getCurrentUser as getStoredUser,
@@ -77,10 +77,14 @@ import {
   setAuditUserResolver
 } from './jobs.js'
 import { renderLocalFirmAdminUI } from './admin-ui.js'
-import { upsertUser } from './user-registry.js'
+import { registerCurrentUserFromAuth } from './services/user-service.js'
+import {
+  getJobById as getJobByIdFromService,
+  saveJob as saveJobViaService,
+  submitJob as submitJobViaService,
+} from './services/job-service.js'
 import {
   ensureJobStatus,
-  markJobSubmitted,
   metaToApproval,
   approvalToMeta,
   formatApprovalStatus
@@ -1412,7 +1416,7 @@ function persistCurrentSheetState(systemId, options = {}) {
     job.systems = job.systems.concat(systemId);
   }
   job.currentSystemId = systemId;
-  const updated = updateJob(currentJobId, job);
+  const updated = saveJobViaService(job);
   if (updated) {
     jobsState[index] = updated;
   }
@@ -1476,7 +1480,7 @@ function persistCurrentJobState(options = {}) {
   if (!job.firmId) {
     job.firmId = getCurrentFirmIdForJob();
   }
-  const updated = updateJob(currentJobId, job);
+  const updated = saveJobViaService(job);
   if (updated) {
     jobsState[index] = updated;
   }
@@ -1670,9 +1674,14 @@ function setCurrentJob(jobId, options = {}) {
   if (currentJobId && !options.skipPersist) {
     persistCurrentJobState({ silent: true });
   }
-  const job = jobsState.find(item => item.id === jobId);
+  let job = getJobByIdFromService(jobId);
+  if (!job) {
+    job = jobsState.find(item => item.id === jobId) || null;
+  }
   if (!job) return;
-  applyJobToUI(job, options);
+  const ensured = ensureJobStatus({ ...job });
+  updateJobStateEntry(ensured);
+  applyJobToUI(ensured, options);
   renderJobList();
 }
 
@@ -2353,24 +2362,15 @@ async function updateAuthBar () {
   }
 
   if (profile) {
-    const userId = profile.sub || profile.user_id || profile.userId || profile.email || null;
-    if (userId) {
-      const tenants = Array.isArray(profile.tenants) ? profile.tenants : [];
-      const membership = tenants.find(entry => entry && (entry.id || entry.tenantId || entry.slug)) || tenants[0] || null;
-      const firmId = membership?.id || membership?.tenantId || membership?.slug || null;
-      const role = flags.isCsmateAdmin
-        ? 'csmate-admin'
-        : flags.isCompanyAdmin
-          ? 'firma-admin'
-          : 'user';
-      upsertUser({
-        id: userId,
-        email: profile.email || '',
-        name: profile.name || profile.nickname || profile.email || '',
-        role,
-        firmId: typeof firmId === 'string' ? firmId : null
-      });
-    }
+    const tenants = Array.isArray(profile.tenants) ? profile.tenants : [];
+    const membership = tenants.find(entry => entry && (entry.id || entry.tenantId || entry.slug)) || tenants[0] || null;
+    const firmId = membership?.id || membership?.tenantId || membership?.slug || null;
+    const role = flags.isCsmateAdmin
+      ? 'csmate-admin'
+      : flags.isCompanyAdmin
+        ? 'firma-admin'
+        : 'user';
+    registerCurrentUserFromAuth(profile, { role, firmId });
   }
 
   const name = typeof profile?.name === 'string' && profile.name.trim()
@@ -2612,18 +2612,9 @@ function applyUserToUi (user) {
     if (Array.isArray(user.tenants)) {
       activeUser.tenants = user.tenants.map(entry => ({ ...entry }));
     }
-    const userId = activeUser.id || activeUser.emailKey || activeUser.email || null;
-    if (userId) {
-      const firmId = resolveUserFirmId(activeUser);
-      const roleLabel = activeUser.role || (activeUser.roles && activeUser.roles[0]) || 'user';
-      upsertUser({
-        id: userId,
-        email: activeUser.email || activeUser.emailKey || '',
-        name: activeUser.displayName || activeUser.name || '',
-        role: roleLabel,
-        firmId
-      });
-    }
+    const firmId = resolveUserFirmId(activeUser);
+    const roleLabel = activeUser.role || (activeUser.roles && activeUser.roles[0]) || 'user';
+    registerCurrentUserFromAuth(user, { role: roleLabel, firmId });
   } else {
     activeUser = null;
   }
@@ -3518,11 +3509,7 @@ function initStatusControls() {
 
 function handleSubmitForApproval() {
   if (!currentJobId) return;
-  const updated = updateJob(currentJobId, job => {
-    const next = ensureJobStatus({ ...job });
-    markJobSubmitted(next);
-    return next;
-  });
+  const updated = submitJobViaService(currentJobId) || getJobByIdFromService(currentJobId);
   if (updated) {
     updateJobStateEntry(updated);
     currentStatus = updated.metaStatus || 'kladde';
@@ -5713,14 +5700,20 @@ async function bootstrap () {
     console.error('initAuth failed', error);
   }
 
-  syncAuthUiFromState();
+  const latestState = syncAuthUiFromState();
+  if (latestState?.user) {
+    const tenantCandidate = currentTenant || deriveTenantFromUser(latestState.user);
+    if (tenantCandidate) {
+      registerCurrentUserFromAuth(latestState.user, tenantCandidate);
+    }
+  }
   updateAdminTabVisibility();
   initAuthButtons();
   const opretBtn = document.getElementById('btn-opret-login');
   if (opretBtn) {
     opretBtn.addEventListener('click', (event) => {
       if (event?.preventDefault) event.preventDefault();
-      authLogin().catch(error => {
+      login().catch(error => {
         console.error('Auth login failed', error);
       });
     });

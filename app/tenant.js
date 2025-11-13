@@ -1,5 +1,9 @@
+import {
+  getFirmsConfig,
+  getTemplatesMeta,
+} from './services/tenant-service.js';
+
 const LOCAL_ACTIVE_KEY = 'csmate-active-firm';
-const LOCAL_FIRMS_KEY = 'csmate-firms';
 const LOCAL_OVERRIDES_PREFIX = 'csmate-firm-overrides:';
 
 const memoryStorage = (() => {
@@ -135,41 +139,11 @@ async function loadJson(path) {
 }
 
 export async function loadFirmsConfig() {
-  const seed = await loadJson('/data/firms.json');
-  let local = null;
-  try {
-    const raw = getStoredValue(LOCAL_FIRMS_KEY);
-    local = raw ? JSON.parse(raw) : null;
-  } catch (error) {
-    console.warn('Kunne ikke parse lokal firms config', error);
-    local = null;
-  }
-
-  if (!local || !Array.isArray(local.firms)) {
-    return seed;
-  }
-
-  const byId = new Map();
-  ensureArray(seed.firms).forEach(firm => {
-    if (firm?.id) {
-      byId.set(firm.id, { ...firm });
-    }
-  });
-  ensureArray(local.firms).forEach(firm => {
-    if (firm?.id) {
-      byId.set(firm.id, { ...firm });
-    }
-  });
-
-  return { firms: Array.from(byId.values()) };
-}
-
-export function saveFirmsConfig(config) {
-  setStoredValue(LOCAL_FIRMS_KEY, JSON.stringify(config));
+  return getFirmsConfig();
 }
 
 export async function loadTemplateMeta() {
-  return loadJson('/data/templates/index.json');
+  return getTemplatesMeta();
 }
 
 function loadFirmOverrides(firmId) {

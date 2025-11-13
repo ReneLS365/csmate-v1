@@ -1,4 +1,12 @@
-import { listUsers, updateUser } from './user-registry.js';
+import {
+  getAllUsers,
+  assignUserToFirm,
+  makeUserFirmAdmin,
+} from './services/user-service.js';
+import {
+  updateFirmTemplate,
+  createFirm,
+} from './services/tenant-service.js';
 import { listJobsForFirm, approveJobById, rejectJobById } from './job-admin.js';
 import { formatApprovalStatus, ensureJobStatus } from './job-status.js';
 
@@ -149,19 +157,16 @@ function renderUsersTable({ container, users, firmId, canAssign, tenantName }) {
   container.querySelectorAll('button[data-user-firm]').forEach(button => {
     button.addEventListener('click', () => {
       const targetId = button.dataset.userFirm || '';
-      const existing = users.find(user => user.id === targetId);
-      updateUser(targetId, { firmId, role: existing?.role || 'user' });
-      console.log('TODO: Opdater Auth0 app_metadata.firmId for', targetId, '->', firmId);
-      renderUsersTable({ container, users: listUsers(), firmId, canAssign, tenantName });
+      assignUserToFirm(targetId, firmId);
+      renderUsersTable({ container, users: getAllUsers(), firmId, canAssign, tenantName });
     });
   });
 
   container.querySelectorAll('button[data-user-firm-admin]').forEach(button => {
     button.addEventListener('click', () => {
       const targetId = button.dataset.userFirmAdmin || '';
-      updateUser(targetId, { firmId, role: 'firma-admin' });
-      console.log('TODO: Opdater Auth0 rolle til "firma-admin" for', targetId, 'i firma', firmId);
-      renderUsersTable({ container, users: listUsers(), firmId, canAssign, tenantName });
+      makeUserFirmAdmin(targetId, firmId);
+      renderUsersTable({ container, users: getAllUsers(), firmId, canAssign, tenantName });
     });
   });
 }
@@ -300,7 +305,7 @@ export function renderLocalFirmAdminUI({ tenantId, currentUser, tenantName }) {
     infoEl.append(message);
   }
 
-  const users = listUsers();
+  const users = getAllUsers();
   const currentUserId = getCurrentUserId(currentUser);
   const currentUserLabel = currentUser?.displayName || currentUser?.name || currentUserId;
   const globalAdmin = isGlobalAdmin(currentUser);
@@ -323,7 +328,6 @@ import {
   getTenantFirmId,
   setActiveFirmId,
   loadFirmsConfig,
-  saveFirmsConfig,
   loadTemplateMeta,
   loadTemplateForTenant,
   saveFirmOverrides
@@ -433,13 +437,12 @@ async function setupCsmateAdminSection(tenant) {
       });
       select.value = firm.templateId || templateOptions[0]?.id || 'default';
       select.addEventListener('change', async () => {
-        const nextConfig = await loadFirmsConfig();
-        const nextFirms = Array.isArray(nextConfig?.firms) ? nextConfig.firms : [];
-        const target = nextFirms.find(entry => entry.id === firm.id);
-        if (target) {
-          target.templateId = select.value;
-          saveFirmsConfig({ firms: nextFirms });
+        try {
+          await updateFirmTemplate(firm.id, select.value);
+        } catch (error) {
+          console.error('Kunne ikke opdatere firmatemplate', error);
         }
+        await render();
       });
       row.appendChild(select);
 
@@ -471,8 +474,13 @@ async function setupCsmateAdminSection(tenant) {
       window.alert('Et firma med dette id findes allerede.');
       return;
     }
-    firms.push({ id, name, templateId: 'default' });
-    saveFirmsConfig({ firms });
+    try {
+      await createFirm({ id, name, templateId: 'default' });
+    } catch (error) {
+      console.error('Kunne ikke oprette firma', error);
+      window.alert('Kunne ikke oprette firma. Se konsollen for detaljer.');
+      return;
+    }
     await render();
   });
 }
