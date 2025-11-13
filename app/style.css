@@ -45,6 +45,10 @@ header .bar{display:flex;gap:8px;align-items:center;justify-content:space-betwee
 #job-health{margin-left:auto;font-size:0.85rem;color:var(--muted);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:65vw}
 header .ttl{font-weight:700}
 .statusbar-container{position:sticky;top:0;z-index:6;display:flex;flex-direction:column;gap:0;background:var(--panel);border-bottom:1px solid var(--border)}
+#auth-bar{position:relative;top:auto;z-index:auto;display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:0.75rem;padding:0.35rem 0.75rem;background:var(--panel);border-bottom:1px solid var(--border)}
+#auth-status{font-size:0.9rem;color:var(--muted);flex:1 1 auto;min-width:160px}
+.auth-bar-actions{display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;justify-content:flex-end}
+#auth-bar .btn.small{min-height:38px}
 .statusbar{position:relative;padding:.5rem 1rem;font-size:.9rem;display:flex;gap:1rem;align-items:center;background:inherit;border-bottom:1px solid var(--border)}
 .statusbar.online{background:#e6ffed;border-bottom:1px solid #b2f5bf;color:#14532d}
 .statusbar.offline{background:#fff5f5;border-bottom:1px solid #feb2b2;color:#7f1d1d}
