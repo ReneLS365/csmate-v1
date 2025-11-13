@@ -1,0 +1,16 @@
+{
+  "templates": [
+    {
+      "id": "default",
+      "label": "Standard CSMate",
+      "file": "default.json",
+      "editableByFirmAdmin": true
+    },
+    {
+      "id": "hulmose",
+      "label": "Hulmose Stilladser",
+      "file": "hulmose.json",
+      "editableByFirmAdmin": true
+    }
+  ]
+}

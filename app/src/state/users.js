@@ -1,4 +1,5 @@
 import { isOwnerEmail } from '../auth0-config.js'
+import { mapAuthUserToTenant } from '../../tenant.js'
 
 /**
  * @typedef {Object} TenantMembership
@@ -696,14 +697,60 @@ export function ensureUserFromAuth0 (authUser) {
 
   if (!Array.isArray(user.roles) || user.roles.length === 0) {
     user.roles = ['worker']
-  } else {
-    user.roles = normalizeGlobalRoles(user.roles)
   }
+  user.roles = normalizeGlobalRoles(user.roles)
 
   if (!Array.isArray(user.tenants)) {
     user.tenants = []
-  } else {
-    user.tenants = normalizeTenantMemberships(user.tenants)
+  }
+  user.tenants = normalizeTenantMemberships(user.tenants)
+
+  const tenantMeta = mapAuthUserToTenant(authUser)
+  if (tenantMeta && (tenantMeta.role || tenantMeta.firmId || tenantMeta.firms?.length)) {
+    const canonicalFirmRole = tenantMeta.role === 'csmate-admin'
+      ? 'owner'
+      : tenantMeta.role === 'firma-admin'
+        ? 'tenantAdmin'
+        : 'worker'
+
+    user.metadata = cloneMetadata(user.metadata)
+    user.metadata.tenant = { ...tenantMeta }
+    if (tenantMeta.activeFirmId) {
+      user.metadata.activeFirmId = tenantMeta.activeFirmId
+    } else if (tenantMeta.firmId) {
+      user.metadata.activeFirmId = tenantMeta.firmId
+    }
+
+    const firmIds = new Set()
+    if (Array.isArray(tenantMeta.firms)) {
+      tenantMeta.firms.forEach(id => {
+        if (typeof id === 'string' && id.trim()) {
+          firmIds.add(id.trim())
+        }
+      })
+    }
+    if (typeof tenantMeta.firmId === 'string' && tenantMeta.firmId.trim()) {
+      firmIds.add(tenantMeta.firmId.trim())
+    }
+    if (typeof tenantMeta.activeFirmId === 'string' && tenantMeta.activeFirmId.trim()) {
+      firmIds.add(tenantMeta.activeFirmId.trim())
+    }
+
+    if (firmIds.size > 0) {
+      const merged = [...user.tenants]
+      firmIds.forEach(id => {
+        merged.push({ id, role: canonicalFirmRole })
+      })
+      user.tenants = normalizeTenantMemberships(merged)
+    }
+
+    if (canonicalFirmRole === 'owner') {
+      user.roles = normalizeGlobalRoles([...user.roles, 'owner'])
+    } else if (canonicalFirmRole === 'tenantAdmin') {
+      user.roles = normalizeGlobalRoles([...user.roles, 'tenantAdmin'])
+    } else {
+      user.roles = normalizeGlobalRoles([...user.roles, 'worker'])
+    }
   }
 
   if (email && isOwnerEmail(email)) {

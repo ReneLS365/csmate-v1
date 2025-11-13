@@ -545,29 +545,33 @@
       </div>
     </section>
   </section>
-  <section id="admin-panel" style="display:none;">
+  <section id="admin-panel" hidden>
     <section data-view="admin" id="view-admin" class="sektion tab-view hidden" hidden>
       <h2>Adminpanel</h2>
 
       <section
-        id="company-admin-panel"
+        id="admin-csmate-section"
         class="admin-subpanel"
         hidden
-        aria-labelledby="company-admin-panel-title"
+        aria-labelledby="admin-csmate-title"
       >
-        <h3 id="company-admin-panel-title">Firmaadministration</h3>
-        <div id="admin-users-list"></div>
+        <h3 id="admin-csmate-title">CSMate administration</h3>
+        <p class="muted">Opret firmaer, vælg templates og skift aktivt firma for globalt overblik.</p>
+        <div id="admin-csmate-firm-list" class="admin-firm-list"></div>
+        <button id="admin-create-firm-btn" type="button" class="btn secondary">Opret nyt firma</button>
       </section>
 
       <section
-        id="platform-admin-panel"
+        id="admin-firm-section"
         class="admin-subpanel"
         hidden
-        aria-labelledby="platform-admin-panel-title"
+        aria-labelledby="admin-firm-title"
       >
-        <h3 id="platform-admin-panel-title">Platformadministration</h3>
-        <label for="admin-tenant-select">Firma</label>
-        <select id="admin-tenant-select"></select>
+        <h3 id="admin-firm-title">Firmaadministration</h3>
+        <div id="admin-firm-info" class="admin-firm-info"></div>
+        <div id="admin-firm-users" class="admin-firm-users"></div>
+        <div id="admin-firm-prices" class="admin-firm-prices"></div>
+        <div id="admin-firm-jobs" class="admin-firm-jobs"></div>
       </section>
     </section>
   </section>

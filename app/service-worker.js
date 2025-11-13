@@ -26,7 +26,11 @@ const PRECACHE = [
   '/src/dev.js',
   '/src/dev/panel.js',
   '/src/keyboard.js',
-  '/src/data/materials-static.js'
+  '/src/data/materials-static.js',
+  '/data/firms.json',
+  '/data/templates/index.json',
+  '/data/templates/default.json',
+  '/data/templates/hulmose.json'
 ];
 
 const DATA_MATCHERS = [/\/data\//, /\.json(?:\?|$)/i];

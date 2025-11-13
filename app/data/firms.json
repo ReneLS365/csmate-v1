@@ -1,0 +1,14 @@
+{
+  "firms": [
+    {
+      "id": "hulmose",
+      "name": "Hulmose Stilladser",
+      "templateId": "hulmose"
+    },
+    {
+      "id": "demo",
+      "name": "Demo Firma",
+      "templateId": "default"
+    }
+  ]
+}
