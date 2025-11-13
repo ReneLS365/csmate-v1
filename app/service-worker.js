@@ -31,6 +31,10 @@ const PRECACHE = [
   '/job-status.js',
   '/job-admin.js',
   '/user-registry.js'
+  '/data/firms.json',
+  '/data/templates/index.json',
+  '/data/templates/default.json',
+  '/data/templates/hulmose.json'
 ];
 
 const DATA_MATCHERS = [/\/data\//, /\.json(?:\?|$)/i];

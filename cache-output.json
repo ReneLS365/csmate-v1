@@ -8,31 +8,31 @@
       "file": "app/index.html",
       "aliasFor": "/index.html",
       "exists": true,
-      "bytes": 36327,
-      "sha256": "b118ee9717727dbb8015f2ba3f911c9d5bf206024bf97ef6b29b5de8ec6c98bc"
+      "bytes": 36674,
+      "sha256": "b4332a6c9a002c5ee0f10612279519805df190321839f643f83443facba4851f"
     },
     {
       "url": "/?source=pwa",
       "file": "app/index.html",
       "exists": true,
-      "bytes": 36327,
-      "sha256": "b118ee9717727dbb8015f2ba3f911c9d5bf206024bf97ef6b29b5de8ec6c98bc",
+      "bytes": 36674,
+      "sha256": "b4332a6c9a002c5ee0f10612279519805df190321839f643f83443facba4851f",
       "duplicateOf": "app/index.html"
     },
     {
       "url": "/index.html",
       "file": "app/index.html",
       "exists": true,
-      "bytes": 36327,
-      "sha256": "b118ee9717727dbb8015f2ba3f911c9d5bf206024bf97ef6b29b5de8ec6c98bc",
+      "bytes": 36674,
+      "sha256": "b4332a6c9a002c5ee0f10612279519805df190321839f643f83443facba4851f",
       "duplicateOf": "app/index.html"
     },
     {
       "url": "/main.js",
       "file": "app/main.js",
       "exists": true,
-      "bytes": 180822,
-      "sha256": "39a1fca54a60e61f7b20204f5eef4f7871ad9e8df3d43b90c6c15b075a010d87"
+      "bytes": 180947,
+      "sha256": "d40fd0b6896444d04e76e53c53a8f9e7cb1cfb9786cfd1fcadfdfd3e57b3bd88"
     },
     {
       "url": "/style.css",
@@ -194,6 +194,32 @@
       "exists": true,
       "bytes": 1433,
       "sha256": "eb1d55f99a018cc877706e3dca547e65a206894abf5b638a3199e20bb5ab57ab"
+      "url": "/data/firms.json",
+      "file": "app/data/firms.json",
+      "exists": true,
+      "bytes": 213,
+      "sha256": "bd92e4a25f1b28763476f6e13076391a39ea43eeae8e22233e9080fbe5ebd23e"
+    },
+    {
+      "url": "/data/templates/index.json",
+      "file": "app/data/templates/index.json",
+      "exists": true,
+      "bytes": 295,
+      "sha256": "c341efeb9d7f47ae458996ad71216d813123f45fc4d52854d71bcf0ed9a1c872"
+    },
+    {
+      "url": "/data/templates/default.json",
+      "file": "app/data/templates/default.json",
+      "exists": true,
+      "bytes": 526,
+      "sha256": "2772a71e0c9981e3588c0c78b9bb4e9c5e6fdfa5fa80785f2581ba399f3e5b3d"
+    },
+    {
+      "url": "/data/templates/hulmose.json",
+      "file": "app/data/templates/hulmose.json",
+      "exists": true,
+      "bytes": 1291,
+      "sha256": "d3f03fc750a4cbc37e065ceb42d067273012fcdc7d2d8e5f7963e4e2a8dfeb2c"
     }
   ],
   "dataMatchers": [
