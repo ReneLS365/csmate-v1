@@ -2,6 +2,9 @@ import { AUTH0_DOMAIN as CONFIG_DOMAIN, AUTH0_CLIENT_ID as CONFIG_CLIENT_ID } fr
 
 const AUTH0_AUDIENCE = 'https://csmate.netlify.app/api';
 const ROLE_NAMESPACE = 'https://csmate.app';
+const ROLE_PLATFORM_ADMIN = 'csmate-admin';
+const ROLE_COMPANY_ADMIN = 'Company-admin';
+const ROLE_STANDARD_USER = 'csmate-user';
 
 let auth0Client = typeof window !== 'undefined' ? window.__CSMATE_AUTH0_CLIENT || null : null;
 let auth0ClientFactoryPromise = null;
@@ -188,7 +191,32 @@ export async function getUserRoles() {
   return [];
 }
 
-export async function isAdmin() {
+export async function isPlatformAdmin() {
   const roles = await getUserRoles();
-  return roles.includes('csmate-admin');
+  return roles.includes(ROLE_PLATFORM_ADMIN);
+}
+
+export async function isCompanyAdmin() {
+  const roles = await getUserRoles();
+  return roles.includes(ROLE_COMPANY_ADMIN);
+}
+
+export async function isAnyAdmin() {
+  const roles = await getUserRoles();
+  if (!Array.isArray(roles) || roles.length === 0) return false;
+  return roles.includes(ROLE_PLATFORM_ADMIN) || roles.includes(ROLE_COMPANY_ADMIN);
+}
+
+export async function isAdmin() {
+  return isPlatformAdmin();
+}
+
+export async function getRoleFlags() {
+  const roles = await getUserRoles();
+  const list = Array.isArray(roles) ? roles : [];
+  return {
+    isCsmateAdmin: list.includes(ROLE_PLATFORM_ADMIN),
+    isCompanyAdmin: list.includes(ROLE_COMPANY_ADMIN),
+    isUser: list.includes(ROLE_STANDARD_USER)
+  };
 }

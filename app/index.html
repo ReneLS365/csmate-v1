@@ -549,12 +549,26 @@
     <section data-view="admin" id="view-admin" class="sektion tab-view hidden" hidden>
       <h2>Adminpanel</h2>
 
-      <label>
-        Firma
-        <select id="admin-tenant-select"></select>
-      </label>
+      <section
+        id="company-admin-panel"
+        class="admin-subpanel"
+        hidden
+        aria-labelledby="company-admin-panel-title"
+      >
+        <h3 id="company-admin-panel-title">Firmaadministration</h3>
+        <div id="admin-users-list"></div>
+      </section>
 
-      <div id="admin-users-list"></div>
+      <section
+        id="platform-admin-panel"
+        class="admin-subpanel"
+        hidden
+        aria-labelledby="platform-admin-panel-title"
+      >
+        <h3 id="platform-admin-panel-title">Platformadministration</h3>
+        <label for="admin-tenant-select">Firma</label>
+        <select id="admin-tenant-select"></select>
+      </section>
     </section>
   </section>
         </main>
