@@ -161,7 +161,7 @@ function publishState (state) {
 
 const AUTH_BUTTON_SELECTORS = Object.freeze({
   login: ['#login', '#btn-login', '[data-action="login"]', '[data-auth="login"]'],
-  signup: ['#signup', '#btn-signup', '[data-action="signup"]', '[data-auth="signup"]'],
+  signup: ['#signup', '[data-action="signup"]', '[data-auth="signup"]'],
   switch: ['#switch', '#btn-switch-user', '[data-action="switch"]', '[data-auth="switch"]'],
   offline: ['#offline', '#btn-offline', '[data-action="offline"]', '[data-auth="offline"]']
 })

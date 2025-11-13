@@ -181,7 +181,7 @@ function updateAuthUi () {
   const loginBtn = document.getElementById('btn-login')
   const logoutBtn = document.getElementById('btn-logout')
   const switchUserBtn = document.getElementById('btn-switch-user')
-  const signupBtn = document.getElementById('btn-signup')
+  const signupBtn = document.getElementById('btn-opret-login')
   const userLabel = document.getElementById('current-user-label')
 
   const isAuthenticated = authState.isAuthenticated
@@ -248,12 +248,15 @@ function bindAuthButtonHandlers () {
   const loginBtn = document.getElementById('btn-login')
   const logoutBtn = document.getElementById('btn-logout')
   const switchUserBtn = document.getElementById('btn-switch-user')
-  const signupBtn = document.getElementById('btn-signup')
+  const signupBtn = document.getElementById('btn-opret-login')
 
   handleAuthButton(loginBtn, onLoginButtonClick)
-  handleAuthButton(signupBtn, onSignupButtonClick)
   handleAuthButton(switchUserBtn, onLoginButtonClick)
   handleAuthButton(logoutBtn, onLogoutButtonClick)
+
+  if (signupBtn) {
+    signupBtn.removeEventListener('click', onSignupButtonClick)
+  }
 }
 
 export async function initAuth () {
