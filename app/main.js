@@ -22,7 +22,8 @@ import {
   initAuth as initAuthHeader,
   isAuthenticated as headerIsAuthenticated,
   getUserProfile as headerGetUserProfile,
-  isAdmin as headerIsAdmin
+  isAnyAdmin as headerIsAnyAdmin,
+  getRoleFlags as headerGetRoleFlags
 } from './auth.js'
 import {
   getCurrentUser as getStoredUser,
@@ -2238,6 +2239,8 @@ async function updateAuthBar () {
   const logoutBtn = document.getElementById('btn-logout');
   const statusEl = document.getElementById('auth-status');
   const adminPanel = document.getElementById('admin-panel');
+  const companyAdminPanel = document.getElementById('company-admin-panel');
+  const platformAdminPanel = document.getElementById('platform-admin-panel');
 
   if (!loginBtn || !logoutBtn || !statusEl || !adminPanel) {
     console.warn('Auth UI elements not found, skipping auth UI update');
@@ -2251,51 +2254,79 @@ async function updateAuthBar () {
     console.warn('Kunne ikke afgøre auth-status', error);
   }
 
-  if (loggedIn) {
-    loginBtn.style.display = 'none';
-    loginBtn.classList.add('hidden');
-    logoutBtn.style.display = 'inline-flex';
-    logoutBtn.classList.remove('hidden');
-  } else {
-    loginBtn.style.display = 'inline-flex';
-    loginBtn.classList.remove('hidden');
-    logoutBtn.style.display = 'none';
-    logoutBtn.classList.add('hidden');
-  }
+  loginBtn.style.display = loggedIn ? 'none' : 'inline-flex';
+  loginBtn.classList.toggle('hidden', loggedIn);
+  logoutBtn.style.display = loggedIn ? 'inline-flex' : 'none';
+  logoutBtn.classList.toggle('hidden', !loggedIn);
 
   if (!loggedIn) {
     statusEl.textContent = 'Ikke logget ind';
     adminPanel.style.display = 'none';
+    if (companyAdminPanel) {
+      companyAdminPanel.style.display = 'none';
+      companyAdminPanel.hidden = true;
+    }
+    if (platformAdminPanel) {
+      platformAdminPanel.style.display = 'none';
+      platformAdminPanel.hidden = true;
+    }
     return;
   }
 
   let profile = null;
+  let flags = { isCsmateAdmin: false, isCompanyAdmin: false, isUser: false };
+  let anyAdmin = false;
   try {
     profile = await headerGetUserProfile();
   } catch (error) {
     console.warn('Kunne ikke hente auth-profil', error);
   }
 
+  try {
+    flags = await headerGetRoleFlags();
+  } catch (error) {
+    console.warn('Kunne ikke hente rolle-flags', error);
+  }
+
+  try {
+    anyAdmin = await headerIsAnyAdmin();
+  } catch (error) {
+    console.warn('Kunne ikke afgøre admin-roller', error);
+  }
+
   const name = typeof profile?.name === 'string' && profile.name.trim()
     ? profile.name.trim()
     : (typeof profile?.email === 'string' && profile.email.trim() ? profile.email.trim() : '');
 
-  let isAdminUser = false;
-  try {
-    isAdminUser = await headerIsAdmin();
-  } catch (error) {
-    console.warn('Kunne ikke afgøre admin-rolle', error);
-  }
-
   if (name) {
-    statusEl.textContent = isAdminUser
-      ? `Logget ind som ${name} (admin)`
-      : `Logget ind som ${name}`;
+    if (flags.isCsmateAdmin) {
+      statusEl.textContent = `Logget ind som ${name} (CSMate-admin)`;
+    } else if (flags.isCompanyAdmin) {
+      statusEl.textContent = `Logget ind som ${name} (Company-admin)`;
+    } else {
+      statusEl.textContent = `Logget ind som ${name}`;
+    }
+  } else if (flags.isCsmateAdmin) {
+    statusEl.textContent = 'Logget ind (CSMate-admin)';
+  } else if (flags.isCompanyAdmin) {
+    statusEl.textContent = 'Logget ind (Company-admin)';
   } else {
-    statusEl.textContent = isAdminUser ? 'Logget ind (admin)' : 'Logget ind';
+    statusEl.textContent = 'Logget ind';
   }
 
-  adminPanel.style.display = isAdminUser ? 'block' : 'none';
+  adminPanel.style.display = anyAdmin ? 'block' : 'none';
+
+  if (companyAdminPanel) {
+    const showCompanyPanel = flags.isCompanyAdmin || flags.isCsmateAdmin;
+    companyAdminPanel.style.display = showCompanyPanel ? 'block' : 'none';
+    companyAdminPanel.hidden = !showCompanyPanel;
+  }
+
+  if (platformAdminPanel) {
+    const showPlatformPanel = Boolean(flags.isCsmateAdmin);
+    platformAdminPanel.style.display = showPlatformPanel ? 'block' : 'none';
+    platformAdminPanel.hidden = !showPlatformPanel;
+  }
 }
 
 if (typeof window !== 'undefined') {
