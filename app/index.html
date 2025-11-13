@@ -34,14 +34,13 @@
   <link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-16.png">
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
-  <script src="https://cdn.auth0.com/js/auth0-spa-js/2.6/auth0-spa-js.production.js" defer></script>
   <script>
     window.CSMATE_AUTH0_CONFIG = {
       domain: 'DIN_TENANT.eu.auth0.com',
       clientId: 'DIN_CLIENT_ID',
       authorizationParams: {
         redirect_uri: window.location.origin + '/',
-        // audience kan udfyldes via miljøvariabler eller runtime-script
+        audience: 'https://csmate.netlify.app/api'
       },
       cacheLocation: 'localstorage',
       useRefreshTokens: true
@@ -60,6 +59,13 @@
     <button id="close-dev" type="button">Luk</button>
   </dialog>
   <div class="statusbar-container">
+    <header id="auth-bar">
+      <div id="auth-status" aria-live="polite">Ikke logget ind</div>
+      <div class="auth-bar-actions">
+        <button id="btn-login" class="btn small" type="button" data-allow-click data-auth="login">Login</button>
+        <button id="btn-logout" class="btn small hidden" type="button" data-allow-click data-auth="logout">Log ud</button>
+      </div>
+    </header>
     <div id="statusbar" class="statusbar offline">
       <span class="status-dot offline" id="status-dot"></span>
       <span id="status-text">Offline</span>
@@ -76,9 +82,7 @@
           aria-live="polite"
         >Ingen bruger</span>
         <div class="auth-controls__buttons">
-          <button id="btn-login" class="btn small" type="button" data-allow-click data-auth="login">Login</button>
           <button id="btn-signup" class="btn small" type="button" data-allow-click data-auth="signup">Opret bruger</button>
-          <button id="btn-logout" class="btn small hidden" type="button" data-allow-click data-auth="logout">Log ud</button>
           <button id="btn-switch-user" class="btn small hidden" type="button" data-allow-click>Skift bruger</button>
           <button id="btnOpenUserOverlay" class="btn small" type="button" data-allow-click data-auth="offline">Offline login</button>
         </div>
@@ -541,15 +545,17 @@
       </div>
     </section>
   </section>
-  <section data-view="admin" id="view-admin" class="sektion tab-view hidden" hidden>
-    <h2>Adminpanel</h2>
+  <section id="admin-panel" style="display:none;">
+    <section data-view="admin" id="view-admin" class="sektion tab-view hidden" hidden>
+      <h2>Adminpanel</h2>
 
-    <label>
-      Firma
-      <select id="admin-tenant-select"></select>
-    </label>
+      <label>
+        Firma
+        <select id="admin-tenant-select"></select>
+      </label>
 
-    <div id="admin-users-list"></div>
+      <div id="admin-users-list"></div>
+    </section>
   </section>
         </main>
       </div>

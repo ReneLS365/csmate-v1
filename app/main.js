@@ -11,13 +11,19 @@ import { createMaterialRow } from './src/modules/materialRowTemplate.js'
 import { sha256Hex, constantTimeEquals } from './src/lib/sha256.js'
 import { ensureExportLibs, ensureZipLib, prefetchExportLibs } from './src/features/export/lazy-libs.js'
 import {
-  initAuth,
+  initAuth as initLegacyAuth,
   bindAuthButtons,
   logout as authLogout,
   getAuthState,
   getUserProfileSnapshot,
   getAccessToken
 } from './src/auth/auth0-client.js'
+import {
+  initAuth as initAuthHeader,
+  isAuthenticated as headerIsAuthenticated,
+  getUserProfile as headerGetUserProfile,
+  isAdmin as headerIsAdmin
+} from './auth.js'
 import {
   getCurrentUser as getStoredUser,
   setCurrentUser as setStoredCurrentUser,
@@ -139,6 +145,9 @@ function syncAuthUiFromState() {
   const state = getAuthState()
   const latest = setLatestAuthState(state)
   updateAuthUi(latest.isAuthenticated, latest.user)
+  updateAuthBar().catch(error => {
+    console.error('updateAuthBar failed', error)
+  })
   updateAdminTabVisibility()
   mountDevIfHash({ reason: 'auth-state' })
   return latest
@@ -2220,6 +2229,88 @@ function updateAuthUi (isAuthenticated, user) {
   }
 
   updateAdminTabVisibility();
+}
+
+async function updateAuthBar () {
+  if (typeof document === 'undefined') return;
+
+  const loginBtn = document.getElementById('btn-login');
+  const logoutBtn = document.getElementById('btn-logout');
+  const statusEl = document.getElementById('auth-status');
+  const adminPanel = document.getElementById('admin-panel');
+
+  if (!loginBtn || !logoutBtn || !statusEl || !adminPanel) {
+    console.warn('Auth UI elements not found, skipping auth UI update');
+    return;
+  }
+
+  let loggedIn = false;
+  try {
+    loggedIn = await headerIsAuthenticated();
+  } catch (error) {
+    console.warn('Kunne ikke afgøre auth-status', error);
+  }
+
+  if (loggedIn) {
+    loginBtn.style.display = 'none';
+    loginBtn.classList.add('hidden');
+    logoutBtn.style.display = 'inline-flex';
+    logoutBtn.classList.remove('hidden');
+  } else {
+    loginBtn.style.display = 'inline-flex';
+    loginBtn.classList.remove('hidden');
+    logoutBtn.style.display = 'none';
+    logoutBtn.classList.add('hidden');
+  }
+
+  if (!loggedIn) {
+    statusEl.textContent = 'Ikke logget ind';
+    adminPanel.style.display = 'none';
+    return;
+  }
+
+  let profile = null;
+  try {
+    profile = await headerGetUserProfile();
+  } catch (error) {
+    console.warn('Kunne ikke hente auth-profil', error);
+  }
+
+  const name = typeof profile?.name === 'string' && profile.name.trim()
+    ? profile.name.trim()
+    : (typeof profile?.email === 'string' && profile.email.trim() ? profile.email.trim() : '');
+
+  let isAdminUser = false;
+  try {
+    isAdminUser = await headerIsAdmin();
+  } catch (error) {
+    console.warn('Kunne ikke afgøre admin-rolle', error);
+  }
+
+  if (name) {
+    statusEl.textContent = isAdminUser
+      ? `Logget ind som ${name} (admin)`
+      : `Logget ind som ${name}`;
+  } else {
+    statusEl.textContent = isAdminUser ? 'Logget ind (admin)' : 'Logget ind';
+  }
+
+  adminPanel.style.display = isAdminUser ? 'block' : 'none';
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('online', () => {
+    updateAuthBar().catch(error => {
+      console.error('updateAuthBar failed', error);
+    });
+  });
+
+  window.addEventListener('offline', () => {
+    const statusEl = document.getElementById('auth-status');
+    if (statusEl) {
+      statusEl.textContent = 'Offline – viser sidst kendte login-status';
+    }
+  });
 }
 
 function ensureUserAdminContainer () {
@@ -5403,7 +5494,13 @@ async function bootstrap () {
   applyUserToUi(getStoredUser());
 
   try {
-    await initAuth();
+    await initAuthHeader();
+  } catch (error) {
+    console.error('initAuth header failed', error);
+  }
+
+  try {
+    await initLegacyAuth();
   } catch (error) {
     console.error('initAuth failed', error);
   }
@@ -5411,6 +5508,9 @@ async function bootstrap () {
   syncAuthUiFromState();
   updateAdminTabVisibility();
   initAuthButtons();
+  await updateAuthBar().catch(error => {
+    console.error('updateAuthBar failed', error);
+  });
   setActiveTab('job');
 }
 

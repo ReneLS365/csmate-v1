@@ -385,6 +385,12 @@ async function syncUserWithBackend () {
 async function createClient () {
   if (auth0Client) return auth0Client
   if (typeof window === 'undefined') return null
+
+  if (window.__CSMATE_AUTH0_CLIENT) {
+    auth0Client = window.__CSMATE_AUTH0_CLIENT
+    return auth0Client
+  }
+
   if (typeof window.createAuth0Client !== 'function') {
     console.error('Auth0 SPA JS ikke indlæst')
     return null
@@ -397,12 +403,18 @@ async function createClient () {
     console.error('Kunne ikke initialisere Auth0-klient', error)
     return null
   })
+
+  if (auth0Client) {
+    window.__CSMATE_AUTH0_CLIENT = auth0Client
+  }
+
   return auth0Client
 }
 
 async function handleRedirectCallback (client) {
   if (typeof window === 'undefined') return
   const query = window.location.search || ''
+  if (window.__CSMATE_AUTH0_REDIRECT_HANDLED) return
   if (!query.includes('code=') || !query.includes('state=')) return
   try {
     await client.handleRedirectCallback()
@@ -412,6 +424,7 @@ async function handleRedirectCallback (client) {
   } catch (error) {
     console.error('Auth0 redirect-fejl', error)
   }
+  window.__CSMATE_AUTH0_REDIRECT_HANDLED = true
 }
 
 export async function initAuth () {
