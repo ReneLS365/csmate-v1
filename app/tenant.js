@@ -63,9 +63,13 @@ function ensureObject(value) {
 }
 
 export function mapAuthUserToTenant(authUser) {
-  const meta =
-    ensureObject(authUser?.app_metadata) ||
-    ensureObject(authUser?.['https://csmate/app_metadata']);
+  const primaryMeta = authUser?.app_metadata;
+  const fallbackMeta = authUser?.['https://csmate/app_metadata'];
+  const metaSource =
+    primaryMeta && typeof primaryMeta === 'object' && !Array.isArray(primaryMeta)
+      ? primaryMeta
+      : fallbackMeta;
+  const meta = ensureObject(metaSource);
 
   const role = typeof meta.role === 'string' && meta.role.trim() ? meta.role.trim() : 'user';
   const firmId = typeof meta.firmId === 'string' && meta.firmId.trim() ? meta.firmId.trim() : null;
