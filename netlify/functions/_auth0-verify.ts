@@ -15,7 +15,6 @@ const buildAudienceFromEnv = (): string[] => {
     process.env.AUTH0_AUDIENCE,
     process.env.AUTH0_API_AUDIENCE,
     process.env.AUTH0_CLIENT_ID,
-    process.env.VITE_AUTH0_CLIENT_ID,
   ]
 
   const audiences = rawCandidates
