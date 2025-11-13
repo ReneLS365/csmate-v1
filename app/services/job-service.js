@@ -18,16 +18,69 @@ import {
 } from '../job-status.js';
 
 export function getJobsForFirm(firmId) {
-  if (!firmId) return [];
-  const normalized = String(firmId).trim().toLowerCase();
+  const target = typeof firmId === 'string' ? firmId.trim() : '';
+  const normalized = target.toLowerCase();
   if (!normalized) return [];
-  const all = getJobs();
-  const filtered = all.filter(job => {
-    const jobFirm = typeof job?.firmId === 'string' ? job.firmId.trim().toLowerCase() : '';
-    return jobFirm === normalized;
+
+  const jobsForFirm = [];
+  getJobs().forEach(rawJob => {
+    const migrated = migrateJobFirm(ensureJobStatus({ ...rawJob }), target);
+    const jobFirm = typeof migrated?.firmId === 'string' ? migrated.firmId.trim().toLowerCase() : '';
+    if (jobFirm === normalized) {
+      jobsForFirm.push(ensureJobStatus({ ...migrated }));
+    }
   });
+
   // TODO backend: GET /api/firms/:id/jobs
-  return filtered.map(job => ensureJobStatus({ ...job }));
+  return jobsForFirm;
+}
+
+function migrateJobFirm(job, fallbackFirmId) {
+  if (!job || typeof job !== 'object') return job;
+
+  const currentFirm = typeof job.firmId === 'string' ? job.firmId.trim() : '';
+  if (currentFirm) {
+    return { ...job, firmId: currentFirm };
+  }
+
+  const legacyFirm = resolveLegacyFirmId(job);
+  const targetFirm = (legacyFirm || fallbackFirmId || '').trim();
+  if (!targetFirm) {
+    return { ...job, firmId: null };
+  }
+
+  if (job.id) {
+    const updated = updateJob(job.id, { firmId: targetFirm });
+    if (updated) {
+      return ensureJobStatus({ ...updated });
+    }
+  }
+
+  const copy = { ...job, firmId: targetFirm };
+  return ensureJobStatus(copy);
+}
+
+function resolveLegacyFirmId(job) {
+  const candidates = [
+    job.tenantId,
+    job.tenantSlug,
+    job.tenant,
+    job.tenantName,
+    job.companyId,
+    job.companySlug,
+    job.company,
+  ];
+
+  for (const value of candidates) {
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (trimmed) {
+        return trimmed;
+      }
+    }
+  }
+
+  return '';
 }
 
 export function getJobById(jobId) {

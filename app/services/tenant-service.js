@@ -6,15 +6,78 @@
 
 const LOCAL_FIRMS_KEY = 'csmate-firms';
 
+const memoryStorage = (() => {
+  const store = new Map();
+  return {
+    getItem(key) {
+      return store.has(key) ? store.get(key) : null;
+    },
+    setItem(key, value) {
+      store.set(key, String(value));
+    },
+    removeItem(key) {
+      store.delete(key);
+    },
+  };
+})();
+
+function getStorage() {
+  if (typeof window !== 'undefined' && window?.localStorage) {
+    return window.localStorage;
+  }
+  return memoryStorage;
+}
+
+function readStorageValue(key) {
+  try {
+    return getStorage().getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+function writeStorageValue(key, value) {
+  try {
+    getStorage().setItem(key, value);
+  } catch {
+    // Ignore write errors (e.g. storage quota)
+  }
+}
+
 async function loadJson(path) {
-  const res = await fetch(path);
-  if (!res.ok) throw new Error('Failed to load ' + path);
-  return res.json();
+  const url = path.startsWith('/') ? path : `/${path.replace(/^\//, '')}`;
+
+  if (typeof fetch === 'function') {
+    try {
+      const res = await fetch(url, { credentials: 'same-origin' });
+      if (res?.ok) {
+        return res.json();
+      }
+    } catch (error) {
+      if (typeof window !== 'undefined') {
+        throw error;
+      }
+    }
+  }
+
+  if (typeof window === 'undefined') {
+    const [{ readFile }, { fileURLToPath }, { dirname, resolve }] = await Promise.all([
+      import('fs/promises'),
+      import('url'),
+      import('path'),
+    ]);
+    const basePath = dirname(fileURLToPath(import.meta.url));
+    const filePath = resolve(basePath, `.${url}`);
+    const raw = await readFile(filePath, 'utf8');
+    return JSON.parse(raw);
+  }
+
+  throw new Error('Failed to load ' + url);
 }
 
 function loadLocalFirms() {
   try {
-    const raw = window.localStorage.getItem(LOCAL_FIRMS_KEY);
+    const raw = readStorageValue(LOCAL_FIRMS_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
     if (!parsed || !Array.isArray(parsed.firms)) return null;
@@ -25,7 +88,7 @@ function loadLocalFirms() {
 }
 
 function saveLocalFirms(config) {
-  window.localStorage.setItem(LOCAL_FIRMS_KEY, JSON.stringify(config));
+  writeStorageValue(LOCAL_FIRMS_KEY, JSON.stringify(config));
 }
 
 export async function getFirmsConfig() {
