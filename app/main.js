@@ -23,7 +23,8 @@ import {
   isAuthenticated as headerIsAuthenticated,
   getUserProfile as headerGetUserProfile,
   isAnyAdmin as headerIsAnyAdmin,
-  getRoleFlags as headerGetRoleFlags
+  getRoleFlags as headerGetRoleFlags,
+  login as authLogin
 } from './auth.js'
 import {
   getCurrentUser as getStoredUser,
@@ -2194,7 +2195,7 @@ function updateAuthUi (isAuthenticated, user) {
   if (typeof document === 'undefined') return;
 
   const loginBtn = document.querySelector('[data-auth="login"]');
-  const signupBtn = document.querySelector('[data-auth="signup"]');
+  const signupBtn = document.getElementById('btn-opret-login') || document.querySelector('[data-auth="signup"]');
   const offlineBtn = document.querySelector('[data-auth="offline"]');
   const logoutBtn = document.querySelector('[data-auth="logout"]');
   const userLabel = document.querySelector('[data-auth="user-label"]');
@@ -5539,6 +5540,15 @@ async function bootstrap () {
   syncAuthUiFromState();
   updateAdminTabVisibility();
   initAuthButtons();
+  const opretBtn = document.getElementById('btn-opret-login');
+  if (opretBtn) {
+    opretBtn.addEventListener('click', (event) => {
+      if (event?.preventDefault) event.preventDefault();
+      authLogin().catch(error => {
+        console.error('Auth login failed', error);
+      });
+    });
+  }
   await updateAuthBar().catch(error => {
     console.error('updateAuthBar failed', error);
   });
