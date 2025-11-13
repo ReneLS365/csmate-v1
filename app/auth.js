@@ -27,10 +27,14 @@ function resolveConfig() {
   const domain = CONFIG_DOMAIN || globalConfig.domain || '';
   const clientId = CONFIG_CLIENT_ID || globalConfig.clientId || '';
 
+  const providedAuthorizationParams = globalConfig.authorizationParams || {};
   const authorizationParams = {
-    ...(globalConfig.authorizationParams || {}),
-    redirect_uri: window.location.origin,
-    audience: AUTH0_AUDIENCE
+    ...providedAuthorizationParams,
+    redirect_uri: typeof providedAuthorizationParams.redirect_uri === 'string'
+      && providedAuthorizationParams.redirect_uri
+      ? providedAuthorizationParams.redirect_uri
+      : window.location.origin,
+    audience: providedAuthorizationParams.audience || AUTH0_AUDIENCE
   };
 
   const config = {
