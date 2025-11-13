@@ -50,62 +50,107 @@ function formatTimestamp(value) {
 
 function renderUsersTable({ container, users, firmId, canAssign, tenantName }) {
   if (!container) return;
+
+  container.replaceChildren();
+
   if (!Array.isArray(users) || users.length === 0) {
-    container.innerHTML = '<p>Ingen brugere registreret lokalt endnu.</p>';
+    const message = document.createElement('p');
+    message.textContent = 'Ingen brugere registreret lokalt endnu.';
+    container.append(message);
     return;
   }
 
-  const rows = users
-    .map(user => {
-      const name = user.name || user.email || user.id;
-      const role = user.role || 'user';
-      const firm = user.firmId || '-';
-      const flags = [];
-      if (user.firmId === firmId) flags.push('Samme firma');
-      if (role === 'firma-admin') flags.push('Firma-admin');
-      if (role === 'csmate-admin') flags.push('CSMate-admin');
-      const badge = flags.length ? `<div class="muted">${flags.join(', ')}</div>` : '';
-      const assignButtons = canAssign
-        ? `
-          <button type="button" class="btn small" data-user-firm="${encodeURIComponent(user.id)}">Tilknyt</button>
-          <button type="button" class="btn small" data-user-firm-admin="${encodeURIComponent(user.id)}">Firma-admin</button>
-        `
-        : '';
-      return `
-        <tr>
-          <td><strong>${name || ''}</strong><br><small>${user.email || ''}</small></td>
-          <td>${firm}</td>
-          <td>${role}</td>
-          <td>${badge}</td>
-          <td class="actions">${assignButtons}</td>
-        </tr>
-      `;
-    })
-    .join('');
+  const heading = document.createElement('h4');
+  heading.textContent = 'Brugere';
+  container.append(heading);
 
-  container.innerHTML = `
-    <h4>Brugere</h4>
-    <p class="muted">Registreret lokalt i denne browser. Ændringer skal senere synkroniseres med Auth0.</p>
-    <table class="admin-users-table">
-      <thead>
-        <tr>
-          <th>Bruger</th>
-          <th>Firmatilhør</th>
-          <th>Rolle</th>
-          <th>Noter</th>
-          <th>Handlinger</th>
-        </tr>
-      </thead>
-      <tbody>${rows}</tbody>
-    </table>
-  `;
+  const subtitle = document.createElement('p');
+  subtitle.className = 'muted';
+  subtitle.textContent = 'Registreret lokalt i denne browser. Ændringer skal senere synkroniseres med Auth0.';
+  container.append(subtitle);
+
+  const table = document.createElement('table');
+  table.className = 'admin-users-table';
+
+  const thead = document.createElement('thead');
+  const headRow = document.createElement('tr');
+  ['Bruger', 'Firmatilhør', 'Rolle', 'Noter', 'Handlinger'].forEach(label => {
+    const th = document.createElement('th');
+    th.textContent = label;
+    headRow.append(th);
+  });
+  thead.append(headRow);
+  table.append(thead);
+
+  const tbody = document.createElement('tbody');
+
+  users.forEach(user => {
+    const row = document.createElement('tr');
+    const nameCell = document.createElement('td');
+    const name = user.name || user.email || user.id || '';
+    const strong = document.createElement('strong');
+    strong.textContent = name;
+    nameCell.append(strong);
+    nameCell.append(document.createElement('br'));
+    const small = document.createElement('small');
+    small.textContent = user.email || '';
+    nameCell.append(small);
+    row.append(nameCell);
+
+    const firmCell = document.createElement('td');
+    firmCell.textContent = user.firmId || '-';
+    row.append(firmCell);
+
+    const roleCell = document.createElement('td');
+    const normalizedRole = typeof user.role === 'string' ? user.role.trim() : '';
+    roleCell.textContent = normalizedRole || 'user';
+    row.append(roleCell);
+
+    const notesCell = document.createElement('td');
+    const flags = [];
+    if (user.firmId === firmId) flags.push('Samme firma');
+    if (normalizedRole.toLowerCase() === 'firma-admin') flags.push('Firma-admin');
+    if (normalizedRole.toLowerCase() === 'csmate-admin') flags.push('CSMate-admin');
+    if (flags.length) {
+      const badge = document.createElement('div');
+      badge.className = 'muted';
+      badge.textContent = flags.join(', ');
+      notesCell.append(badge);
+    }
+    row.append(notesCell);
+
+    const actionsCell = document.createElement('td');
+    actionsCell.className = 'actions';
+    if (canAssign) {
+      const assignBtn = document.createElement('button');
+      assignBtn.type = 'button';
+      assignBtn.className = 'btn small';
+      assignBtn.dataset.userFirm = user.id;
+      assignBtn.textContent = 'Tilknyt';
+      actionsCell.append(assignBtn);
+
+      const adminBtn = document.createElement('button');
+      adminBtn.type = 'button';
+      adminBtn.className = 'btn small';
+      adminBtn.dataset.userFirmAdmin = user.id;
+      adminBtn.textContent = 'Firma-admin';
+      actionsCell.append(adminBtn);
+    }
+    row.append(actionsCell);
+
+    tbody.append(row);
+  });
+
+  table.append(tbody);
+  container.append(table);
 
   if (!canAssign) return;
 
   container.querySelectorAll('button[data-user-firm]').forEach(button => {
     button.addEventListener('click', () => {
-      const targetId = decodeURIComponent(button.getAttribute('data-user-firm'));
-      updateUser(targetId, { firmId, role: users.find(user => user.id === targetId)?.role || 'user' });
+      const targetId = button.dataset.userFirm || '';
+      const existing = users.find(user => user.id === targetId);
+      updateUser(targetId, { firmId, role: existing?.role || 'user' });
       console.log('TODO: Opdater Auth0 app_metadata.firmId for', targetId, '->', firmId);
       renderUsersTable({ container, users: listUsers(), firmId, canAssign, tenantName });
     });
@@ -113,7 +158,7 @@ function renderUsersTable({ container, users, firmId, canAssign, tenantName }) {
 
   container.querySelectorAll('button[data-user-firm-admin]').forEach(button => {
     button.addEventListener('click', () => {
-      const targetId = decodeURIComponent(button.getAttribute('data-user-firm-admin'));
+      const targetId = button.dataset.userFirmAdmin || '';
       updateUser(targetId, { firmId, role: 'firma-admin' });
       console.log('TODO: Opdater Auth0 rolle til "firma-admin" for', targetId, 'i firma', firmId);
       renderUsersTable({ container, users: listUsers(), firmId, canAssign, tenantName });
@@ -123,8 +168,13 @@ function renderUsersTable({ container, users, firmId, canAssign, tenantName }) {
 
 function renderJobsTable({ container, jobs, currentUserId }) {
   if (!container) return;
+
+  container.replaceChildren();
+
   if (!Array.isArray(jobs) || jobs.length === 0) {
-    container.innerHTML = '<p>Ingen sager registreret for dette firma endnu.</p>';
+    const message = document.createElement('p');
+    message.textContent = 'Ingen sager registreret for dette firma endnu.';
+    container.append(message);
     return;
   }
 
@@ -134,48 +184,76 @@ function renderJobsTable({ container, jobs, currentUserId }) {
     return acc;
   }, {});
 
-  const rows = jobs
-    .map(job => {
-      const statusLabel = formatApprovalStatus(job.approvalStatus);
-      const approvedBy = job.approvedBy || '-';
-      const approvedAt = formatTimestamp(job.approvedAt) || '-';
-      return `
-        <tr>
-          <td>${job.navn || job.sagsnummer || job.id}</td>
-          <td>${statusLabel}</td>
-          <td>${approvedBy}</td>
-          <td>${approvedAt}</td>
-          <td class="actions">
-            <button type="button" class="btn small" data-job-approve="${job.id}">Godkend</button>
-            <button type="button" class="btn small" data-job-reject="${job.id}">Afvis</button>
-          </td>
-        </tr>
-      `;
-    })
-    .join('');
+  const heading = document.createElement('h4');
+  heading.textContent = 'Sager';
+  container.append(heading);
 
-  container.innerHTML = `
-    <h4>Sager</h4>
-    <p class="muted">
-      Overblik – Kladde: ${counts.draft || 0}, Afventer: ${counts.submitted || 0}, Godkendt: ${counts.approved || 0}, Afvist: ${counts.rejected || 0}
-    </p>
-    <table class="admin-jobs-table">
-      <thead>
-        <tr>
-          <th>Sag</th>
-          <th>Status</th>
-          <th>Godkendt af</th>
-          <th>Tidspunkt</th>
-          <th>Handlinger</th>
-        </tr>
-      </thead>
-      <tbody>${rows}</tbody>
-    </table>
-  `;
+  const summary = document.createElement('p');
+  summary.className = 'muted';
+  summary.textContent = `Overblik – Kladde: ${counts.draft || 0}, Afventer: ${counts.submitted || 0}, Godkendt: ${counts.approved || 0}, Afvist: ${counts.rejected || 0}`;
+  container.append(summary);
+
+  const table = document.createElement('table');
+  table.className = 'admin-jobs-table';
+
+  const thead = document.createElement('thead');
+  const headRow = document.createElement('tr');
+  ['Sag', 'Status', 'Godkendt af', 'Tidspunkt', 'Handlinger'].forEach(label => {
+    const th = document.createElement('th');
+    th.textContent = label;
+    headRow.append(th);
+  });
+  thead.append(headRow);
+  table.append(thead);
+
+  const tbody = document.createElement('tbody');
+
+  jobs.forEach(job => {
+    const row = document.createElement('tr');
+
+    const nameCell = document.createElement('td');
+    nameCell.textContent = job.navn || job.sagsnummer || job.id || '';
+    row.append(nameCell);
+
+    const statusCell = document.createElement('td');
+    statusCell.textContent = formatApprovalStatus(job.approvalStatus);
+    row.append(statusCell);
+
+    const approvedByCell = document.createElement('td');
+    approvedByCell.textContent = job.approvedBy || '-';
+    row.append(approvedByCell);
+
+    const approvedAtCell = document.createElement('td');
+    approvedAtCell.textContent = formatTimestamp(job.approvedAt) || '-';
+    row.append(approvedAtCell);
+
+    const actionsCell = document.createElement('td');
+    actionsCell.className = 'actions';
+
+    const approveBtn = document.createElement('button');
+    approveBtn.type = 'button';
+    approveBtn.className = 'btn small';
+    approveBtn.dataset.jobApprove = job.id;
+    approveBtn.textContent = 'Godkend';
+    actionsCell.append(approveBtn);
+
+    const rejectBtn = document.createElement('button');
+    rejectBtn.type = 'button';
+    rejectBtn.className = 'btn small';
+    rejectBtn.dataset.jobReject = job.id;
+    rejectBtn.textContent = 'Afvis';
+    actionsCell.append(rejectBtn);
+
+    row.append(actionsCell);
+    tbody.append(row);
+  });
+
+  table.append(tbody);
+  container.append(table);
 
   container.querySelectorAll('button[data-job-approve]').forEach(button => {
     button.addEventListener('click', () => {
-      const jobId = button.getAttribute('data-job-approve');
+      const jobId = button.dataset.jobApprove;
       approveJobById(jobId, currentUserId);
       renderJobsTable({ container, jobs: listJobsForFirm(container.dataset.firmId), currentUserId });
       renderLocalFirmAdminUI({
@@ -188,7 +266,7 @@ function renderJobsTable({ container, jobs, currentUserId }) {
 
   container.querySelectorAll('button[data-job-reject]').forEach(button => {
     button.addEventListener('click', () => {
-      const jobId = button.getAttribute('data-job-reject');
+      const jobId = button.dataset.jobReject;
       rejectJobById(jobId, currentUserId);
       renderJobsTable({ container, jobs: listJobsForFirm(container.dataset.firmId), currentUserId });
       renderLocalFirmAdminUI({
@@ -207,12 +285,19 @@ export function renderLocalFirmAdminUI({ tenantId, currentUser, tenantName }) {
   const jobsEl = document.getElementById('admin-firm-jobs');
 
   if (infoEl) {
+    infoEl.replaceChildren();
+    const message = document.createElement('p');
     if (!firmId) {
-      infoEl.innerHTML = '<p>Ingen aktiv firma-tilknytning.</p>';
+      message.textContent = 'Ingen aktiv firma-tilknytning.';
     } else {
       const label = tenantName || firmId;
-      infoEl.innerHTML = `<p>Aktivt firma: <strong>${label}</strong> (${firmId})</p>`;
+      message.append('Aktivt firma: ');
+      const strong = document.createElement('strong');
+      strong.textContent = label;
+      message.append(strong);
+      message.append(` (${firmId})`);
     }
+    infoEl.append(message);
   }
 
   const users = listUsers();
