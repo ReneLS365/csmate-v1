@@ -69,6 +69,15 @@ import {
   markJobSent,
   setAuditUserResolver
 } from './jobs.js'
+import { renderLocalFirmAdminUI } from './admin-ui.js'
+import { upsertUser } from './user-registry.js'
+import {
+  ensureJobStatus,
+  markJobSubmitted,
+  metaToApproval,
+  approvalToMeta,
+  formatApprovalStatus
+} from './job-status.js'
 
 if (typeof window !== 'undefined') {
   initSwBridge()
@@ -115,6 +124,17 @@ if (typeof window !== 'undefined') {
       console.warn('Kunne ikke initialisere net-queue badge', error)
     }
   })()
+
+  window.addEventListener('csmate:jobs-changed', () => {
+    refreshJobsState()
+    renderJobList()
+    const current = getCurrentJob()
+    if (current) {
+      currentStatus = current.metaStatus || currentStatus
+      syncStatusUI(currentStatus)
+      renderJobApprovalStatus(current)
+    }
+  })
 }
 
 let DEFAULT_ADMIN_CODE_HASH = ''
@@ -136,6 +156,26 @@ function getActiveProfile () {
   const profile = getUserProfileSnapshot()
   if (profile) return profile
   return getStoredUser()
+}
+
+function resolveUserFirmId (user) {
+  const tenants = getUserTenants(user)
+  if (!Array.isArray(tenants) || tenants.length === 0) return null
+  const candidate = tenants.find(entry => entry && (entry.id || entry.tenantId || entry.slug)) || tenants[0]
+  const firmId = candidate?.id || candidate?.tenantId || candidate?.slug || null
+  if (typeof firmId === 'string') {
+    const trimmed = firmId.trim()
+    return trimmed || null
+  }
+  return null
+}
+
+function getActiveFirmId () {
+  return resolveUserFirmId(getActiveProfile())
+}
+
+function getCurrentFirmIdForJob () {
+  return resolveUserFirmId(activeUser) || getActiveFirmId()
 }
 
 function canActiveUserAccessAdmin () {
@@ -469,6 +509,15 @@ async function loadAdminUsersForTenant(tenantId) {
   const normalizedTenantId = typeof tenantId === 'string' ? tenantId.trim() : '';
   const container = document.getElementById('admin-users-list');
   if (!container) return false;
+
+  const selectEl = document.getElementById('admin-tenant-select');
+  let tenantLabel = '';
+  if (selectEl) {
+    const option = Array.from(selectEl.options || []).find(entry => entry.value === normalizedTenantId);
+    tenantLabel = option?.textContent?.trim() || '';
+  }
+
+  renderLocalFirmAdminUI({ tenantId: normalizedTenantId, currentUser: activeUser, tenantName: tenantLabel });
 
   if (!normalizedTenantId) {
     container.innerHTML = '<p>Ingen brugere fundet for dette firma endnu.</p>';
@@ -1428,6 +1477,9 @@ function persistCurrentJobState(options = {}) {
     currentSystemId,
     updatedAt: Date.now(),
   });
+  if (!job.firmId) {
+    job.firmId = getCurrentFirmIdForJob();
+  }
   const updated = updateJob(currentJobId, job);
   if (updated) {
     jobsState[index] = updated;
@@ -1469,6 +1521,7 @@ function migrateLegacyState() {
     currentSystemId: DEFAULT_SYSTEM_ID,
     sheets: { [DEFAULT_SYSTEM_ID]: sheet },
     auditLog: [],
+    firmId: getCurrentFirmIdForJob(),
   });
   refreshJobsState();
   currentJobId = job?.id || null;
@@ -1491,6 +1544,7 @@ function ensureJobsInitialised() {
         currentSystemId: DEFAULT_SYSTEM_ID,
         sheets: { [DEFAULT_SYSTEM_ID]: sheet },
         auditLog: [],
+        firmId: getCurrentFirmIdForJob(),
       });
       refreshJobsState();
       currentJobId = job?.id || null;
@@ -1575,31 +1629,33 @@ function applyJobLockState(job) {
 
 function applyJobToUI(job, options = {}) {
   if (!job) return;
-  currentJobId = job.id;
-  currentSystemId = job.currentSystemId || job.systems?.[0] || DEFAULT_SYSTEM_ID;
+  const normalizedJob = ensureJobStatus({ ...job });
+  currentJobId = normalizedJob.id;
+  currentSystemId = normalizedJob.currentSystemId || normalizedJob.systems?.[0] || DEFAULT_SYSTEM_ID;
   syncSelectedKeysFromSystem();
 
-  setSagsinfoField('sagsnummer', job.sagsnummer || '');
-  setSagsinfoField('sagsnavn', job.navn || '');
-  setSagsinfoField('sagsadresse', job.adresse || '');
-  setSagsinfoField('sagskunde', job.kunde || '');
-  setSagsinfoField('sagsdato', job.dato || '');
+  setSagsinfoField('sagsnummer', normalizedJob.sagsnummer || '');
+  setSagsinfoField('sagsnavn', normalizedJob.navn || '');
+  setSagsinfoField('sagsadresse', normalizedJob.adresse || '');
+  setSagsinfoField('sagskunde', normalizedJob.kunde || '');
+  setSagsinfoField('sagsdato', normalizedJob.dato || '');
   const montorField = document.getElementById('sagsmontoer');
   if (montorField) {
-    montorField.value = job.montorer || '';
+    montorField.value = normalizedJob.montorer || '';
   }
 
-  currentStatus = job.metaStatus || 'kladde';
+  currentStatus = normalizedJob.metaStatus || 'kladde';
   syncStatusUI(currentStatus);
+  renderJobApprovalStatus(normalizedJob);
 
-  const sheet = job.sheets?.[currentSystemId];
+  const sheet = normalizedJob.sheets?.[currentSystemId];
   if (sheet) {
     applySheetState(currentSystemId, sheet);
   } else {
     applySheetState(currentSystemId, createEmptySheet(currentSystemId));
   }
 
-  renderJobBadges(job);
+  renderJobBadges(normalizedJob);
   syncMaterialAuditState(currentSystemId);
   syncLonAuditState();
   renderOptaelling();
@@ -1670,7 +1726,10 @@ function renderJobList() {
     const systems = Array.isArray(job.systems)
       ? job.systems.map(id => systemLabelMap.get(id) || id).join(', ')
       : '';
+    const approvalStatus = job.approvalStatus || 'draft';
+    const approvalLabel = formatApprovalStatus(approvalStatus);
     const statusLabel = formatJobStatus(job.status);
+    const combinedStatus = approvalStatus !== 'draft' ? `${statusLabel} · ${approvalLabel}` : statusLabel;
     const updatedLabel = formatJobTimestamp(job.updatedAt);
     const actions = [];
     actions.push(`<button type="button" data-action="open" data-job="${job.id}">Åbn</button>`);
@@ -1694,7 +1753,7 @@ function renderJobList() {
         <td>${job.navn || ''}</td>
         <td>${job.kunde || ''}</td>
         <td>${systems}</td>
-        <td>${statusLabel}${job.isLocked ? ' 🔒' : ''}</td>
+        <td>${combinedStatus}${job.isLocked ? ' 🔒' : ''}</td>
         <td>${updatedLabel}</td>
         <td class="actions">${actions.join(' ')}</td>
       </tr>
@@ -1723,6 +1782,7 @@ function createNewJob() {
     currentSystemId: DEFAULT_SYSTEM_ID,
     sheets: { [DEFAULT_SYSTEM_ID]: sheet },
     auditLog: [],
+    firmId: getCurrentFirmIdForJob(),
   });
   refreshJobsState();
   if (job?.id) {
@@ -1759,6 +1819,7 @@ function duplicateJob(jobId) {
     sagsnummer: '',
     dato: '',
     auditLog: [],
+    firmId: source.firmId || getCurrentFirmIdForJob(),
   });
   refreshJobsState();
   if (job?.id) {
@@ -2295,6 +2356,27 @@ async function updateAuthBar () {
     console.warn('Kunne ikke afgøre admin-roller', error);
   }
 
+  if (profile) {
+    const userId = profile.sub || profile.user_id || profile.userId || profile.email || null;
+    if (userId) {
+      const tenants = Array.isArray(profile.tenants) ? profile.tenants : [];
+      const membership = tenants.find(entry => entry && (entry.id || entry.tenantId || entry.slug)) || tenants[0] || null;
+      const firmId = membership?.id || membership?.tenantId || membership?.slug || null;
+      const role = flags.isCsmateAdmin
+        ? 'csmate-admin'
+        : flags.isCompanyAdmin
+          ? 'firma-admin'
+          : 'user';
+      upsertUser({
+        id: userId,
+        email: profile.email || '',
+        name: profile.name || profile.nickname || profile.email || '',
+        role,
+        firmId: typeof firmId === 'string' ? firmId : null
+      });
+    }
+  }
+
   const name = typeof profile?.name === 'string' && profile.name.trim()
     ? profile.name.trim()
     : (typeof profile?.email === 'string' && profile.email.trim() ? profile.email.trim() : '');
@@ -2534,6 +2616,18 @@ function applyUserToUi (user) {
     if (Array.isArray(user.tenants)) {
       activeUser.tenants = user.tenants.map(entry => ({ ...entry }));
     }
+    const userId = activeUser.id || activeUser.emailKey || activeUser.email || null;
+    if (userId) {
+      const firmId = resolveUserFirmId(activeUser);
+      const roleLabel = activeUser.role || (activeUser.roles && activeUser.roles[0]) || 'user';
+      upsertUser({
+        id: userId,
+        email: activeUser.email || activeUser.emailKey || '',
+        name: activeUser.displayName || activeUser.name || '',
+        role: roleLabel,
+        firmId
+      });
+    }
   } else {
     activeUser = null;
   }
@@ -2550,6 +2644,13 @@ function applyUserToUi (user) {
   applyRoleGuards(activeUser);
   renderUserAdminTable();
   renderJobList();
+  const adminSelect = document.getElementById('admin-tenant-select');
+  if (adminSelect) {
+    const tenantId = adminSelect.value || '';
+    const option = Array.from(adminSelect.options || []).find(entry => entry.value === tenantId);
+    const tenantLabel = option?.textContent?.trim() || '';
+    renderLocalFirmAdminUI({ tenantId, currentUser: activeUser, tenantName: tenantLabel });
+  }
   syncAuthUiFromState();
   mountDevIfHash({ reason: 'user-change' });
 }
@@ -3301,6 +3402,45 @@ function formatStatusLabel(status) {
   return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 }
 
+function formatApprovalTimestamp(isoString) {
+  if (!isoString) return ''
+  try {
+    const date = new Date(isoString)
+    if (Number.isNaN(date.getTime())) return ''
+    return date.toLocaleString('da-DK', { dateStyle: 'short', timeStyle: 'short' })
+  } catch (error) {
+    console.warn('Kunne ikke formatere godkendelsestidspunkt', error)
+    return ''
+  }
+}
+
+function renderJobApprovalStatus(job) {
+  const indicator = document.getElementById('job-status-indicator')
+  const submitBtn = document.getElementById('job-submit-btn')
+  if (!indicator) return
+
+  const ensured = job ? ensureJobStatus({ ...job }) : null
+  const approvalStatus = ensured?.approvalStatus || 'draft'
+  const label = formatApprovalStatus(approvalStatus)
+  let details = ''
+
+  if (approvalStatus === 'approved' && ensured?.approvedBy) {
+    const formatted = formatApprovalTimestamp(ensured.approvedAt)
+    details = `<br><small>Godkendt af ${ensured.approvedBy}${formatted ? ` · ${formatted}` : ''}</small>`
+  } else if (approvalStatus === 'rejected' && ensured?.approvedBy) {
+    const formatted = formatApprovalTimestamp(ensured.approvedAt)
+    details = `<br><small>Afvist af ${ensured.approvedBy}${formatted ? ` · ${formatted}` : ''}</small>`
+  } else if (approvalStatus === 'submitted') {
+    details = '<br><small>Afventer godkendelse fra firma-admin</small>'
+  }
+
+  indicator.innerHTML = `<strong>${label}</strong>${details}`
+
+  if (submitBtn) {
+    submitBtn.disabled = approvalStatus === 'submitted' || approvalStatus === 'approved'
+  }
+}
+
 function syncStatusUI(status) {
   const indicator = document.getElementById('statusIndicator');
   if (indicator) {
@@ -3334,6 +3474,15 @@ function updateStatus(value, options = {}) {
   const updated = updateJob(currentJobId, job => {
     const nextJob = { ...job };
     nextJob.metaStatus = next;
+    nextJob.approvalStatus = metaToApproval(next);
+    if (nextJob.approvalStatus === 'approved' || nextJob.approvalStatus === 'rejected') {
+      const approver = activeUser?.displayName || activeUser?.name || activeUser?.email || activeUser?.id || 'Ukendt';
+      nextJob.approvedBy = approver;
+      nextJob.approvedAt = new Date().toISOString();
+    } else {
+      nextJob.approvedBy = null;
+      nextJob.approvedAt = null;
+    }
     return nextJob;
   });
   if (updated) {
@@ -3343,6 +3492,7 @@ function updateStatus(value, options = {}) {
       message: `Skiftede status til ${formatStatusLabel(next)}`,
       diff: { field: 'metaStatus', before: previous, after: next },
     });
+    renderJobApprovalStatus(updated);
     renderJobList();
   }
 }
@@ -3354,6 +3504,31 @@ function initStatusControls() {
     select.addEventListener('change', event => {
       updateStatus(event.target.value, { source: 'control' });
     });
+  }
+
+  const submitBtn = document.getElementById('job-submit-btn');
+  if (submitBtn && !submitBtn.dataset.bound) {
+    submitBtn.addEventListener('click', () => {
+      handleSubmitForApproval();
+    });
+    submitBtn.dataset.bound = 'true';
+  }
+}
+
+function handleSubmitForApproval() {
+  if (!currentJobId) return;
+  const updated = updateJob(currentJobId, job => {
+    const next = ensureJobStatus({ ...job });
+    markJobSubmitted(next);
+    return next;
+  });
+  if (updated) {
+    updateJobStateEntry(updated);
+    currentStatus = updated.metaStatus || 'kladde';
+    syncStatusUI(currentStatus);
+    renderJobApprovalStatus(updated);
+    renderJobList();
+    window.alert('Sagen er sendt til godkendelse.');
   }
 }
 

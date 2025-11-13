@@ -189,6 +189,10 @@
           <span>Aktuel status</span>
           <strong id="statusIndicator" data-status="kladde" class="status-pill">Kladde</strong>
         </div>
+        <div class="job-approval" aria-live="polite">
+          <div id="job-status-indicator" class="status-detail">Status: Kladde</div>
+          <button type="button" id="job-submit-btn" class="btn small">Send til godkendelse</button>
+        </div>
         <div class="job-lock-status" aria-live="polite">
           <span id="jobLockBadge" class="status-pill" hidden>Job låst</span>
           <span id="jobSentBadge" class="status-pill" hidden>Fremsendt</span>
@@ -556,6 +560,9 @@
         aria-labelledby="company-admin-panel-title"
       >
         <h3 id="company-admin-panel-title">Firmaadministration</h3>
+        <div id="admin-firm-info" class="admin-card"></div>
+        <div id="admin-firm-users" class="admin-card"></div>
+        <div id="admin-firm-jobs" class="admin-card"></div>
         <div id="admin-users-list"></div>
       </section>
 

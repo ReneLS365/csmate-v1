@@ -1,7 +1,7 @@
 {
-  "version": "v20251113T203742",
+  "version": "v20251113T214748",
   "cachePrefix": "csmate",
-  "cacheName": "csmate-v20251113T203742",
+  "cacheName": "csmate-v20251113T214748",
   "precache": [
     {
       "url": "/",
@@ -166,6 +166,34 @@
       "exists": true,
       "bytes": 16730,
       "sha256": "2072cada70a28c4d4b1bfb30609b4a0109b17fa3d7eb59afcce36b03953146c3"
+    },
+    {
+      "url": "/admin-ui.js",
+      "file": "app/admin-ui.js",
+      "exists": true,
+      "bytes": 8743,
+      "sha256": "0e83946c763c3a7b480b664447f024cab8af6b74afcd328179be9472663c3e6b"
+    },
+    {
+      "url": "/job-status.js",
+      "file": "app/job-status.js",
+      "exists": true,
+      "bytes": 2646,
+      "sha256": "a7e8d856f287527422f8c45a96322acad1062f3220f083047eb70f438aa0d1a3"
+    },
+    {
+      "url": "/job-admin.js",
+      "file": "app/job-admin.js",
+      "exists": true,
+      "bytes": 911,
+      "sha256": "709ed4682e08934a307ff985aa02884b0cd14dedb07601847a0bf0c983c6aefc"
+    },
+    {
+      "url": "/user-registry.js",
+      "file": "app/user-registry.js",
+      "exists": true,
+      "bytes": 1433,
+      "sha256": "eb1d55f99a018cc877706e3dca547e65a206894abf5b638a3199e20bb5ab57ab"
     }
   ],
   "dataMatchers": [

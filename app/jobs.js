@@ -1,3 +1,5 @@
+import { ensureJobStatus } from './job-status.js';
+
 const JOBS_STORAGE_KEY = 'csmate.jobs.v1';
 let jobsCache = null;
 let auditUserResolver = null;
@@ -34,7 +36,7 @@ function readJobsFromStorage() {
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
-    return parsed.map(job => ({ ...job }));
+    return parsed.map(job => ensureJobStatus({ ...job }));
   } catch (error) {
     console.warn('Kunne ikke læse jobs fra storage', error);
     return [];
@@ -44,8 +46,11 @@ function readJobsFromStorage() {
 function writeJobsToStorage(jobs) {
   if (typeof localStorage === 'undefined') return;
   try {
-    localStorage.setItem(JOBS_STORAGE_KEY, JSON.stringify(jobs));
-    syncOfflineJobsCache(jobs);
+    const serialized = Array.isArray(jobs)
+      ? jobs.map(job => ensureJobStatus({ ...job }))
+      : [];
+    localStorage.setItem(JOBS_STORAGE_KEY, JSON.stringify(serialized));
+    syncOfflineJobsCache(serialized);
   } catch (error) {
     console.warn('Kunne ikke gemme jobs', error);
   }
@@ -60,15 +65,17 @@ function ensureJobs() {
 
 export function loadJobs() {
   jobsCache = readJobsFromStorage();
-  return jobsCache.slice();
+  return jobsCache.map(job => ensureJobStatus({ ...job }));
 }
 
 export function getJobs() {
-  return ensureJobs().slice();
+  return ensureJobs().map(job => ensureJobStatus({ ...job }));
 }
 
 export function saveJobs(nextJobs) {
-  const jobs = Array.isArray(nextJobs) ? nextJobs.map(job => ({ ...job })) : [];
+  const jobs = Array.isArray(nextJobs)
+    ? nextJobs.map(job => ensureJobStatus({ ...job }))
+    : [];
   jobsCache = jobs;
   writeJobsToStorage(jobsCache);
   if (typeof window !== 'undefined') {
@@ -113,10 +120,16 @@ export function createJob(data = {}) {
     isLocked: !!data.isLocked,
     sentToOfficeAt: data.sentToOfficeAt || null,
     auditLog: Array.isArray(data.auditLog) ? data.auditLog.slice() : [],
+    firmId: data.firmId || null,
+    metaStatus: data.metaStatus || 'kladde',
+    approvalStatus: data.approvalStatus || 'draft',
+    approvedBy: data.approvedBy || null,
+    approvedAt: data.approvedAt || null,
   };
 
   applyPartial(job, data);
   if (!job.auditLog) job.auditLog = [];
+  ensureJobStatus(job);
   jobs.push(job);
   saveJobs(jobs);
   return { ...job };
@@ -136,9 +149,10 @@ export function updateJob(jobId, updater) {
   }
   if (!updated) return null;
   updated.updatedAt = Date.now();
+  ensureJobStatus(updated);
   jobs[index] = updated;
   saveJobs(jobs);
-  return { ...updated };
+  return ensureJobStatus({ ...updated });
 }
 
 export function deleteJob(jobId) {
@@ -151,7 +165,8 @@ export function deleteJob(jobId) {
 }
 
 export function findJobById(jobId) {
-  return ensureJobs().find(job => job.id === jobId) || null;
+  const job = ensureJobs().find(job => job.id === jobId) || null;
+  return job ? ensureJobStatus({ ...job }) : null;
 }
 
 export function setAuditUserResolver(resolver) {
