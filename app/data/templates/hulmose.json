@@ -1,0 +1,58 @@
+{
+  "_meta": {
+    "company": "Hulmose Stilladser ApS",
+    "template": "hulmose",
+    "currency": "DKK",
+    "source": "HP3 Provinsen v50 + Hvidbog",
+    "generated": "2025-03-01",
+    "admin_code": "3fd932ed5c3da33973a205e2b111718537bd089e6516eb077cbc6176b5b6db0d",
+    "systems": ["BOSTA70", "HAKI", "MODEX", "Alfix VARIO"]
+  },
+  "pay": {
+    "base_wage_hourly": 147,
+    "allowances_per_hour": {
+      "udd1": 42.98,
+      "udd2": 49.38,
+      "mentor": 22.26
+    },
+    "overtime_multipliers": {
+      "weekday": 1.5,
+      "weekend": 2
+    }
+  },
+  "transport_rules": {
+    "included_distance_m": 15,
+    "tiers": [
+      {
+        "from_m": 15,
+        "to_m": 55,
+        "step_m": 10,
+        "percent": 7
+      },
+      {
+        "from_m": 55,
+        "step_m": 20,
+        "percent": 7
+      }
+    ],
+    "notes": "HP3 Provinsen v50 transportafsnit A6-A11"
+  },
+  "roles": {
+    "chef": ["approve", "reject", "send", "edit"],
+    "kontor": ["approve", "reject", "send", "edit", "administer"],
+    "formand": ["approve", "reject", "send"],
+    "arbejder": ["send"]
+  },
+  "price_table": {
+    "B001": 2.68,
+    "B002": 2.68,
+    "B005": 16.71,
+    "B010": 16.71,
+    "B011": 12.53,
+    "B024": 15.66,
+    "B030": 9.4,
+    "M036": 16.71,
+    "M037": 16.71,
+    "M073": 42.98
+  }
+}

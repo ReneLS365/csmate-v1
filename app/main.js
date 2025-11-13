@@ -31,7 +31,6 @@ import {
   setCurrentUser as setStoredCurrentUser,
   getAllUsers,
   updateUserRole as updateStoredUserRole,
-  getUserTenants,
   getUserRoles,
   isOwner,
   isTenantAdmin,
@@ -56,6 +55,14 @@ import { canPerformAction } from './src/utils/permissions.js'
 import { applyOnlineState, setOfflineUserFlag } from './src/core/net-guard.js'
 import { renderJobHealth } from './src/ui/job-health.js'
 import { initSwBridge } from './src/core/sw-bridge.js'
+import {
+  isCsmateAdmin as tenantIsCsmateAdmin,
+  isFirmaAdmin as tenantIsFirmaAdmin,
+  mapAuthUserToTenant,
+  loadTemplateForTenant,
+  loadFirmsConfig
+} from './tenant.js'
+import { initAdminUI } from './admin-ui.js'
 import {
   loadJobs,
   getJobs,
@@ -120,9 +127,10 @@ if (typeof window !== 'undefined') {
 let DEFAULT_ADMIN_CODE_HASH = ''
 let materialsVirtualListController = null
 let latestAuthState = { isAuthenticated: false, user: null }
-let adminViewInitialized = false
-let adminViewInitPromise = null
-let lastAdminTenantsSignature = ''
+let currentTenant = null
+let currentTemplate = null
+let tenantContextPromise = Promise.resolve()
+let cachedFirmsConfig = null
 
 function setLatestAuthState(state) {
   latestAuthState = {
@@ -130,6 +138,91 @@ function setLatestAuthState(state) {
     user: state?.user ? { ...state.user } : null
   }
   return latestAuthState
+}
+
+function cloneTenantMeta(tenant) {
+  if (!tenant || typeof tenant !== 'object') return null
+  const copy = { ...tenant }
+  if (Array.isArray(tenant.firms)) {
+    copy.firms = tenant.firms.slice()
+  }
+  return copy
+}
+
+function deriveTenantFromUser(user) {
+  if (!user || typeof user !== 'object') return null
+  if (user.metadata && typeof user.metadata === 'object' && user.metadata.tenant) {
+    const meta = user.metadata.tenant
+    const tenant = cloneTenantMeta(meta)
+    if (!tenant) return null
+    const activeFirm = user.metadata.activeFirmId || tenant.activeFirmId || tenant.firmId || null
+    tenant.activeFirmId = activeFirm || null
+    return tenant
+  }
+  if (user.app_metadata) {
+    return cloneTenantMeta(mapAuthUserToTenant(user))
+  }
+  return null
+}
+
+function setWindowTenant(tenant) {
+  if (typeof window === 'undefined') return
+  const snapshot = tenant ? cloneTenantMeta(tenant) : null
+  window.csmate = window.csmate || {}
+  window.csmate.tenant = snapshot
+  window.csmateTenant = snapshot
+}
+
+async function refreshTenantContext(tenantCandidate) {
+  const nextTenant = tenantCandidate ? cloneTenantMeta(tenantCandidate) : null
+  currentTenant = nextTenant
+  setWindowTenant(nextTenant)
+
+  if (!nextTenant) {
+    currentTemplate = null
+    cachedFirmsConfig = null
+    if (typeof window !== 'undefined') {
+      window.csmate = window.csmate || {}
+      window.csmate.template = null
+    }
+    await initAdminUI(null)
+    return
+  }
+
+  try {
+    cachedFirmsConfig = await loadFirmsConfig()
+  } catch (error) {
+    console.warn('Kunne ikke indlæse firms config', error)
+    cachedFirmsConfig = null
+  }
+
+  try {
+    currentTemplate = await loadTemplateForTenant(nextTenant)
+    const adminCode = currentTemplate?._meta?.admin_code
+    if (typeof adminCode === 'string' && adminCode.trim()) {
+      DEFAULT_ADMIN_CODE_HASH = adminCode.trim()
+    }
+    if (typeof window !== 'undefined') {
+      window.csmate = window.csmate || {}
+      window.csmate.template = currentTemplate
+    }
+  } catch (error) {
+    console.error('Kunne ikke indlæse template for tenant', error)
+  }
+
+  try {
+    await initAdminUI(nextTenant)
+  } catch (error) {
+    console.error('initAdminUI fejl', error)
+  }
+}
+
+function ensureTenantContext(user) {
+  const tenant = deriveTenantFromUser(user)
+  tenantContextPromise = refreshTenantContext(tenant).catch(error => {
+    console.error('refreshTenantContext failed', error)
+  })
+  return tenantContextPromise
 }
 
 function getActiveProfile () {
@@ -157,13 +250,9 @@ function syncAuthUiFromState() {
 
 async function loadDefaultAdminCode () {
   try {
-    const response = await fetch('./data/tenants/hulmose.json')
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`)
-    }
-    const tenant = await response.json()
-    if (tenant && typeof tenant._meta?.admin_code === 'string') {
-      DEFAULT_ADMIN_CODE_HASH = tenant._meta.admin_code
+    const template = await loadTemplateForTenant({ role: 'user', firmId: 'demo', activeFirmId: 'demo' })
+    if (template && typeof template._meta?.admin_code === 'string') {
+      DEFAULT_ADMIN_CODE_HASH = template._meta.admin_code
     }
   } catch (error) {
     console.warn('Kunne ikke indlæse standard admin-kode', error)
@@ -310,9 +399,11 @@ function setActiveTab(tabName) {
   if (section) {
     vis(section);
     if (normalizedTab === 'admin') {
-      initAdminView().catch(error => {
-        console.error('initAdminView failed', error);
-      });
+      if (currentTenant) {
+        initAdminUI(currentTenant).catch(error => {
+          console.error('initAdminUI failed', error);
+        });
+      }
     }
   }
 }
@@ -330,47 +421,27 @@ function activateTabByName(name) {
   });
 }
 
-function resetAdminViewState() {
-  adminViewInitialized = false;
-  adminViewInitPromise = null;
-  const select = document.getElementById('admin-tenant-select');
-  if (select) {
-    select.innerHTML = '';
-    select.value = '';
-  }
-  const container = document.getElementById('admin-users-list');
-  if (container) {
-    container.innerHTML = '';
-  }
-}
-
 function updateAdminTabVisibility() {
   const adminTabBtn = document.getElementById('tab-btn-admin');
   const adminSection = document.getElementById('view-admin');
   if (!adminTabBtn || !adminSection) return;
 
   const profile = getActiveProfile();
-  if (canSeeAdminTab(profile)) {
+  const tenant = currentTenant;
+  const canAccess = canSeeAdminTab(profile) || tenantIsCsmateAdmin(tenant) || tenantIsFirmaAdmin(tenant);
+
+  if (canAccess) {
     adminTabBtn.classList.remove('hidden');
     adminTabBtn.removeAttribute('hidden');
     adminTabBtn.removeAttribute('aria-hidden');
-    const tenants = getUserTenants(profile);
-    const signature = JSON.stringify(
-      tenants
-        .filter(tenant => tenant && (tenant.id || tenant.slug))
-        .map(tenant => `${tenant.id || tenant.slug}:${tenant.role || ''}`)
-        .sort()
-    );
-    const hasChanged = signature !== lastAdminTenantsSignature;
-    if (hasChanged) {
-      lastAdminTenantsSignature = signature;
-      adminViewInitialized = false;
-      adminViewInitPromise = null;
-      if (!adminSection.hasAttribute('hidden')) {
-        initAdminView().catch(error => {
-          console.error('initAdminView failed', error);
-        });
-      }
+    adminTabBtn.style.display = '';
+    adminSection.classList.remove('hidden');
+    adminSection.removeAttribute('hidden');
+    adminSection.removeAttribute('aria-hidden');
+    if (tenant) {
+      initAdminUI(tenant).catch(error => {
+        console.error('initAdminUI failed', error);
+      });
     }
   } else {
     const wasActive = !adminSection.hasAttribute('hidden');
@@ -384,84 +455,9 @@ function updateAdminTabVisibility() {
     adminSection.setAttribute('hidden', '');
     adminSection.setAttribute('aria-hidden', 'true');
     adminSection.style.display = 'none';
-    resetAdminViewState();
-    lastAdminTenantsSignature = '';
     if (wasActive) {
       setActiveTab('job');
     }
-  }
-}
-
-async function initAdminView() {
-  if (!canActiveUserAccessAdmin()) return;
-  if (adminViewInitialized) return;
-  if (adminViewInitPromise) {
-    await adminViewInitPromise;
-    return;
-  }
-
-  const runner = async () => {
-    const select = document.getElementById('admin-tenant-select');
-    const container = document.getElementById('admin-users-list');
-    if (!select || !container) {
-      adminViewInitialized = false;
-      return;
-    }
-
-    const profile = getActiveProfile();
-    const tenantOptions = getUserTenants(profile)
-      .filter(entry => entry && typeof entry.id === 'string' && entry.id.trim())
-      .map(entry => ({
-        id: entry.id.trim(),
-        label: typeof entry.slug === 'string' && entry.slug.trim() ? entry.slug.trim() : entry.id.trim()
-      }));
-
-    select.innerHTML = '';
-    tenantOptions.forEach(option => {
-      const element = document.createElement('option');
-      element.value = option.id;
-      element.textContent = option.label;
-      select.appendChild(element);
-    });
-
-    if (tenantOptions.length === 0) {
-      container.innerHTML = '<p>Ingen firmaer tilknyttet din bruger.</p>';
-      adminViewInitialized = true;
-      return;
-    }
-
-    if (!select.dataset.adminBound) {
-      select.addEventListener('change', event => {
-        const target = event?.target;
-        const nextTenant = target && typeof target.value === 'string' ? target.value : '';
-        if (!nextTenant) return;
-        loadAdminUsersForTenant(nextTenant);
-      });
-      select.dataset.adminBound = 'true';
-    }
-
-    const initialTenant = select.value || tenantOptions[0].id;
-    if (!select.value) {
-      select.value = initialTenant;
-    }
-
-    const loaded = await loadAdminUsersForTenant(initialTenant);
-    if (!loaded) {
-      adminViewInitialized = false;
-      return;
-    }
-
-    adminViewInitialized = true;
-  };
-
-  adminViewInitPromise = runner();
-  try {
-    await adminViewInitPromise;
-  } catch (error) {
-    adminViewInitialized = false;
-    console.error('initAdminView failed', error);
-  } finally {
-    adminViewInitPromise = null;
   }
 }
 
@@ -2541,6 +2537,11 @@ function applyUserToUi (user) {
     window.csmate = window.csmate || {};
     window.csmate.currentUser = activeUser;
   }
+  ensureTenantContext(activeUser)?.then(() => {
+    updateAdminTabVisibility();
+  }).catch(error => {
+    console.error('ensureTenantContext failed', error);
+  });
   setOfflineUserFlag(Boolean(activeUser?.offline));
   applyOnlineState();
   setAuditUserResolver(() => {
