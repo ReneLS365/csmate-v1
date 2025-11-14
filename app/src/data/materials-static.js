@@ -237,7 +237,7 @@ export const ALFIX_BASE = [
   { id: 202, name: 'Alu drager pr. m', price: 17.12, quantity: 0 },
   { id: 203, name: '4,5 m kederdrager', price: 175.68, quantity: 0 },
   { id: 204, name: 'Samlerør til aludrager', price: 14.26, quantity: 0 },
-  { id: 205, name: '3 m kededrager', price: 117.12, quantity: 0 },
+  { id: 205, name: '3 m kederdrager', price: 117.12, quantity: 0 },
   { id: 206, name: '2,25 m kederdrager', price: 87.84, quantity: 0 },
   { id: 207, name: '1,5 m kederdrager', price: 58.56, quantity: 0 },
   { id: 208, name: 'Flapper/singel', price: 3.99, quantity: 0 },
