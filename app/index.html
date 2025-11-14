@@ -35,16 +35,46 @@
   <link rel="icon" type="image/x-icon" href="/favicon.ico">
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
   <script>
-    window.CSMATE_AUTH0_CONFIG = {
-      domain: 'dev-3xcigxvdwlymo1k6.eu.auth0.com',
-      clientId: 'DIN_CLIENT_ID',
-      authorizationParams: {
-        redirect_uri: window.location.origin + '/',
-        audience: 'https://csmate.netlify.app/api'
-      },
-      cacheLocation: 'localstorage',
-      useRefreshTokens: true
-    };
+    (function bootstrapAuth0Config () {
+      const defaults = {
+        AUTH0_DOMAIN: 'dev-3xcigxvdwlymo1k6.eu.auth0.com',
+        AUTH0_CLIENT_ID: 'REPLACE_WITH_AUTH0_CLIENT_ID',
+        AUTH0_REDIRECT_URI: window.location.origin + '/',
+        AUTH0_AUDIENCE: 'https://csmate.netlify.app/api'
+      };
+
+      const existing = typeof window !== 'undefined' && window.__CSMATE_PUBLIC_CONFIG__
+        ? window.__CSMATE_PUBLIC_CONFIG__
+        : {};
+
+      const config = {
+        AUTH0_DOMAIN: typeof existing.AUTH0_DOMAIN === 'string' && existing.AUTH0_DOMAIN.trim()
+          ? existing.AUTH0_DOMAIN.trim()
+          : defaults.AUTH0_DOMAIN,
+        AUTH0_CLIENT_ID: typeof existing.AUTH0_CLIENT_ID === 'string' && existing.AUTH0_CLIENT_ID.trim()
+          ? existing.AUTH0_CLIENT_ID.trim()
+          : defaults.AUTH0_CLIENT_ID,
+        AUTH0_REDIRECT_URI: typeof existing.AUTH0_REDIRECT_URI === 'string' && existing.AUTH0_REDIRECT_URI.trim()
+          ? existing.AUTH0_REDIRECT_URI.trim()
+          : defaults.AUTH0_REDIRECT_URI,
+        AUTH0_AUDIENCE: typeof existing.AUTH0_AUDIENCE === 'string' && existing.AUTH0_AUDIENCE.trim()
+          ? existing.AUTH0_AUDIENCE.trim()
+          : defaults.AUTH0_AUDIENCE
+      };
+
+      window.__CSMATE_PUBLIC_CONFIG__ = Object.freeze({ ...config });
+
+      window.CSMATE_AUTH0_CONFIG = {
+        domain: config.AUTH0_DOMAIN,
+        clientId: config.AUTH0_CLIENT_ID,
+        authorizationParams: {
+          redirect_uri: config.AUTH0_REDIRECT_URI,
+          audience: config.AUTH0_AUDIENCE
+        },
+        cacheLocation: 'localstorage',
+        useRefreshTokens: true
+      };
+    }());
   </script>
 </head>
 <body>

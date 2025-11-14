@@ -3,18 +3,74 @@
 En PWA til hurtig optælling af materialer, akkordberegning og eksport. Projektet kan køres som statisk HTML/JS uden build-step.
 
 ## Kom i gang
-1. Klon repoet og installer ingen ekstra afhængigheder – alt ligger i `/`.
-2. Start en simpel webserver i projektroden, fx:
+1. Klon repoet og installer afhængighederne:
    ```bash
-   python -m http.server 8000
+   npm install
    ```
-   eller
+2. Byg og servér den statiske app:
    ```bash
-   npx http-server
+   npm run build
+   npm run serve:dist
    ```
-3. Åbn `http://localhost:8000` i din browser.
+   Alternativt kan du køre en simpel webserver fra projektroden:
+   ```bash
+   npm run serve
+   ```
+3. Åbn `http://127.0.0.1:4173` (eller den port du valgte) i din browser.
 
-Service worker registreres automatisk i produktion; ved lokale tests kan den caches i browseren, så husk evt. at rydde application storage mellem sessioner.
+Service worker registreres automatisk i produktion. Ved lokale tests kan den caches i browseren, så ryd eventuelt Application Storage mellem sessioner.
+
+## Auth0 konfiguration (offentlige værdier)
+
+Auth0-domænet og API-audience er offentlige værdier og skal ikke lægges i Netlify-miljøvariabler:
+
+- **Domæne**: `dev-3xcigxvdwlymo1k6.eu.auth0.com`
+- **Audience**: `https://csmate.netlify.app/api`
+- **Redirect URI**: `window.location.origin + '/'`
+- **Client ID**: udfyldes i `app/index.html` (feltet `REPLACE_WITH_AUTH0_CLIENT_ID`).
+
+`app/index.html` initialiserer `window.__CSMATE_PUBLIC_CONFIG__` og `window.CSMATE_AUTH0_CONFIG`. Hvis du har brug for at injicere værdier runtime (fx via Netlify snippet), kan du sætte `window.__CSMATE_PUBLIC_CONFIG__` før scriptet kører:
+
+```html
+<script>
+  window.__CSMATE_PUBLIC_CONFIG__ = {
+    AUTH0_DOMAIN: 'dev-3xcigxvdwlymo1k6.eu.auth0.com',
+    AUTH0_CLIENT_ID: 'REPLACE_WITH_AUTH0_CLIENT_ID',
+    AUTH0_AUDIENCE: 'https://csmate.netlify.app/api',
+    AUTH0_REDIRECT_URI: window.location.origin + '/'
+  };
+</script>
+```
+
+Client secrets skal fortsat kun ligge i Auth0/Netlify miljøet – kun de offentlige værdier hører til i frontend.
+
+## Auth0 client secret (deployment)
+
+- **Environment key**: `AUTH0_CLIENT_SECRET`.
+- **Hvor lagres den?**
+  - Netlify → Site configuration → Environment variables (`AUTH0_CLIENT_SECRET` for alle deploy contexts).
+  - GitHub → Repository settings → Secrets → Actions (`AUTH0_CLIENT_SECRET`).
+- **Hvor bruges den?** Nuvarande kode læser ikke hemmeligheden direkte, men den skal være tilgængelig til Netlify functions eller scripts, der henter Auth0 management tokens.
+- **Aldrig i frontend**: Undgå `VITE_`-prefix eller bundling i `app/`-koden – hemmeligheden må ikke dukke op i build-output eller i PWA'en.
+
+### Checkliste efter rotation
+
+1. Rotér client secret i Auth0 dashboardet.
+2. Opdater Netlify environment variabler (`AUTH0_CLIENT_SECRET`) og udløs en ny deploy.
+3. Opdater GitHub Actions-secret `AUTH0_CLIENT_SECRET`.
+4. Kør lokalt: `npm test` og `npm run build` for at bekræfte at applikationen fungerer uden hardkodede secrets.
+5. Efter deploy: test login/logud og kontroller Netlify function logs for eventuelle Auth0-fejl.
+6. I browseren: søg i DevTools (Network/Application) efter `AUTH0_CLIENT_SECRET` og bekræft at den ikke eksponeres.
+
+## Roller og rettigheder
+
+Appen bruger Auth0-roller til at styre UI og funktioner:
+
+- **csmate-user**: standardbruger med adgang til job, optælling, løn og eksport.
+- **Company-admin**: kan administrere lokale brugere for firmaet og får adgang til firmaadministrationspanelet.
+- **csmate-admin**: platform-admin med adgang til alle paneler (inkl. platform/admin-sektionerne).
+
+`app/main.js` viser/skjuler panelerne `#admin-panel`, `#company-admin-panel` og `#platform-admin-panel` baseret på rolleflag fra `auth.js`.
 
 ## Nye hovedfunktioner
 - **Sagsinfo-fane** med krævede felter (Sagsnummer, Navn/opgave, Adresse, Kunde, Dato, Montørnavne). Eksport, print og E-komplet-knappen er låst indtil disse felter er udfyldt.
