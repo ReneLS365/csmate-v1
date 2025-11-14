@@ -44,6 +44,24 @@ Auth0-domænet og API-audience er offentlige værdier og skal ikke lægges i Net
 
 Client secrets skal fortsat kun ligge i Auth0/Netlify miljøet – kun de offentlige værdier hører til i frontend.
 
+## Auth0 client secret (deployment)
+
+- **Environment key**: `AUTH0_CLIENT_SECRET`.
+- **Hvor lagres den?**
+  - Netlify → Site configuration → Environment variables (`AUTH0_CLIENT_SECRET` for alle deploy contexts).
+  - GitHub → Repository settings → Secrets → Actions (`AUTH0_CLIENT_SECRET`).
+- **Hvor bruges den?** Nuvarande kode læser ikke hemmeligheden direkte, men den skal være tilgængelig til Netlify functions eller scripts, der henter Auth0 management tokens.
+- **Aldrig i frontend**: Undgå `VITE_`-prefix eller bundling i `app/`-koden – hemmeligheden må ikke dukke op i build-output eller i PWA'en.
+
+### Checkliste efter rotation
+
+1. Rotér client secret i Auth0 dashboardet.
+2. Opdater Netlify environment variabler (`AUTH0_CLIENT_SECRET`) og udløs en ny deploy.
+3. Opdater GitHub Actions-secret `AUTH0_CLIENT_SECRET`.
+4. Kør lokalt: `npm test` og `npm run build` for at bekræfte at applikationen fungerer uden hardkodede secrets.
+5. Efter deploy: test login/logud og kontroller Netlify function logs for eventuelle Auth0-fejl.
+6. I browseren: søg i DevTools (Network/Application) efter `AUTH0_CLIENT_SECRET` og bekræft at den ikke eksponeres.
+
 ## Roller og rettigheder
 
 Appen bruger Auth0-roller til at styre UI og funktioner:
