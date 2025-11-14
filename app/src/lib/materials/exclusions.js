@@ -8,7 +8,7 @@ const EXCLUDED_MATERIAL_NAMES = [
   'kilometer',
   'huller',
   'luk af hul',
-  'boring i beton'
+  'borring i beton'
 ]
 
 export const EXCLUDED_MATERIAL_KEYS = EXCLUDED_MATERIAL_NAMES
