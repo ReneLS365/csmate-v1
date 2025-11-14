@@ -32,7 +32,8 @@ import {
   getUserProfile as headerGetUserProfile,
   isAnyAdmin as headerIsAnyAdmin,
   getRoleFlags as headerGetRoleFlags,
-  login
+  login,
+  logout as headerLogout
 } from './auth.js'
 import {
   getCurrentUser as getStoredUser,
@@ -2625,11 +2626,34 @@ function initAuthButtons () {
 
   bindAuthButtons();
 
+  const loginBtn = document.querySelector('[data-auth="login"]');
+  if (loginBtn) {
+    if (typeof loginBtn.onclick === 'function') {
+      loginBtn.onclick = null;
+    }
+    loginBtn.addEventListener('click', event => {
+      event.preventDefault();
+      login().catch(error => {
+        console.error('Auth login failed', error);
+      });
+    });
+  }
+
   const logoutBtn = document.querySelector('[data-auth="logout"]');
   if (logoutBtn) {
+    if (typeof logoutBtn.onclick === 'function') {
+      logoutBtn.onclick = null;
+    }
     logoutBtn.addEventListener('click', event => {
       event.preventDefault();
-      authLogout();
+      headerLogout()
+        .catch(error => {
+          console.error('Auth logout failed', error);
+          return authLogout();
+        })
+        .catch(error => {
+          console.error('Legacy auth logout failed', error);
+        });
     });
   }
 }

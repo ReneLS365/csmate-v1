@@ -1,6 +1,6 @@
 import { AUTH0_DOMAIN as CONFIG_DOMAIN, AUTH0_CLIENT_ID as CONFIG_CLIENT_ID } from './src/auth0-config.js';
 
-const AUTH0_AUDIENCE = 'https://csmate.netlify.app/api';
+const CSMATE_AUTH0_AUDIENCE = 'https://csmate.netlify.app/api';
 const ROLE_NAMESPACE = 'https://csmate.app';
 const ROLE_PLATFORM_ADMIN = 'csmate-admin';
 const ROLE_COMPANY_ADMIN = 'Company-admin';
@@ -16,7 +16,7 @@ function resolveConfig() {
       clientId: CONFIG_CLIENT_ID || '',
       authorizationParams: {
         redirect_uri: '',
-        audience: AUTH0_AUDIENCE
+        audience: CSMATE_AUTH0_AUDIENCE
       },
       cacheLocation: 'memory',
       useRefreshTokens: true
@@ -37,7 +37,7 @@ function resolveConfig() {
       && providedAuthorizationParams.redirect_uri
       ? providedAuthorizationParams.redirect_uri
       : window.location.origin,
-    audience: providedAuthorizationParams.audience || AUTH0_AUDIENCE
+    audience: providedAuthorizationParams.audience || CSMATE_AUTH0_AUDIENCE
   };
 
   const config = {
