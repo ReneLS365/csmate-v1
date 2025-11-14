@@ -1,38 +1,38 @@
 {
-  "version": "v20251113T214748",
+  "version": "v20251114T000328",
   "cachePrefix": "csmate",
-  "cacheName": "csmate-v20251113T214748",
+  "cacheName": "csmate-v20251114T000328",
   "precache": [
     {
       "url": "/",
       "file": "app/index.html",
       "aliasFor": "/index.html",
       "exists": true,
-      "bytes": 36674,
-      "sha256": "b4332a6c9a002c5ee0f10612279519805df190321839f643f83443facba4851f"
+      "bytes": 37218,
+      "sha256": "7ac7cbdb3fbd625792b84110eeee2432849136a5da8b78ec89ebdefb5da85ff0"
     },
     {
       "url": "/?source=pwa",
       "file": "app/index.html",
       "exists": true,
-      "bytes": 36674,
-      "sha256": "b4332a6c9a002c5ee0f10612279519805df190321839f643f83443facba4851f",
+      "bytes": 37218,
+      "sha256": "7ac7cbdb3fbd625792b84110eeee2432849136a5da8b78ec89ebdefb5da85ff0",
       "duplicateOf": "app/index.html"
     },
     {
       "url": "/index.html",
       "file": "app/index.html",
       "exists": true,
-      "bytes": 36674,
-      "sha256": "b4332a6c9a002c5ee0f10612279519805df190321839f643f83443facba4851f",
+      "bytes": 37218,
+      "sha256": "7ac7cbdb3fbd625792b84110eeee2432849136a5da8b78ec89ebdefb5da85ff0",
       "duplicateOf": "app/index.html"
     },
     {
       "url": "/main.js",
       "file": "app/main.js",
       "exists": true,
-      "bytes": 180947,
-      "sha256": "d40fd0b6896444d04e76e53c53a8f9e7cb1cfb9786cfd1fcadfdfd3e57b3bd88"
+      "bytes": 183624,
+      "sha256": "0519d17717561c2725b7a9c2af17d047cca87f1191418457e58dc3291b881768"
     },
     {
       "url": "/style.css",
@@ -171,8 +171,8 @@
       "url": "/admin-ui.js",
       "file": "app/admin-ui.js",
       "exists": true,
-      "bytes": 8743,
-      "sha256": "0e83946c763c3a7b480b664447f024cab8af6b74afcd328179be9472663c3e6b"
+      "bytes": 19423,
+      "sha256": "1854b299376a24513c0d297512c444f240540abc380947dd3726a14ace70bdd0"
     },
     {
       "url": "/job-status.js",
@@ -185,8 +185,8 @@
       "url": "/job-admin.js",
       "file": "app/job-admin.js",
       "exists": true,
-      "bytes": 911,
-      "sha256": "709ed4682e08934a307ff985aa02884b0cd14dedb07601847a0bf0c983c6aefc"
+      "bytes": 342,
+      "sha256": "49723f98af66f6d33d6e554c0eda616d316f0a0b4c7ca15e211212468f7151dd"
     },
     {
       "url": "/user-registry.js",
@@ -194,6 +194,8 @@
       "exists": true,
       "bytes": 1433,
       "sha256": "eb1d55f99a018cc877706e3dca547e65a206894abf5b638a3199e20bb5ab57ab"
+    },
+    {
       "url": "/data/firms.json",
       "file": "app/data/firms.json",
       "exists": true,
