@@ -1,6 +1,14 @@
-import { AUTH0_DOMAIN as CONFIG_DOMAIN, AUTH0_CLIENT_ID as CONFIG_CLIENT_ID } from './src/auth0-config.js';
+import {
+  AUTH0_DOMAIN as CONFIG_DOMAIN,
+  AUTH0_CLIENT_ID as CONFIG_CLIENT_ID,
+  AUTH0_AUDIENCE as CONFIG_AUDIENCE
+} from './src/auth0-config.js';
 
-const CSMATE_AUTH0_AUDIENCE = 'https://csmate.netlify.app/api';
+const FALLBACK_AUTH0_AUDIENCE = 'https://csmate.netlify.app/api';
+const CONFIGURED_AUDIENCE = typeof CONFIG_AUDIENCE === 'string'
+  ? CONFIG_AUDIENCE.trim()
+  : '';
+const CSMATE_AUTH0_AUDIENCE = CONFIGURED_AUDIENCE || FALLBACK_AUTH0_AUDIENCE;
 const ROLE_NAMESPACE = 'https://csmate.app';
 const ROLE_PLATFORM_ADMIN = 'csmate-admin';
 const ROLE_COMPANY_ADMIN = 'Company-admin';

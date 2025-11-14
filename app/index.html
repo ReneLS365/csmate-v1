@@ -36,11 +36,19 @@
   <link rel="apple-touch-icon" href="/icons/icon-192.png">
   <script>
     (function bootstrapAuth0Config () {
+      const PLACEHOLDER_PATTERN = /^__CSMATE_.*__$/;
+      const sanitizeValue = (value, fallback = '') => {
+        if (typeof value !== 'string') return fallback;
+        const trimmed = value.trim();
+        if (!trimmed || PLACEHOLDER_PATTERN.test(trimmed)) return fallback;
+        return trimmed;
+      };
+
       const defaults = {
-        AUTH0_DOMAIN: 'dev-3xcigxvdwlymo1k6.eu.auth0.com',
-        AUTH0_CLIENT_ID: 'REPLACE_WITH_AUTH0_CLIENT_ID',
-        AUTH0_REDIRECT_URI: window.location.origin + '/',
-        AUTH0_AUDIENCE: 'https://csmate.netlify.app/api'
+        AUTH0_DOMAIN: sanitizeValue('__CSMATE_AUTH0_DOMAIN__'),
+        AUTH0_CLIENT_ID: sanitizeValue('__CSMATE_AUTH0_CLIENT_ID__'),
+        AUTH0_REDIRECT_URI: sanitizeValue('__CSMATE_AUTH0_REDIRECT_URI__', window.location.origin),
+        AUTH0_AUDIENCE: sanitizeValue('__CSMATE_AUTH0_AUDIENCE__', 'https://csmate.netlify.app/api')
       };
 
       const existing = typeof window !== 'undefined' && window.__CSMATE_PUBLIC_CONFIG__
@@ -48,18 +56,10 @@
         : {};
 
       const config = {
-        AUTH0_DOMAIN: typeof existing.AUTH0_DOMAIN === 'string' && existing.AUTH0_DOMAIN.trim()
-          ? existing.AUTH0_DOMAIN.trim()
-          : defaults.AUTH0_DOMAIN,
-        AUTH0_CLIENT_ID: typeof existing.AUTH0_CLIENT_ID === 'string' && existing.AUTH0_CLIENT_ID.trim()
-          ? existing.AUTH0_CLIENT_ID.trim()
-          : defaults.AUTH0_CLIENT_ID,
-        AUTH0_REDIRECT_URI: typeof existing.AUTH0_REDIRECT_URI === 'string' && existing.AUTH0_REDIRECT_URI.trim()
-          ? existing.AUTH0_REDIRECT_URI.trim()
-          : defaults.AUTH0_REDIRECT_URI,
-        AUTH0_AUDIENCE: typeof existing.AUTH0_AUDIENCE === 'string' && existing.AUTH0_AUDIENCE.trim()
-          ? existing.AUTH0_AUDIENCE.trim()
-          : defaults.AUTH0_AUDIENCE
+        AUTH0_DOMAIN: sanitizeValue(existing.AUTH0_DOMAIN, defaults.AUTH0_DOMAIN),
+        AUTH0_CLIENT_ID: sanitizeValue(existing.AUTH0_CLIENT_ID, defaults.AUTH0_CLIENT_ID),
+        AUTH0_REDIRECT_URI: sanitizeValue(existing.AUTH0_REDIRECT_URI, defaults.AUTH0_REDIRECT_URI),
+        AUTH0_AUDIENCE: sanitizeValue(existing.AUTH0_AUDIENCE, defaults.AUTH0_AUDIENCE)
       };
 
       window.__CSMATE_PUBLIC_CONFIG__ = Object.freeze({ ...config });
