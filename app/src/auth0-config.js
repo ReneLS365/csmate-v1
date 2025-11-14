@@ -1,6 +1,46 @@
 const PUBLIC_CONFIG_KEY = '__CSMATE_PUBLIC_CONFIG__'
-const FALLBACK_AUTH0_DOMAIN = 'dev-3xcigxvdwlymo1k6.eu.auth0.com'
-const FALLBACK_AUTH0_CLIENT_ID = 'REPLACE_WITH_AUTH0_CLIENT_ID'
+const FALLBACK_AUTH0_DOMAIN = ''
+const FALLBACK_AUTH0_CLIENT_ID = ''
+
+const ENV_KEY_MAP = Object.freeze({
+  AUTH0_DOMAIN: ['VITE_AUTH0_DOMAIN', 'AUTH0_DOMAIN'],
+  AUTH0_CLIENT_ID: ['VITE_AUTH0_CLIENT_ID', 'AUTH0_CLIENT_ID'],
+  AUTH0_REDIRECT_URI: ['VITE_AUTH0_REDIRECT_URI', 'AUTH0_REDIRECT_URI'],
+  AUTH0_AUDIENCE: ['AUTH0_AUDIENCE', 'VITE_AUTH0_AUDIENCE']
+})
+
+function readViteEnvValue (envKey) {
+  if (!envKey || typeof import.meta === 'undefined' || !import.meta?.env) return undefined
+  const raw = import.meta.env[envKey]
+  if (typeof raw !== 'string') return undefined
+  const trimmed = raw.trim()
+  return trimmed.length > 0 ? trimmed : undefined
+}
+
+function readNodeEnvValue (envKey) {
+  if (!envKey || typeof process === 'undefined' || !process?.env) return undefined
+  const raw = process.env[envKey]
+  if (typeof raw !== 'string') return undefined
+  const trimmed = raw.trim()
+  return trimmed.length > 0 ? trimmed : undefined
+}
+
+function readEnvValue (key) {
+  const envKeys = ENV_KEY_MAP[key]
+  if (!Array.isArray(envKeys) || envKeys.length === 0) return undefined
+
+  for (const envKey of envKeys) {
+    const viteValue = readViteEnvValue(envKey)
+    if (viteValue) return viteValue
+  }
+
+  for (const envKey of envKeys) {
+    const nodeValue = readNodeEnvValue(envKey)
+    if (nodeValue) return nodeValue
+  }
+
+  return undefined
+}
 
 function readRuntimeAuth0Value (key) {
   if (typeof window === 'undefined') return undefined
@@ -41,6 +81,9 @@ function readRuntimeAuth0Value (key) {
 function readConfigValue (key) {
   if (!key) return undefined
 
+  const envValue = readEnvValue(key)
+  if (envValue) return envValue
+
   if (typeof window !== 'undefined') {
     const runtimeValue = readRuntimeAuth0Value(key)
     if (runtimeValue) return runtimeValue
@@ -69,11 +112,12 @@ function readConfigList (key) {
     .filter(entry => entry.length > 0)
 }
 
-const defaultRedirect = typeof window !== 'undefined' ? `${window.location.origin}/` : ''
+const defaultRedirect = typeof window !== 'undefined' ? window.location.origin : ''
 
 export const AUTH0_DOMAIN = readConfigValue('AUTH0_DOMAIN') || FALLBACK_AUTH0_DOMAIN
 export const AUTH0_CLIENT_ID = readConfigValue('AUTH0_CLIENT_ID') || FALLBACK_AUTH0_CLIENT_ID
 export const AUTH0_REDIRECT_URI = readConfigValue('AUTH0_REDIRECT_URI') || defaultRedirect
+export const AUTH0_AUDIENCE = readConfigValue('AUTH0_AUDIENCE') || ''
 
 const ownerEmails = readConfigList('OWNER_EMAILS').map(email => email.toLowerCase())
 

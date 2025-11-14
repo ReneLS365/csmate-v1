@@ -22,22 +22,22 @@ Service worker registreres automatisk i produktion. Ved lokale tests kan den cac
 
 ## Auth0 konfiguration (offentlige værdier)
 
-Auth0-domænet og API-audience er offentlige værdier og skal ikke lægges i Netlify-miljøvariabler:
+Auth0-domænet og API-audience injiceres via miljøvariabler, så de kan matche Auth0-dashboardet uden hardkodning i frontend. Følgende offentlige variabler skal sættes ved build/deploy:
 
-- **Domæne**: `dev-3xcigxvdwlymo1k6.eu.auth0.com`
-- **Audience**: `https://csmate.netlify.app/api`
-- **Redirect URI**: `window.location.origin + '/'`
-- **Client ID**: udfyldes i `app/index.html` (feltet `REPLACE_WITH_AUTH0_CLIENT_ID`).
+- **Domæne**: `VITE_AUTH0_DOMAIN`
+- **Client ID**: `VITE_AUTH0_CLIENT_ID`
+- **Audience** (valgfri): `AUTH0_AUDIENCE`
+- **Redirect URI**: resolves til `window.location.origin`
 
-`app/index.html` initialiserer `window.__CSMATE_PUBLIC_CONFIG__` og `window.CSMATE_AUTH0_CONFIG`. Hvis du har brug for at injicere værdier runtime (fx via Netlify snippet), kan du sætte `window.__CSMATE_PUBLIC_CONFIG__` før scriptet kører:
+`app/index.html` initialiserer `window.__CSMATE_PUBLIC_CONFIG__` og `window.CSMATE_AUTH0_CONFIG` ud fra de miljøinjekterede værdier. Hvis du har brug for at injicere værdier runtime (fx via Netlify snippet), kan du sætte `window.__CSMATE_PUBLIC_CONFIG__` før scriptet kører:
 
 ```html
 <script>
   window.__CSMATE_PUBLIC_CONFIG__ = {
-    AUTH0_DOMAIN: 'dev-3xcigxvdwlymo1k6.eu.auth0.com',
-    AUTH0_CLIENT_ID: 'REPLACE_WITH_AUTH0_CLIENT_ID',
+    AUTH0_DOMAIN: 'din-auth0-tenant.eu.auth0.com',
+    AUTH0_CLIENT_ID: 'dinAuth0ClientId',
     AUTH0_AUDIENCE: 'https://csmate.netlify.app/api',
-    AUTH0_REDIRECT_URI: window.location.origin + '/'
+    AUTH0_REDIRECT_URI: window.location.origin
   };
 </script>
 ```
