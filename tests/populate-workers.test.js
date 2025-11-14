@@ -15,13 +15,44 @@ describe('populateWorkersFromLabor', () => {
   `;
 
   let populateWorkersFromLabor;
+  let updateTotalsMock;
+  let beregnLonMock;
   let warnSpy;
 
   beforeEach(async () => {
     vi.resetModules();
     warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     document.body.innerHTML = BASE_HTML;
-    ({ populateWorkersFromLabor } = await import('../app/main.js'));
+    const workersModule = await import('../app/src/modules/workers.js');
+    ({ populateWorkersFromLabor } = workersModule);
+    updateTotalsMock = vi.fn();
+    beregnLonMock = vi.fn();
+    workersModule.configureWorkerModule({
+      formatNumber: (value) => new Intl.NumberFormat('da-DK', {
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 2
+      }).format(Number.isFinite(value) ? value : Number(value) || 0),
+      toNumber: (value) => {
+        if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+        if (typeof value === 'string') {
+          const normalized = value.replace(/\./g, '').replace(',', '.');
+          const parsed = Number.parseFloat(normalized);
+          return Number.isFinite(parsed) ? parsed : 0;
+        }
+        return 0;
+      },
+      updateTotals: updateTotalsMock,
+      beregnLon: () => {
+        beregnLonMock();
+        document.querySelectorAll('.worker-row').forEach((row, index) => {
+          const output = row.querySelector('.worker-output');
+          if (output) {
+            output.textContent = `${index + 1} kr/t`;
+          }
+        });
+      },
+      syncLonAuditState: () => {}
+    });
   });
 
   afterEach(() => {
@@ -57,5 +88,7 @@ describe('populateWorkersFromLabor', () => {
 
     const firstOutputText = rows[0].querySelector('.worker-output')?.textContent ?? '';
     expect(firstOutputText).toContain('kr/t');
+    expect(updateTotalsMock).toHaveBeenCalledWith(true);
+    expect(beregnLonMock).toHaveBeenCalledTimes(1);
   });
 });

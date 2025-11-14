@@ -11,6 +11,14 @@ import { createMaterialRow } from './src/modules/materialRowTemplate.js'
 import { sha256Hex, constantTimeEquals } from './src/lib/sha256.js'
 import { ensureExportLibs, ensureZipLib, prefetchExportLibs } from './src/features/export/lazy-libs.js'
 import {
+  configureWorkerModule,
+  addWorker,
+  resetWorkers,
+  populateWorkersFromLabor,
+  captureWorkers,
+  applyWorkers
+} from './src/modules/workers.js'
+import {
   initAuth as initLegacyAuth,
   bindAuthButtons,
   logout as authLogout,
@@ -961,7 +969,6 @@ const ROLE_PERMISSIONS = {
 };
 
 let admin = false;
-let workerCount = 0;
 let laborEntries = [];
 let lastLoensum = 0;
 let lastMaterialSum = 0;
@@ -1293,45 +1300,6 @@ function applyExtraFieldValues(values = {}) {
   if (showSelected) {
     showSelected.checked = !!values.showSelectedOnly;
   }
-}
-
-function captureWorkers() {
-  const rows = document.querySelectorAll('.worker-row');
-  if (!rows.length) return [];
-  return Array.from(rows).map(row => {
-    const hours = row.querySelector('.worker-hours');
-    const udd = row.querySelector('.worker-udd');
-    const tillaeg = row.querySelector('.worker-tillaeg');
-    const legend = row.querySelector('legend');
-    return {
-      name: legend?.textContent?.trim() || '',
-      hours: hours?.value || '',
-      udd: udd?.value || 'udd1',
-      tillaeg: tillaeg?.value || '',
-    };
-  });
-}
-
-function applyWorkers(workers = []) {
-  const container = document.getElementById('workers');
-  if (!container) return;
-  container.innerHTML = '';
-  workerCount = 0;
-  if (!Array.isArray(workers) || workers.length === 0) {
-    addWorker();
-    return;
-  }
-  workers.forEach(worker => {
-    addWorker();
-    const row = container.lastElementChild;
-    if (!row) return;
-    const hours = row.querySelector('.worker-hours');
-    const udd = row.querySelector('.worker-udd');
-    const tillaeg = row.querySelector('.worker-tillaeg');
-    if (hours) hours.value = worker.hours ?? '';
-    if (udd) udd.value = worker.udd ?? 'udd1';
-    if (tillaeg) tillaeg.value = worker.tillaeg ?? '';
-  });
 }
 
 function captureLonState() {
@@ -3999,59 +3967,6 @@ function resetMaterials() {
   });
 }
 
-function resetWorkers() {
-  workerCount = 0;
-  const container = document.getElementById('workers');
-  if (container) {
-    container.innerHTML = '';
-  }
-}
-
-function populateWorkersFromLabor(entries) {
-  resetWorkers();
-  if (!Array.isArray(entries) || entries.length === 0) {
-    addWorker();
-    updateTotals(true);
-    return;
-  }
-
-  entries.forEach((entry, index) => {
-    addWorker();
-    const worker = document.getElementById(`worker${index + 1}`);
-    if (!worker) return;
-
-    const hoursInput = worker.querySelector('.worker-hours');
-    const tillaegInput = worker.querySelector('.worker-tillaeg');
-    const uddSelect = worker.querySelector('.worker-udd');
-
-    if (hoursInput) {
-      hoursInput.value = formatNumber(toNumber(entry.hours));
-    }
-    if (tillaegInput) {
-      tillaegInput.value = formatNumber(toNumber(entry.mentortillaeg));
-    }
-    if (uddSelect instanceof HTMLSelectElement) {
-      const savedValue = (entry?.udd ?? '').toString().trim();
-      if (savedValue) {
-        const hasOption = Array.from(uddSelect.options).some(option => option.value === savedValue);
-        if (hasOption) {
-          uddSelect.value = savedValue;
-        } else if (uddSelect.options.length > 0) {
-          uddSelect.selectedIndex = 0;
-        }
-      } else if (uddSelect.options.length > 0) {
-        uddSelect.selectedIndex = 0;
-      }
-    }
-  });
-
-  updateTotals(true);
-  const hasRegisteredHours = entries.some(entry => toNumber(entry.hours) > 0);
-  if (hasRegisteredHours && typeof beregnLon === 'function') {
-    beregnLon();
-  }
-}
-
 function matchMaterialByName(name) {
   if (!name) return null;
   const targetKey = normalizeKey(name);
@@ -4254,7 +4169,7 @@ async function verifyAdminCodeInput(value) {
   return constantTimeEquals(hash, DEFAULT_ADMIN_CODE_HASH);
 }
 
-async function login() {
+async function handleAdminCodeLogin() {
   const codeInput = document.getElementById('adminCode');
   const feedback = document.getElementById('adminFeedback');
   if (!codeInput) return;
@@ -4284,47 +4199,9 @@ const adminLoginButton = document.getElementById('btnAdminLogin');
 if (adminLoginButton) {
   adminLoginButton.addEventListener('click', event => {
     event.preventDefault();
-    login();
+    handleAdminCodeLogin();
   });
 }
-
-// --- Worker Functions ---
-function addWorker() {
-  workerCount++;
-  const w = document.createElement("fieldset");
-  w.className = "worker-row";
-  w.id = `worker${workerCount}`;
-  w.innerHTML = `
-    <legend>Mand ${workerCount}</legend>
-    <div class="worker-grid">
-      <label>
-        <span>Timer</span>
-        <input type="text" class="worker-hours" value="0" inputmode="decimal" data-numpad="true" data-decimal="comma" data-numpad-field="worker-hours-${workerCount}">
-      </label>
-      <label>
-        <span>Uddannelse</span>
-        <select class="worker-udd">
-          <option value="udd1">Udd1 (42,98 kr)</option>
-          <option value="udd2">Udd2 (49,38 kr)</option>
-        </select>
-      </label>
-      <label>
-        <span>Mentortillæg (22,26 kr/t)</span>
-        <input type="text" class="worker-tillaeg" value="0" inputmode="decimal" data-numpad="true" data-decimal="comma" data-numpad-field="worker-tillaeg-${workerCount}">
-      </label>
-    </div>
-    <div class="worker-output" aria-live="polite"></div>
-  `;
-  const container = document.getElementById('workers');
-  if (!container) {
-    console.warn('Kan ikke tilføje medarbejder – container mangler i DOM.');
-    return null;
-  }
-  container.appendChild(w);
-  syncLonAuditState();
-  return w;
-}
-
 
 // Debounce funktion til performance
 function debounce(func, delay) {
@@ -5682,6 +5559,14 @@ registerJobStoreHooks({
     persistCurrentJobState({ silent: false });
     return getCurrentJob();
   }
+});
+
+configureWorkerModule({
+  formatNumber,
+  toNumber,
+  updateTotals,
+  beregnLon,
+  syncLonAuditState
 });
 
 async function bootstrap () {
