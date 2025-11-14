@@ -6,7 +6,7 @@ import { registerJobStoreHooks } from './src/globals.js'
 import { initMaterialsScrollLock } from './src/modules/materialsScrollLock.js'
 import { calculateTotals } from './src/modules/calculateTotals.js'
 import { normalizeKey } from './src/lib/string-utils.js'
-import { EXCLUDED_MATERIAL_KEYS, shouldExcludeMaterialEntry } from './src/lib/materials/exclusions.js'
+import { shouldExcludeMaterialEntry } from './src/lib/materials/exclusions.js'
 import { createMaterialRow } from './src/modules/materialRowTemplate.js'
 import { sha256Hex, constantTimeEquals } from './src/lib/sha256.js'
 import { ensureExportLibs, ensureZipLib, prefetchExportLibs } from './src/features/export/lazy-libs.js'
@@ -2671,7 +2671,39 @@ const TILLAEG_UDD2 = 49.38;
 const dataBosta = [];
 const dataHaki = [];
 const dataModex = [];
-const dataAlfix = [];
+const dataAlfix = [
+  { id: 201, name: 'Kipdrager 4,5 m', price: 249.66, quantity: 0, systemKey: 'alfix' },
+  { id: 202, name: 'Alu drager pr. m', price: 17.12, quantity: 0, systemKey: 'alfix' },
+  { id: 203, name: '4,5 m kederdrager', price: 175.68, quantity: 0, systemKey: 'alfix' },
+  { id: 204, name: 'Samlerør til aludrager', price: 14.26, quantity: 0, systemKey: 'alfix' },
+  { id: 205, name: '3 m kederdrager', price: 117.12, quantity: 0, systemKey: 'alfix' },
+  { id: 206, name: '2,25 m kederdrager', price: 87.84, quantity: 0, systemKey: 'alfix' },
+  { id: 207, name: '1,5 m kederdrager', price: 58.56, quantity: 0, systemKey: 'alfix' },
+  { id: 208, name: 'Flapper/singel', price: 3.99, quantity: 0, systemKey: 'alfix' },
+  { id: 209, name: 'Fastkobling', price: 3.99, quantity: 0, systemKey: 'alfix' },
+  { id: 210, name: 'Horisontal/gelænder', price: 5.22, quantity: 0, systemKey: 'alfix' },
+  { id: 211, name: 'Drejekobling', price: 3.99, quantity: 0, systemKey: 'alfix' },
+  { id: 212, name: 'Diagonal', price: 9.4, quantity: 0, systemKey: 'alfix' },
+  { id: 213, name: 'Kipfingerkobling', price: 3.99, quantity: 0, systemKey: 'alfix' },
+  { id: 214, name: 'SK kobling', price: 3.99, quantity: 0, systemKey: 'alfix' },
+  { id: 215, name: 'Keder-teltdug pr. m²', price: 6.42, quantity: 0, systemKey: 'alfix' },
+  { id: 216, name: 'Rørsamler', price: 3.99, quantity: 0, systemKey: 'alfix' },
+  { id: 217, name: 'Stilladsrør 1M', price: 5.51, quantity: 0, systemKey: 'alfix' },
+  { id: 218, name: 'Stilladsrør 2M', price: 11.02, quantity: 0, systemKey: 'alfix' },
+  { id: 219, name: 'Stilladsrør 3M', price: 16.53, quantity: 0, systemKey: 'alfix' },
+  { id: 220, name: 'Stilladsrør 4M', price: 22.04, quantity: 0, systemKey: 'alfix' },
+  { id: 221, name: 'Stilladsrør 5M', price: 27.55, quantity: 0, systemKey: 'alfix' },
+  { id: 222, name: 'Stilladsrør 6M', price: 33.06, quantity: 0, systemKey: 'alfix' },
+  { id: 223, name: 'Stilladsrør 6M alu', price: 23.94, quantity: 0, systemKey: 'alfix' },
+  { id: 224, name: 'Dragestyr', price: 10.13, quantity: 0, systemKey: 'alfix' },
+  { id: 225, name: 'Trekantdrager pr. m', price: 35.53, quantity: 0, systemKey: 'alfix' }
+];
+
+dataAlfix.forEach(item => {
+  if (item && typeof item === 'object') {
+    item.systemKey = 'alfix';
+  }
+});
 
 function applyBaseDataset(target, baseItems, systemKey) {
   if (!Array.isArray(target)) return;
@@ -2814,11 +2846,7 @@ function hydrateMaterialListsFromJson() {
     const previous = new Map(
       target.map(item => [normalizeKey(item.name || ''), item.quantity || 0])
     );
-    const filteredEntries = entries.filter(entry => {
-      const rawName = entry?.beskrivelse ?? entry?.navn ?? entry?.name ?? '';
-      const key = normalizeKey(String(rawName).trim());
-      return !EXCLUDED_MATERIAL_KEYS.includes(key);
-    });
+    const filteredEntries = entries.filter(entry => !shouldExcludeMaterialEntry(entry));
 
     const next = filteredEntries.map((entry, index) => {
       const rawName = entry?.beskrivelse ?? entry?.navn ?? entry?.name ?? '';

@@ -1,21 +1,36 @@
 import { normalizeKey } from '../string-utils.js'
 
-export const EXCLUDED_MATERIAL_NAMES = [
-  'Luk af hul',
-  'Opskydeligt rækværk',
-  'Borring i beton',
-  'Huller',
-  'Km.',
-  'Udd. tillæg 1',
-  'Udd. tillæg 2',
-  'Mentortillæg'
+const EXCLUDED_MATERIAL_NAMES = [
+  'udd. tillæg 1',
+  'udd. tillæg 2',
+  'mentortillæg',
+  'km.',
+  'kilometer',
+  'huller',
+  'luk af hul',
+  'borring i beton'
 ]
 
-export const EXCLUDED_MATERIAL_KEYS = EXCLUDED_MATERIAL_NAMES.map(name => normalizeKey(name))
+export const EXCLUDED_MATERIAL_KEYS = EXCLUDED_MATERIAL_NAMES
+  .map(name => normalizeKey(name))
+  .filter(Boolean)
 
 export function shouldExcludeMaterialEntry (entry) {
   if (!entry) return false
-  const { id, name } = entry
-  const candidateKeys = [normalizeKey(name), normalizeKey(id)]
-  return candidateKeys.some(key => key && EXCLUDED_MATERIAL_KEYS.includes(key))
+
+  const resolveKey = value => normalizeKey(String(value ?? '').trim())
+
+  const rawName = entry.beskrivelse ?? entry.navn ?? entry.name ?? ''
+  const nameKey = resolveKey(rawName)
+  if (nameKey && EXCLUDED_MATERIAL_KEYS.includes(nameKey)) {
+    return true
+  }
+
+  const rawId = entry.varenr ?? entry.id ?? ''
+  const idKey = resolveKey(rawId)
+  if (idKey && EXCLUDED_MATERIAL_KEYS.includes(idKey)) {
+    return true
+  }
+
+  return false
 }

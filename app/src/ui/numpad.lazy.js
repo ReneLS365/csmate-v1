@@ -1,5 +1,6 @@
 let loaderPromise = null
 let numpadReady = false
+let installed = false
 const scheduleFrame = (callback) => {
   if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
     return window.requestAnimationFrame(callback)
@@ -65,7 +66,8 @@ function scheduleOpen (input) {
 }
 
 export function installLazyNumpad () {
-  if (typeof document === 'undefined') return
+  if (installed || typeof document === 'undefined') return
+  installed = true
 
   const ensureLoaded = (input, afterLoad) => {
     return loadNumpadModules().then(module => {
